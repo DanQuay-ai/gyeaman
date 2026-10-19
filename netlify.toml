@@ -1,0 +1,8 @@
+[build]
+  publish = "."
+  command = "echo static site"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
