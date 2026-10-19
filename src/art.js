@@ -3,17 +3,57 @@
 // (transparent PNG). Nothing else needs to change.
 
 const cache = new Map();
-export function img(path) {
-  if (cache.has(path)) return cache.get(path);
-  const entry = { ok: false, el: new Image() };
-  entry.el.onload = () => { entry.ok = true; };
-  entry.el.src = path;
-  cache.set(path, entry);
+/** Load an image; `paths` is tried in order (webp first, older png second). */
+export function img(paths) {
+  if (!Array.isArray(paths)) paths = [paths];
+  const key = paths[0];
+  if (cache.has(key)) return cache.get(key);
+  const entry = { ok: false, el: new Image(), src: '' };
+  let k = 0;
+  entry.el.decoding = 'async';
+  entry.el.onload = () => { entry.ok = true; entry.src = paths[k]; };
+  entry.el.onerror = () => { if (++k < paths.length) entry.el.src = paths[k]; };
+  entry.el.src = paths[0];
+  cache.set(key, entry);
   return entry;
 }
-export const heroImg = (id) => img('assets/heroes/' + id + '.png');
-export const monImg = (id) => img('assets/monsters/' + id + '.png');
-export const gearImg = (art) => img('assets/gear/' + art + '.png');
+export const heroImg = (id) => img(['assets/heroes/' + id + '.webp', 'assets/heroes/' + id + '.png']);
+export const portraitImg = (id) => img(['assets/portraits/' + id + '.webp', 'assets/heroes/' + id + '.webp']);
+export const monImg = (id) => img(['assets/monsters/' + id + '.webp', 'assets/monsters/' + id + '.png']);
+export const gearImg = (art) => img(['assets/gear/' + art + '.webp', 'assets/gear/' + art + '.png']);
+export const heroSrc = (id) => heroImg(id).src || 'assets/heroes/' + id + '.webp';
+export const portraitSrc = (id) => portraitImg(id).src || 'assets/portraits/' + id + '.webp';
+export const monSrc = (id) => monImg(id).src || 'assets/monsters/' + id + '.webp';
+
+// Pre-scaled copies: big art drawn small in one step aliases on some browsers (Safari ignores
+// imageSmoothingQuality). Halve repeatedly on an offscreen canvas, cache per target height.
+const scaledCache = new Map();
+export function scaled(entry, targetH) {
+  if (!entry.ok) return null;
+  const el = entry.el, th = Math.max(8, Math.round(targetH / 8) * 8);
+  if (th >= el.naturalHeight * 0.75) return el;
+  const key = entry.src + '@' + th;
+  if (scaledCache.has(key)) return scaledCache.get(key);
+  let src = el, w = el.naturalWidth, h = el.naturalHeight;
+  while (h / 2 >= th) {
+    const c = document.createElement('canvas'); c.width = Math.round(w / 2); c.height = Math.round(h / 2);
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, c.width, c.height);
+    src = c; w = c.width; h = c.height;
+  }
+  const c = document.createElement('canvas'); c.width = Math.round(w * th / h); c.height = th;
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, c.width, c.height);
+  scaledCache.set(key, c);
+  return c;
+}
+/** Draw an image with feet at (cx, by), height h (css px), crisp at the given device pixel ratio. */
+export function drawArt(g, entry, cx, by, h, dpr = 1, flip = false) {
+  const s = scaled(entry, h * dpr); if (!s) return false;
+  const w = h * s.width / s.height;
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  if (flip) { g.save(); g.translate(cx, 0); g.scale(-1, 1); g.drawImage(s, -w / 2, by - h, w, h); g.restore(); }
+  else g.drawImage(s, cx - w / 2, by - h, w, h);
+  return { w, h };
+}
 
 const INK = '#120c10';
 function shade(hex, amt) {
@@ -25,10 +65,7 @@ function shade(hex, amt) {
 /** Hero placeholder, anime ink style. (cx, by) = feet centre; s = scale (1 ≈ 100px tall). */
 export function drawHero(g, hero, cx, by, s, opts = {}) {
   const im = heroImg(hero.id);
-  if (im.ok) {
-    const h = 110 * s * hero.body.h, w = h * im.el.width / im.el.height;
-    g.drawImage(im.el, cx - w / 2, by - h, w, h); return;
-  }
+  if (im.ok) { drawArt(g, im, cx, by, 110 * s * hero.body.h, opts.dpr || 1, opts.flip); return; }
   const H = 100 * s * hero.body.h, W = hero.body.w;
   const accent = opts.accent || '#e3a72f';
   g.save(); g.translate(cx, by); g.lineJoin = 'round'; g.lineCap = 'round';
@@ -75,9 +112,9 @@ export function drawHero(g, hero, cx, by, s, opts = {}) {
 }
 
 /** Monster placeholder. (cx, by) = feet centre, s = scale. */
-export function drawMonster(g, id, m, cx, by, s, t = 0, hit = 0) {
+export function drawMonster(g, id, m, cx, by, s, t = 0, hit = 0, dpr = 1) {
   const im = monImg(id);
-  if (im.ok) { const h = 120 * s, w = h * im.el.width / im.el.height; g.drawImage(im.el, cx - w / 2, by - h, w, h); return; }
+  if (im.ok) { drawArt(g, im, cx, by, 120 * s, dpr); return; }
   g.save(); g.translate(cx, by - 55 * s); g.scale(s, s);
   const breath = Math.sin(t * 2.4) * 2;
   const body = hit > 0.5 ? '#fff' : m.color;
@@ -130,7 +167,7 @@ export function drawGearIcon(g, item, x, y, size, rarityColor) {
   g.fillStyle = '#1b1419'; g.strokeStyle = rarityColor || '#5a4a40'; g.lineWidth = 2;
   roundRect(g, x, y, size, size, size * 0.18); g.fill(); g.stroke();
   if (!item) { g.restore(); return; }
-  if (im && im.ok) { g.drawImage(im.el, x + 3, y + 3, size - 6, size - 6); g.restore(); return; }
+  if (im && im.ok) { const sc = scaled(im, size * 2) || im.el; const r = Math.min((size - 8) / sc.width, (size - 8) / sc.height); const w = sc.width * r, hh = sc.height * r; g.imageSmoothingQuality = 'high'; g.drawImage(sc, x + (size - w) / 2, y + (size - hh) / 2, w, hh); g.restore(); return; }
   g.translate(x + size / 2, y + size / 2);
   const k = size * 0.32; g.strokeStyle = rarityColor; g.fillStyle = rarityColor; g.lineWidth = Math.max(2, size * 0.07); g.lineCap = 'round';
   const t = { sword: 'afena', shield: 'shield', helmet: 'head', armour: 'body', ring: 'ring' }[item.kind] || item.type || item.slot;
