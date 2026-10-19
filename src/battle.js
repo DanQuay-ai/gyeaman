@@ -1,376 +1,333 @@
-// Grid tactics battle: one hero vs a pack of monsters on an 8x8 board.
+// Monster-clearer battle: the hero faces a 6x6 board of monsters, one wave at a time.
+// Pick an action, then a monster. Only EXPOSED monsters (touching the board edge or an empty cell)
+// can be targeted unless the action says "any". Monsters next to each other grow stronger.
+// Each monster has an attack timer; when a round ends, timers tick and monsters at 0 strike.
 import { MONSTERS, SPELLS, HEROES } from './data.js';
 import { maxStats, weaponType, rnd, pick } from './state.js';
-import { drawHero, drawMonster, shade } from './art.js';
+import { drawMonster, drawHero } from './art.js';
 
-const N = 8;
+export const B = 6;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const dist = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 
-const TILESETS = {
-  forest: { a: '#2f4a27', b: '#36532c', block: '#1d2e18', water: '#24465a', deco: '#4d6b33' },
-  marsh:  { a: '#2c3a33', b: '#33443b', block: '#1b241f', water: '#203a44', deco: '#4a5a46' },
-  grove:  { a: '#3a2f22', b: '#433627', block: '#211a12', water: '#2a3640', deco: '#5c4a2c' },
-  gate:   { a: '#3a1f1f', b: '#442525', block: '#1e0f0f', water: '#3a1010', deco: '#5c2a20' },
+// ---------- action patterns (row, col offsets) ----------
+const PAT = {
+  single: [[0, 0]],
+  row3: [[0, -1], [0, 0], [0, 1]],
+  col3: [[-1, 0], [0, 0], [1, 0]],
+  cross: [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]],
+  box: [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 0], [0, 1], [1, -1], [1, 0], [1, 1]],
+  row: 'row', col: 'col', exposed: 'exposed',
+};
+
+// Weapon basic attack + weapon skill, by weapon type.
+export const WEAPON_ACTIONS = {
+  afena: [{ id: 'w', name: 'Slash', pat: 'single', power: 1.15, stat: 'atk', st: 0, ends: true },
+          { id: 'ws', name: 'Afena Rush', pat: 'cross', power: 1.0, stat: 'atk', st: 2, ends: true }],
+  akuma: [{ id: 'w', name: 'Chop', pat: 'row3', power: 0.9, stat: 'atk', st: 0, ends: true },
+          { id: 'ws', name: 'Cleave', pat: 'box', power: 0.85, stat: 'atk', st: 3, ends: true, stun: 1 }],
+  pea:   [{ id: 'w', name: 'Thrust', pat: 'col3', power: 0.9, stat: 'atk', st: 0, ends: true },
+          { id: 'ws', name: 'Impale', pat: 'col', power: 1.0, stat: 'atk', st: 2, ends: true }],
+  agyan: [{ id: 'w', name: 'Shoot', pat: 'single', power: 0.95, stat: 'atk', st: 0, ends: true, any: true },
+          { id: 'ws', name: 'Volley', pat: 'random4', power: 0.85, stat: 'atk', st: 2, ends: true, any: true }],
+  poma:  [{ id: 'w', name: 'Staff Bolt', pat: 'cross', power: 0.6, stat: 'mag', st: 0, ends: true },
+          { id: 'ws', name: 'Spirit Lance', pat: 'row', power: 0.9, stat: 'mag', st: 2, ends: true }],
+  sekan: [{ id: 'w', name: 'Twin Cut', pat: 'single', power: 0.62, hits: 2, stat: 'atk', st: 0, ends: true },
+          { id: 'ws', name: 'Flurry', pat: 'single', power: 0.5, hits: 4, stat: 'atk', st: 2, ends: false }],
+};
+// Spells as board actions.
+export const SPELL_ACTIONS = {
+  ogya:     { pat: 'cross', power: 1.25, stat: 'mag', st: 2, ends: true, burn: 2 },
+  nkwa:     { self: 'heal', st: 1, ends: false },
+  aprannaa: { pat: 'box', power: 1.0, stat: 'mag', st: 3, ends: true, stun: 1 },
+  nsuo:     { pat: 'row', power: 1.05, stat: 'mag', st: 2, ends: true },
+  sunsum:   { pat: 'single', power: 1.7, stat: 'mag', st: 1, ends: true, any: true },
+  aduto:    { pat: 'random5', power: 0.4, stat: 'mag', st: 2, ends: true, poison: 3, any: true },
+  nkabom:   { self: 'ward', st: 1, ends: false },
+  asase:    { pat: 'exposed', power: 1.2, stat: 'mag', st: 4, ends: true },
 };
 
 export class Battle {
-  constructor({ canvas, ui, player, region, floor, enemies, onEnd, sfx }) {
-    this.cv = canvas; this.g = canvas.getContext('2d');
-    this.ui = ui; this.p = player; this.region = region; this.floor = floor;
-    this.onEnd = onEnd; this.sfx = sfx || (() => {});
-    this.tiles = TILESETS[region.tiles] || TILESETS.forest;
-    this.fx = []; this.floats = []; this.log = [];
-    this.mode = 'idle'; this.busy = false; this.over = false;
-    this.makeMap();
+  constructor({ canvas, ui, player, region, wave, maxWave, onEnd, sfx }) {
+    this.cv = canvas; this.g = canvas.getContext('2d'); this.ui = ui; this.p = player;
+    this.region = region; this.wave = wave; this.maxWave = maxWave; this.onEnd = onEnd; this.sfx = sfx || (() => {});
     const st = maxStats(player);
-    this.hero = { side: 'hero', x: 1, y: 6, hp: Math.min(player.hp, st.hp), mp: Math.min(player.mp, st.mp), st, status: {}, anim: { dx: 0, dy: 0, hit: 0 }, cds: {} };
-    this.foes = enemies.map((e, i) => this.spawn(e.id, e.lvl, i));
-    this.turn = 1; this.moved = false; this.acted = false; this.start = { x: this.hero.x, y: this.hero.y };
-    this.resize(); this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
+    this.st = st;
+    this.hero = { hp: Math.min(player.hp, st.hp), max: st.hp, stamina: 3, maxSt: 4 + Math.floor(player.level / 4), status: {} };
+    this.board = this.makeBoard();
+    this.sel = null; this.hover = null; this.busy = false; this.over = false;
+    this.fx = []; this.floats = []; this.round = 1; this.kills = 0; this.xp = 0; this.gold = 0;
+    this.msg = 'Pick an action, then a glowing monster.';
+    this.resize();
+    this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
     canvas.onpointerdown = (e) => this.tap(e);
-    this.say('Floor ' + floor + ': ' + enemies.length + ' foes. Move, then act.');
+    canvas.onpointermove = (e) => { this.hover = this.cellAt(e); };
+    canvas.onpointerleave = () => { this.hover = null; };
     this.renderUI();
   }
 
-  // ---------- setup ----------
-  makeMap() {
-    for (let tries = 0; tries < 50; tries++) {
-      const m = [];
-      for (let y = 0; y < N; y++) { m.push([]); for (let x = 0; x < N; x++) { const r = Math.random(); m[y].push(r < 0.09 ? 'T' : r < 0.13 ? 'R' : r < 0.16 ? 'W' : '.'); } }
-      for (const [x, y] of [[1, 6], [1, 7], [0, 6], [2, 6], [6, 1], [5, 1], [6, 2], [6, 0], [5, 0], [7, 1]]) m[y][x] = '.';
-      this.map = m;
-      const reach = this.reachable({ x: 1, y: 6 }, 99, false, true);
-      const open = m.flat().filter((c) => c === '.').length;
-      if (reach.size >= open - 1) return;
-    }
+  // ---------- board ----------
+  makeBoard() {
+    const r = this.region, w = this.wave;
+    const boss = w === this.maxWave;
+    const lvl = r.lvl + Math.floor((w - 1) / 2);
+    const count = Math.min(30, 12 + Math.floor(w * 1.6));
+    const cells = Array.from({ length: B * B }, () => null);
+    const order = [...cells.keys()].sort(() => Math.random() - 0.5);
+    const mk = (id, l, big) => {
+      const m = MONSTERS[id], k = 1 + (l - 1) * 0.17;
+      return { id, m, lvl: l, hp: Math.round(m.hp * k * (big ? 1 : 0.55)), max: Math.round(m.hp * k * (big ? 1 : 0.55)), atk: Math.round(m.atk * k * (big ? 1 : 0.6)), def: Math.round(m.def * k * 0.7),
+        cd: big ? 2 : 3 + rnd(2), timer: 2 + rnd(3), status: {}, hit: 0 };
+    };
+    for (let i = 0; i < count; i++) cells[order[i]] = mk(pick(r.pool), lvl, false);
+    // elites every 5th wave, boss at the end, placed in the inner area so they must be dug out
+    const inner = [7, 8, 9, 10, 13, 14, 15, 16, 19, 20, 21, 22, 25, 26, 27, 28];
+    if (w % 5 === 0 && !boss) cells[pick(inner)] = mk(pick(r.elite), lvl + 1, true);
+    if (boss) cells[pick([14, 15, 20, 21])] = mk(r.boss, lvl + 1, true);
+    return cells;
   }
-  spawn(id, lvl, i) {
-    const m = MONSTERS[id];
-    const k = 1 + (lvl - 1) * 0.16;
-    const spots = [[6, 1], [5, 0], [7, 2], [4, 1], [6, 3], [3, 0], [7, 0], [5, 2]];
-    let [x, y] = spots[i % spots.length];
-    while (this.unitAt(x, y) || this.map[y][x] !== '.') { x = rnd(N); y = rnd(3); }
-    const st = { hp: Math.round(m.hp * k), atk: Math.round(m.atk * k), mag: Math.round(m.mag * k), def: Math.round(m.def * (1 + (lvl - 1) * 0.1)), spd: m.spd, move: m.move };
-    return { side: 'foe', id, m, lvl, x, y, hp: st.hp, st, status: {}, cds: { skill: 1 + rnd(2) }, anim: { dx: 0, dy: 0, hit: 0 } };
+  at(r, c) { return r >= 0 && c >= 0 && r < B && c < B ? this.board[r * B + c] : undefined; }
+  exposed(i) {
+    const r = Math.floor(i / B), c = i % B;
+    if (r === 0 || c === 0 || r === B - 1 || c === B - 1) return true;
+    return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dr, dc]) => !this.at(r + dr, c + dc));
   }
+  neighbours(i) { const r = Math.floor(i / B), c = i % B; return [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dr, dc]) => this.at(r + dr, c + dc)).length; }
+  atkOf(mon, i) { return Math.round(mon.atk * (1 + 0.15 * this.neighbours(i))); }
 
-  // ---------- geometry ----------
-  units() { return this.hero ? [this.hero, ...(this.foes || []).filter((f) => f.hp > 0)] : []; }
-  unitAt(x, y) { return this.units().find((u) => u.x === x && u.y === y && u.hp > 0); }
-  walkable(x, y, fly) { if (x < 0 || y < 0 || x >= N || y >= N) return false; const c = this.map[y][x]; return fly ? c !== 'R' : c === '.'; }
-  reachable(from, move, fly, ignoreUnits = false, side = 'hero') {
-    const seen = new Map([[from.x + ',' + from.y, 0]]); const q = [[from.x, from.y, 0]];
-    while (q.length) {
-      const [x, y, d] = q.shift(); if (d >= move) continue;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
-        if (seen.has(k) || !this.walkable(nx, ny, fly)) continue;
-        const u = ignoreUnits ? null : this.unitAt(nx, ny);
-        if (u && u.side !== side) continue; // can pass allies, never enemies
-        seen.set(k, d + 1); q.push([nx, ny, d + 1]);
-      }
-    }
-    for (const k of [...seen.keys()]) { const [x, y] = k.split(',').map(Number); const u = ignoreUnits ? null : this.unitAt(x, y); if (u && !(x === from.x && y === from.y)) seen.delete(k); }
-    return seen;
+  // ---------- actions ----------
+  actions() {
+    const w = this.p.equip.weapon ? this.p.equip.weapon.type : 'afena';
+    const list = WEAPON_ACTIONS[w].map((a) => ({ ...a, kind: 'weapon', key: a.id }));
+    for (const id of this.p.spells) { const s = SPELLS[id], a = SPELL_ACTIONS[id]; if (a) list.push({ ...a, kind: 'spell', key: id, name: s.name, en: s.en, color: s.color }); }
+    return list;
   }
-  inRange(a, b, range) { const d = dist(a, b); return d >= range[0] && d <= range[1]; }
+  cellsFor(a, i) {
+    if (a.pat === 'exposed') return this.board.map((m, k) => (m && this.exposed(k) ? k : -1)).filter((k) => k >= 0);
+    if (a.pat && a.pat.startsWith('random')) return [i];
+    const r = Math.floor(i / B), c = i % B;
+    if (a.pat === 'row') return Array.from({ length: B }, (_, k) => r * B + k);
+    if (a.pat === 'col') return Array.from({ length: B }, (_, k) => k * B + c);
+    return PAT[a.pat].map(([dr, dc]) => [r + dr, c + dc]).filter(([rr, cc]) => rr >= 0 && cc >= 0 && rr < B && cc < B).map(([rr, cc]) => rr * B + cc);
+  }
+  canTarget(a, i) { const m = this.board[i]; return !!m && (a.any || this.exposed(i)); }
 
-  // ---------- input ----------
-  cellFromEvent(e) {
-    const r = this.cv.getBoundingClientRect();
-    const x = Math.floor((e.clientX - r.left) / (r.width / N)); const y = Math.floor((e.clientY - r.top) / (r.height / N));
-    return x >= 0 && y >= 0 && x < N && y < N ? { x, y } : null;
+  pickAction(a) {
+    if (this.busy || this.over) return;
+    if (this.hero.stamina < a.st) { this.say('Not enough stamina.'); return; }
+    if (a.self) { this.useSelf(a); return; }
+    if (a.pat === 'exposed') { this.execute(a, -1); return; }
+    this.sel = this.sel && this.sel.key === a.key ? null : a; this.sfx('click'); this.renderUI();
   }
   tap(e) {
-    if (this.busy || this.over) return;
-    const c = this.cellFromEvent(e); if (!c) return;
-    if (this.mode === 'move') {
-      if (this.moveSet.has(c.x + ',' + c.y)) { this.hero.x = c.x; this.hero.y = c.y; this.moved = true; this.sfx('step'); this.mode = 'idle'; this.renderUI(); }
-      return;
-    }
-    if (this.mode === 'target') {
-      const k = c.x + ',' + c.y;
-      if (!this.targetSet.has(k)) return;
-      const act = this.pending; this.mode = 'idle';
-      this.doHeroAction(act, c);
-      return;
-    }
-    // idle: tap hero to move, tap foe to inspect
-    if (c.x === this.hero.x && c.y === this.hero.y && !this.moved && !this.acted) { this.beginMove(); return; }
-    const f = this.unitAt(c.x, c.y);
-    if (f && f.side === 'foe') this.say(f.m.name + ' L' + f.lvl + ': ' + f.hp + '/' + f.st.hp + ' HP. ' + f.m.lore + '.');
-  }
-  beginMove() { this.moveSet = this.reachable(this.hero, this.hero.st.move, false); this.mode = 'move'; this.renderUI(); }
-  beginTarget(act) {
-    const range = act.kind === 'attack' ? weaponType(this.p).range : SPELLS[act.id].range;
-    const set = new Set();
-    if (act.kind === 'spell' && SPELLS[act.id].target === 'self') { this.doHeroAction(act, this.hero); return; }
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const d = dist(this.hero, { x, y }); if (d < range[0] || d > range[1]) continue;
-      const u = this.unitAt(x, y);
-      if (act.kind === 'attack' || (act.kind === 'spell' && SPELLS[act.id].target === 'enemy')) { if (u && u.side === 'foe') set.add(x + ',' + y); }
-      else if (act.kind === 'spell' && SPELLS[act.id].teleport) { if (!u && this.walkable(x, y, false)) set.add(x + ',' + y); }
-      else set.add(x + ',' + y);
-    }
-    if (!set.size) { this.say('No target in range. Move closer.'); return; }
-    this.targetSet = set; this.pending = act; this.mode = 'target'; this.renderUI();
+    if (this.busy || this.over || !this.sel) return;
+    const i = this.cellAt(e); if (i < 0) return;
+    if (!this.canTarget(this.sel, i)) { this.say(this.board[i] ? 'That monster is shielded by others. Clear a path to it first.' : 'Empty ground.'); return; }
+    const a = this.sel; this.sel = null; this.execute(a, i);
   }
 
-  // ---------- combat math ----------
-  damage(att, def, power, stat = 'atk', el = null) {
-    let base = att.st[stat] * power * (0.9 + Math.random() * 0.2);
-    if (att.side === 'hero' && stat === 'mag' && weaponType(this.p).magBoost) base *= 1 + weaponType(this.p).magBoost;
-    let d = Math.max(1, base - def.st.def * 0.6);
-    if (def.status.curse) d *= 1.3;
-    if (def.status.ward) d *= 0.6;
-    if (att.status.curse && att.side === 'hero') d *= 0.85;
-    let crit = false;
-    if (att.side === 'hero' && Math.random() * 100 < (att.st.crit || 5)) { d *= 1.75; crit = true; }
+  dmg(a, mon) {
+    const base = this.st[a.stat] * a.power * (0.9 + Math.random() * 0.2) * (a.stat === 'mag' && weaponType(this.p).magBoost ? 1 + weaponType(this.p).magBoost : 1);
+    let d = Math.max(1, base - mon.def * 0.5);
+    const crit = Math.random() * 100 < (this.st.crit || 5);
+    if (crit) d *= 1.75;
     return { d: Math.round(d), crit };
   }
-  async hit(att, def, dmg, color = '#fff', crit = false) {
-    def.hp = Math.max(0, def.hp - dmg);
-    def.anim.hit = 1;
-    const p = this.px(def);
-    this.floats.push({ x: p.x, y: p.y - this.ts * 0.9, text: (crit ? 'CRIT ' : '') + dmg, color: crit ? '#ffd23c' : color, life: 1, size: crit ? 1.25 : 1 });
-    this.burst(p.x, p.y - this.ts * 0.4, color, crit ? 26 : 14);
-    this.shake = crit ? 10 : 6;
-    this.sfx(crit ? 'crit' : 'hit');
-    if (def.hp <= 0) { this.sfx('die'); this.floats.push({ x: p.x, y: p.y - this.ts * 1.2, text: def.side === 'hero' ? 'DOWN' : 'Slain', color: '#ff6a5a', life: 1.2, size: 0.9 }); }
-    await sleep(240);
-  }
-  applyStatus(u, status) { for (const [k, v] of Object.entries(status || {})) u.status[k] = Math.max(u.status[k] || 0, v); }
-
-  async lunge(u, to, amt = 0.35) {
-    const dx = Math.sign(to.x - u.x) * amt, dy = Math.sign(to.y - u.y) * amt;
-    for (let i = 0; i <= 5; i++) { u.anim.dx = dx * i / 5; u.anim.dy = dy * i / 5; await sleep(14); }
-    for (let i = 5; i >= 0; i--) { u.anim.dx = dx * i / 5; u.anim.dy = dy * i / 5; await sleep(18); }
-  }
-  async bolt(from, to, color) {
-    const a = this.px(from), b = this.px(to);
-    const f = { kind: 'bolt', x: a.x, y: a.y - this.ts * 0.5, tx: b.x, ty: b.y - this.ts * 0.5, color, t: 0 };
-    this.fx.push(f);
-    for (let i = 0; i <= 10; i++) { f.t = i / 10; await sleep(16); }
-    this.fx.splice(this.fx.indexOf(f), 1);
-  }
-
-  // ---------- hero actions ----------
-  async doHeroAction(act, cell) {
-    this.busy = true; this.renderUI();
-    const H = this.hero;
-    if (act.kind === 'attack') {
-      const w = weaponType(this.p); const tgt = this.unitAt(cell.x, cell.y);
-      if (w.range[1] > 1 && dist(H, tgt) > 1) await this.bolt(H, tgt, '#f3e7cf'); else await this.lunge(H, tgt);
-      for (let i = 0; i < w.hits; i++) { if (tgt.hp <= 0) break; const r = this.damage(H, tgt, w.power, w.stat); await this.hit(H, tgt, r.d, '#fff', r.crit); }
-      if (w.cleave) for (const f of this.foes) if (f !== tgt && f.hp > 0 && dist(f, H) === 1) { const r = this.damage(H, f, w.power * 0.6, 'atk'); await this.hit(H, f, r.d, '#ffd9a8'); }
-      if (w.pierce) { const dx = Math.sign(tgt.x - H.x), dy = Math.sign(tgt.y - H.y); const b = this.unitAt(tgt.x + dx, tgt.y + dy); if (b && b.side === 'foe') { const r = this.damage(H, b, w.power * 0.7, 'atk'); await this.hit(H, b, r.d, '#ffd9a8'); } }
-      this.say('You strike with your ' + this.p.equip.weapon.name + '.');
-    } else if (act.kind === 'spell') {
-      const s = SPELLS[act.id];
-      H.mp -= s.mp; this.sfx('spell');
-      if (s.heal) { const amt = Math.round(H.st.hp * s.heal + H.st.mag); H.hp = Math.min(H.st.hp, H.hp + amt); const p = this.px(H); this.floats.push({ x: p.x, y: p.y - this.ts, text: '+' + amt, color: s.color, life: 1, size: 1 }); this.burst(p.x, p.y - this.ts * 0.4, s.color, 20); await sleep(300); }
-      if (s.teleport) { this.burst(this.px(H).x, this.px(H).y - this.ts * 0.4, s.color, 18); H.x = cell.x; H.y = cell.y; this.burst(this.px(H).x, this.px(H).y - this.ts * 0.4, s.color, 18); await sleep(260); }
-      if (s.target === 'self' && s.status) { this.applyStatus(H, s.status); const p = this.px(H); this.burst(p.x, p.y - this.ts * 0.4, s.color, 24); await sleep(260); }
-      if (s.power) {
-        const center = s.target === 'self' ? H : cell;
-        const victims = this.foes.filter((f) => f.hp > 0 && (s.area ? dist(f, center) <= s.area : f.x === cell.x && f.y === cell.y));
-        if (s.target !== 'self') await this.bolt(H, center, s.color);
-        else { this.fx.push({ kind: 'ring', x: this.px(H).x, y: this.px(H).y - this.ts * 0.3, r: 0, max: this.ts * (s.area + 0.6), color: s.color, t: 0, life: 1 }); await sleep(220); }
-        for (const f of victims) {
-          const r = this.damage(H, f, s.power, 'mag', s.el); await this.hit(H, f, r.d, s.color, r.crit);
-          if (s.status && f.hp > 0) this.applyStatus(f, s.status);
-          if (s.push && f.hp > 0) { const dx = Math.sign(f.x - H.x), dy = Math.sign(f.y - H.y); for (let i = 0; i < s.push; i++) { const nx = f.x + (dx || 0), ny = f.y + (dy || 0); if (this.walkable(nx, ny, f.m.fly) && !this.unitAt(nx, ny)) { f.x = nx; f.y = ny; } } }
-        }
+  async execute(a, i) {
+    this.busy = true; this.hero.stamina -= a.st; this.renderUI();
+    let targets;
+    if (a.pat === 'random4' || a.pat === 'random5') {
+      const alive = this.board.map((m, k) => (m ? k : -1)).filter((k) => k >= 0).sort(() => Math.random() - 0.5);
+      targets = [i, ...alive.filter((k) => k !== i)].slice(0, a.pat === 'random4' ? 4 : 5);
+    } else targets = this.cellsFor(a, i);
+    targets = targets.filter((k) => this.board[k]);
+    this.sfx(a.kind === 'spell' ? 'spell' : 'swing');
+    this.fx.push({ kind: 'flash', cells: targets, color: a.color || '#f3e7cf', t: 0 });
+    await sleep(140);
+    for (let h = 0; h < (a.hits || 1); h++) {
+      for (const k of targets) {
+        const mon = this.board[k]; if (!mon) continue;
+        const r = this.dmg(a, mon);
+        mon.hp -= r.d; mon.hit = 1;
+        if (a.stun) mon.status.stun = Math.max(mon.status.stun || 0, a.stun);
+        if (a.burn) mon.status.burn = a.burn;
+        if (a.poison) mon.status.poison = a.poison;
+        this.float(k, (r.crit ? 'CRIT ' : '') + r.d, r.crit ? '#ffd23c' : '#fff', r.crit ? 1.3 : 1);
+        this.sfx(r.crit ? 'crit' : 'hit');
+        if (mon.hp <= 0) this.kill(k);
       }
-      this.say(s.name + ': ' + s.en + '.');
-    } else if (act.kind === 'potion') {
-      this.p.potions--; const amt = Math.round(H.st.hp * 0.45); H.hp = Math.min(H.st.hp, H.hp + amt);
-      const p = this.px(H); this.floats.push({ x: p.x, y: p.y - this.ts, text: '+' + amt, color: '#7ee08a', life: 1, size: 1 }); this.sfx('heal'); await sleep(300);
-      this.say('You drink a herbal tonic.');
-    } else if (act.kind === 'ether') {
-      this.p.ethers--; const amt = Math.round(H.st.mp * 0.6); H.mp = Math.min(H.st.mp, H.mp + amt);
-      const p = this.px(H); this.floats.push({ x: p.x, y: p.y - this.ts, text: '+' + amt + ' MP', color: '#4fa3ff', life: 1, size: 1 }); this.sfx('heal'); await sleep(300);
+      this.shake = Math.min(12, 4 + targets.length);
+      await sleep(170);
     }
-    this.acted = true; this.busy = false;
-    if (this.checkEnd()) return;
-    await this.endTurn();
+    this.say(a.name + (targets.length > 1 ? ' hits ' + targets.length + ' monsters.' : '.'));
+    if (this.checkWin()) return;
+    if (a.ends) await this.endRound(); else { this.busy = false; this.renderUI(); }
   }
-
-  // ---------- turn flow ----------
-  async endTurn() {
-    if (this.over) return;
-    this.busy = true; this.mode = 'idle'; this.renderUI();
-    await this.tickStatus(this.hero);
-    if (this.checkEnd()) return;
-    for (const f of this.foes) {
-      if (f.hp <= 0) continue;
-      await this.tickStatus(f);
-      if (f.hp <= 0) { if (this.checkEnd()) return; continue; }
-      if (f.status.stun) { this.floats.push({ x: this.px(f).x, y: this.px(f).y - this.ts, text: 'Stunned', color: '#ffe066', life: 0.8, size: 0.8 }); await sleep(250); continue; }
-      await this.foeAct(f);
-      if (this.checkEnd()) return;
+  async useSelf(a) {
+    this.busy = true; this.hero.stamina -= a.st; this.sfx('heal');
+    if (a.self === 'heal') { const amt = Math.round(this.hero.max * 0.3 + this.st.mag); this.hero.hp = Math.min(this.hero.max, this.hero.hp + amt); this.say('Nkwa restores ' + amt + ' HP.'); }
+    if (a.self === 'ward') { this.hero.status.ward = 3; this.say('Unity Ward: damage taken reduced for 3 rounds.'); }
+    await sleep(250); this.busy = false; this.renderUI();
+  }
+  async useItem(kind) {
+    if (this.busy || this.over) return;
+    if (kind === 'tonic' && this.p.potions > 0) { this.p.potions--; const amt = Math.round(this.hero.max * 0.45); this.hero.hp = Math.min(this.hero.max, this.hero.hp + amt); this.say('Herbal tonic: +' + amt + ' HP.'); }
+    else if (kind === 'ether' && this.p.ethers > 0) { this.p.ethers--; this.hero.stamina = Math.min(this.hero.maxSt, this.hero.stamina + 3); this.say('Ether gourd: +3 stamina.'); }
+    else return;
+    this.sfx('heal'); this.renderUI();
+  }
+  kill(k) {
+    const mon = this.board[k];
+    this.board[k] = null; this.kills++;
+    this.xp += Math.round(mon.m.xp * (1 + (mon.lvl - 1) * 0.25) * (mon.max > mon.m.hp * 0.8 ? 1 : 0.45));
+    this.gold += 1 + Math.floor(mon.lvl / 2) + (Math.random() < 0.3 ? rnd(4) : 0);
+    this.burst(k, mon.m.color);
+    this.sfx('die');
+  }
+  async endRound() {
+    // status ticks + monster attacks
+    const hits = [];
+    for (let k = 0; k < this.board.length; k++) {
+      const mon = this.board[k]; if (!mon) continue;
+      if (mon.status.burn || mon.status.poison) {
+        const d = Math.max(1, Math.round(mon.max * (mon.status.poison ? 0.12 : 0.08)));
+        mon.hp -= d; this.float(k, d, mon.status.poison ? '#9ccf3a' : '#ff8a3c', 0.8);
+        if (mon.status.burn) mon.status.burn--; if (mon.status.poison) mon.status.poison--;
+        if (!mon.status.burn) delete mon.status.burn; if (!mon.status.poison) delete mon.status.poison;
+        if (mon.hp <= 0) { this.kill(k); continue; }
+      }
+      if (mon.status.stun) { mon.status.stun--; if (!mon.status.stun) delete mon.status.stun; continue; }
+      mon.timer--;
+      if (mon.timer <= 0) { mon.timer = mon.cd; hits.push(k); }
     }
-    for (const u of this.units()) for (const k of Object.keys(u.status)) { u.status[k]--; if (u.status[k] <= 0) delete u.status[k]; }
-    this.turn++; this.moved = false; this.acted = false; this.start = { x: this.hero.x, y: this.hero.y };
-    this.hero.mp = Math.min(this.hero.st.mp, this.hero.mp + 2);
+    if (this.checkWin()) return;
+    await sleep(160);
+    for (const k of hits) {
+      const mon = this.board[k]; if (!mon) continue;
+      mon.lunge = 1; await sleep(110);
+      let d = Math.max(1, this.atkOf(mon, k) - this.st.def * 0.6);
+      if (this.hero.status.ward) d *= 0.55;
+      d = Math.round(d * (0.9 + Math.random() * 0.2));
+      this.hero.hp = Math.max(0, this.hero.hp - d);
+      this.heroHit = 1; this.shake = 8; this.sfx('hurt');
+      this.floats.push({ x: this.heroX, y: this.heroY - 40, text: '-' + d, color: '#ff6a5a', life: 1, size: 1 });
+      await sleep(160);
+      if (this.hero.hp <= 0) { this.finish(false); return; }
+    }
+    if (this.hero.status.ward) { this.hero.status.ward--; if (!this.hero.status.ward) delete this.hero.status.ward; }
+    this.round++;
+    this.hero.stamina = Math.min(this.hero.maxSt, this.hero.stamina + 1);
     this.busy = false;
-    if (this.hero.status.stun) { this.say('You are stunned!'); this.acted = true; this.moved = true; await sleep(500); return this.endTurn(); }
-    this.say('Turn ' + this.turn + '. Tap your hero to move.');
-    this.renderUI();
+    this.say(hits.length ? hits.length + ' monster' + (hits.length > 1 ? 's' : '') + ' struck you. Round ' + this.round + '.' : 'Round ' + this.round + '.');
   }
-  async tickStatus(u) {
-    const p = this.px(u);
-    if (u.status.burn) { const d = Math.max(1, Math.round(u.st.hp * 0.05)); u.hp = Math.max(0, u.hp - d); this.floats.push({ x: p.x, y: p.y - this.ts, text: d + ' burn', color: '#ff8a3c', life: 0.8, size: 0.8 }); await sleep(180); }
-    if (u.status.poison) { const d = Math.max(1, Math.round(u.st.hp * 0.07)); u.hp = Math.max(0, u.hp - d); this.floats.push({ x: p.x, y: p.y - this.ts * 0.7, text: d + ' poison', color: '#9ccf3a', life: 0.8, size: 0.8 }); await sleep(180); }
-  }
-
-  async foeAct(f) {
-    const H = this.hero, m = f.m;
-    const skillReady = m.skill && f.cds.skill <= 0;
-    const range = m.range;
-    // choose destination
-    const reach = this.reachable(f, f.st.move, !!m.fly, false, 'foe');
-    let best = null, bestScore = -1e9;
-    for (const [k, steps] of reach) {
-      const [x, y] = k.split(',').map(Number); const d = dist({ x, y }, H);
-      let score = -steps * 0.1;
-      if (d >= range[0] && d <= range[1]) score += 100 + (m.ai === 'ranged' || m.ai === 'caster' ? d * 2 : -d);
-      else score -= Math.abs(d - range[1]) * 3;
-      if (score > bestScore) { bestScore = score; best = { x, y }; }
-    }
-    if (best && (best.x !== f.x || best.y !== f.y)) {
-      // animate step by step (straight-line tween is fine for placeholders)
-      const sx = f.x, sy = f.y; for (let i = 1; i <= 6; i++) { f.anim.dx = (best.x - sx) * i / 6; f.anim.dy = (best.y - sy) * i / 6; await sleep(22); }
-      f.x = best.x; f.y = best.y; f.anim.dx = 0; f.anim.dy = 0;
-    }
-    f.cds.skill = (f.cds.skill || 0) - 1;
-    const d = dist(f, H);
-    if (d < range[0] || d > range[1]) return;
-    if (skillReady) {
-      const sk = m.skill; f.cds.skill = sk.cd;
-      this.floats.push({ x: this.px(f).x, y: this.px(f).y - this.ts * 1.3, text: sk.name, color: '#ffb3a8', life: 1, size: 0.85 });
-      if (sk.pull) { await this.bolt(f, H, '#9aa0a8'); const dx = Math.sign(f.x - H.x), dy = Math.sign(f.y - H.y); const nx = H.x + dx, ny = H.y + dy; if (this.walkable(nx, ny, false) && !this.unitAt(nx, ny)) { H.x = nx; H.y = ny; } }
-      else if (m.ai === 'caster' || m.ai === 'boss' && d > 1) await this.bolt(f, H, m.eye); else await this.lunge(f, H, 0.5);
-      const r = this.damage(f, H, sk.power, m.ai === 'caster' || (m.ai === 'boss' && m.mag > m.atk) ? 'mag' : 'atk');
-      await this.hit(f, H, r.d, '#ff6a5a');
-      if (sk.status) this.applyStatus(H, sk.status);
-      this.say(m.name + ' uses ' + sk.name + '!');
-    } else {
-      if (d > 1) await this.bolt(f, H, m.ai === 'caster' ? m.eye : '#d8c8a8'); else await this.lunge(f, H);
-      const r = this.damage(f, H, 1, m.ai === 'caster' ? 'mag' : 'atk');
-      await this.hit(f, H, r.d, '#ff6a5a');
-    }
-  }
-
-  checkEnd() {
-    if (this.over) return true;
-    if (this.hero.hp <= 0) { this.finish(false); return true; }
-    if (this.foes.every((f) => f.hp <= 0)) { this.finish(true); return true; }
-    return false;
-  }
+  checkWin() { if (this.board.every((m) => !m)) { this.finish(true); return true; } return false; }
   finish(win) {
     this.over = true; this.busy = true;
-    const xp = this.foes.filter((f) => f.hp <= 0).reduce((a, f) => a + Math.round(f.m.xp * (1 + (f.lvl - 1) * 0.25)), 0);
-    const gold = this.foes.filter((f) => f.hp <= 0).reduce((a, f) => a + 4 + f.lvl * 2 + rnd(6), 0);
-    this.p.hp = this.hero.hp; this.p.mp = this.hero.mp;
-    setTimeout(() => { cancelAnimationFrame(this.raf); this.cv.onpointerdown = null; this.onEnd({ win, xp, gold, kills: this.foes.filter((f) => f.hp <= 0).length, hasBoss: this.foes.some((f) => f.m.ai === 'boss') }); }, 900);
+    this.p.hp = this.hero.hp;
+    setTimeout(() => { this.destroy(); this.onEnd({ win, xp: this.xp, gold: this.gold, kills: this.kills, boss: this.wave === this.maxWave }); }, 700);
   }
 
   // ---------- UI ----------
-  say(t) { this.log.unshift(t); this.log.length = Math.min(this.log.length, 3); this.renderUI(); }
+  say(t) { this.msg = t; this.renderUI(); }
   renderUI() {
-    const H = this.hero, ui = this.ui, p = this.p;
-    const w = weaponType(p);
-    ui.innerHTML = '';
-    const bars = document.createElement('div'); bars.className = 'bhud';
-    bars.innerHTML = `<div class="bar"><span>HP</span><i style="--f:${H.hp / H.st.hp};--c:#3f9a5a"></i><b>${H.hp}/${H.st.hp}</b></div>
-      <div class="bar"><span>MP</span><i style="--f:${H.mp / H.st.mp};--c:#4fa3ff"></i><b>${H.mp}/${H.st.mp}</b></div>
-      <div class="tags">${Object.keys(H.status).map((k) => `<em>${k} ${H.status[k]}</em>`).join('')}</div>`;
-    ui.append(bars);
-    const row = document.createElement('div'); row.className = 'actions';
-    const btn = (label, sub, fn, dis = false, cls = '') => { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.innerHTML = `<strong>${label}</strong>${sub ? `<small>${sub}</small>` : ''}`; b.disabled = dis || this.busy || this.over; b.onclick = fn; row.append(b); };
-    if (this.mode === 'move' || this.mode === 'target') {
-      btn('Cancel', this.mode === 'move' ? 'Pick a gold tile' : 'Pick a red tile', () => { this.mode = 'idle'; this.renderUI(); }, false, 'ghost');
-    } else {
-      btn('Move', this.moved ? 'Done' : H.st.move + ' tiles', () => this.beginMove(), this.moved || this.acted);
-      if (this.moved && !this.acted) btn('Undo', 'move', () => { H.x = this.start.x; H.y = this.start.y; this.moved = false; this.renderUI(); }, false, 'ghost');
-      btn(w.kind, w.range[0] === w.range[1] ? 'range ' + w.range[0] : 'range ' + w.range.join('-'), () => this.beginTarget({ kind: 'attack' }), this.acted, 'atk');
-      for (const id of p.spells) { const s = SPELLS[id]; btn(s.name, s.mp + ' MP · ' + s.en, () => this.beginTarget({ kind: 'spell', id }), this.acted || H.mp < s.mp, 'spell'); }
-      btn('Tonic', '×' + p.potions, () => this.doHeroAction({ kind: 'potion' }), this.acted || p.potions <= 0, 'item');
-      btn('Ether', '×' + p.ethers, () => this.doHeroAction({ kind: 'ether' }), this.acted || p.ethers <= 0, 'item');
-      btn('End turn', '', () => this.endTurn(), false, 'ghost');
+    const H = this.hero, ui = this.ui;
+    const acts = this.actions();
+    ui.innerHTML = `<div class="bhud">
+        <div class="bar"><span>HP</span><i style="--f:${H.hp / H.max};--c:#c8342e"></i><b>${H.hp}/${H.max}</b></div>
+        <div class="stam">${Array.from({ length: H.maxSt }, (_, k) => `<i class="${k < H.stamina ? 'on' : ''}"></i>`).join('')}<b>${H.stamina}/${H.maxSt} stamina</b></div>
+      </div>
+      <div class="acts2"></div>
+      <div class="blog">${this.msg}</div>`;
+    const row = ui.querySelector('.acts2');
+    for (const a of acts) {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'act ' + a.kind + (this.sel && this.sel.key === a.key ? ' on' : '');
+      b.style.setProperty('--ac', a.color || '#f3e7cf');
+      const what = a.self ? (a.self === 'heal' ? 'Heal self' : 'Ward self') : (a.pat === 'exposed' ? 'All exposed' : (a.pat.startsWith('random') ? a.pat.slice(6) + ' random' : a.pat === 'row3' ? 'Row of 3' : a.pat === 'col3' ? 'Column of 3' : a.pat === 'box' ? '3×3' : a.pat === 'row' ? 'Whole row' : a.pat === 'col' ? 'Whole column' : a.pat === 'cross' ? 'Cross' : 'Single')) + (a.hits > 1 ? ' ×' + a.hits : '') + (a.any ? ' · any target' : '');
+      b.innerHTML = `<strong>${a.name}</strong><small>${what}</small><em>${a.st ? a.st + ' st' : 'free'}${a.ends ? '' : ' · extra turn'}</em>`;
+      b.disabled = this.busy || this.over || H.stamina < a.st;
+      b.onclick = () => this.pickAction(a);
+      row.append(b);
     }
-    ui.append(row);
-    const log = document.createElement('div'); log.className = 'blog'; log.textContent = this.log[0] || ''; ui.append(log);
+    const it = (label, sub, fn, dis) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'act item'; b.innerHTML = `<strong>${label}</strong><small>${sub}</small><em>extra turn</em>`; b.disabled = dis || this.busy || this.over; b.onclick = fn; row.append(b); };
+    it('Tonic', '×' + this.p.potions + ' · +45% HP', () => this.useItem('tonic'), this.p.potions <= 0);
+    it('Ether', '×' + this.p.ethers + ' · +3 stamina', () => this.useItem('ether'), this.p.ethers <= 0);
   }
 
   // ---------- render ----------
   resize() {
     const r = this.cv.getBoundingClientRect(); const dpr = Math.min(2, devicePixelRatio || 1);
-    this.cv.width = Math.round(r.width * dpr); this.cv.height = Math.round(r.width * dpr);
-    this.ts = r.width / N; this.dpr = dpr;
+    this.w = r.width; this.h = r.height; this.dpr = dpr;
+    this.cv.width = Math.round(r.width * dpr); this.cv.height = Math.round(r.height * dpr);
+    this.cs = Math.min((r.width - 16) / B, (r.height - 110) / B);
+    this.ox = (r.width - this.cs * B) / 2; this.oy = 8;
+    this.heroX = r.width / 2; this.heroY = this.oy + this.cs * B + 96;
   }
-  px(u) { return { x: (u.x + (u.anim ? u.anim.dx : 0) + 0.5) * this.ts, y: (u.y + (u.anim ? u.anim.dy : 0) + 0.9) * this.ts }; }
-  burst(x, y, color, n) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 4; this.fx.push({ kind: 'p', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1.5, color, life: 1 }); } }
+  cellAt(e) {
+    const r = this.cv.getBoundingClientRect();
+    const x = e.clientX - r.left - this.ox, y = e.clientY - r.top - this.oy;
+    const c = Math.floor(x / this.cs), rr = Math.floor(y / this.cs);
+    return c >= 0 && rr >= 0 && c < B && rr < B ? rr * B + c : -1;
+  }
+  float(k, text, color, size) { const r = Math.floor(k / B), c = k % B; this.floats.push({ x: this.ox + (c + 0.5) * this.cs, y: this.oy + (r + 0.4) * this.cs, text: String(text), color, life: 1, size }); }
+  burst(k, color) { const r = Math.floor(k / B), c = k % B; const x = this.ox + (c + 0.5) * this.cs, y = this.oy + (r + 0.5) * this.cs; for (let i = 0; i < 14; i++) { const a = Math.random() * 6.28, s = 1 + Math.random() * 4; this.fx.push({ kind: 'p', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, color, life: 1 }); } }
+
   loop(now) {
     const t = now / 1000;
-    if (this.cv.getBoundingClientRect().width / N !== this.ts) this.resize();
-    const g = this.g, ts = this.ts, T = this.tiles;
+    const rect = this.cv.getBoundingClientRect(); if (rect.width !== this.w || rect.height !== this.h) this.resize();
+    const g = this.g, cs = this.cs, ox = this.ox, oy = this.oy;
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    const sh = this.shake || 0; this.shake = Math.max(0, sh - 0.6);
+    g.clearRect(0, 0, this.w, this.h);
+    const sh = this.shake || 0; this.shake = Math.max(0, sh - 0.7);
     g.save(); g.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const c = this.map[y][x];
-      g.fillStyle = (x + y) % 2 ? T.a : T.b; g.fillRect(x * ts, y * ts, ts + 1, ts + 1);
-      if (c === 'W') { g.fillStyle = T.water; g.fillRect(x * ts, y * ts, ts + 1, ts + 1); g.strokeStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(x * ts + ts * 0.2, y * ts + ts * (0.5 + 0.05 * Math.sin(t * 2 + x))); g.lineTo(x * ts + ts * 0.8, y * ts + ts * (0.5 + 0.05 * Math.sin(t * 2 + x + 1))); g.stroke(); }
+    // board frame
+    g.fillStyle = '#2a1f2e'; g.fillRect(ox - 6, oy - 6, cs * B + 12, cs * B + 12);
+    g.strokeStyle = '#c9b27a'; g.lineWidth = 3; g.strokeRect(ox - 6, oy - 6, cs * B + 12, cs * B + 12);
+    // preview area
+    let preview = new Set();
+    if (this.sel && this.hover !== null && this.hover >= 0 && this.canTarget(this.sel, this.hover) && !(this.sel.pat || '').startsWith('random')) preview = new Set(this.cellsFor(this.sel, this.hover));
+    for (let k = 0; k < B * B; k++) {
+      const r = Math.floor(k / B), c = k % B, x = ox + c * cs, y = oy + r * cs, m = this.board[k];
+      g.fillStyle = (r + c) % 2 ? '#3a2c40' : '#33273a'; g.fillRect(x, y, cs, cs);
+      if (!m) continue;
+      const exp = this.exposed(k);
+      const tgt = this.sel && this.canTarget(this.sel, k);
+      g.fillStyle = m.m.ai === 'boss' ? '#5a1a1a' : exp ? '#4a3550' : '#2b2030';
+      g.fillRect(x + 2, y + 2, cs - 4, cs - 4);
+      if (tgt) { g.strokeStyle = `rgba(240,138,36,${0.55 + 0.35 * Math.sin(t * 6)})`; g.lineWidth = 3; g.strokeRect(x + 3, y + 3, cs - 6, cs - 6); }
+      if (preview.has(k)) { g.fillStyle = 'rgba(255,214,120,.35)'; g.fillRect(x + 2, y + 2, cs - 4, cs - 4); }
+      g.save(); g.beginPath(); g.rect(x + 2, y + 2, cs - 4, cs - 4); g.clip();
+      g.globalAlpha = exp ? 1 : 0.55;
+      const lunge = m.lunge ? m.lunge * cs * 0.12 : 0;
+      drawMonster(g, m.id, m.m, x + cs / 2, y + cs * 0.96 + lunge, cs / 128 * (m.m.ai === 'boss' ? 1.15 : 0.95), t + k, m.hit);
+      g.restore();
+      // timer + hp
+      g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x + 3, y + cs - 9, cs - 6, 6);
+      g.fillStyle = '#c8342e'; g.fillRect(x + 3, y + cs - 9, (cs - 6) * Math.max(0, m.hp) / m.max, 6);
+      const urgent = m.timer <= 1 && !m.status.stun;
+      g.fillStyle = urgent ? '#c8342e' : '#120c10'; g.fillRect(x + cs - 20, y + 3, 17, 16);
+      g.fillStyle = '#fff'; g.font = '700 12px Karla, sans-serif'; g.textAlign = 'center'; g.fillText(m.status.stun ? 'z' : String(m.timer), x + cs - 11.5, y + 15);
+      const nb = this.neighbours(k); if (nb >= 2) { g.fillStyle = '#ffb347'; g.font = '700 10px Karla, sans-serif'; g.textAlign = 'left'; g.fillText('+' + nb * 15 + '%', x + 4, y + 13); }
+      if (m.status.burn || m.status.poison) { g.fillStyle = m.status.poison ? '#9ccf3a' : '#ff8a3c'; g.beginPath(); g.arc(x + 9, y + cs - 16, 4, 0, 6.28); g.fill(); }
+      m.hit = Math.max(0, m.hit - 0.08); if (m.lunge) m.lunge = Math.max(0, m.lunge - 0.1);
     }
-    // highlights
-    if (this.mode === 'move') for (const k of this.moveSet.keys()) { const [x, y] = k.split(',').map(Number); g.fillStyle = 'rgba(227,167,47,.28)'; g.fillRect(x * ts + 2, y * ts + 2, ts - 4, ts - 4); g.strokeStyle = 'rgba(227,167,47,.7)'; g.strokeRect(x * ts + 2, y * ts + 2, ts - 4, ts - 4); }
-    if (this.mode === 'target') for (const k of this.targetSet) { const [x, y] = k.split(',').map(Number); g.fillStyle = 'rgba(200,52,46,.3)'; g.fillRect(x * ts + 2, y * ts + 2, ts - 4, ts - 4); g.strokeStyle = 'rgba(255,106,90,.85)'; g.strokeRect(x * ts + 2, y * ts + 2, ts - 4, ts - 4); }
-    // blockers + units sorted by y for depth
-    const draw = [];
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const c = this.map[y][x]; if (c === 'T' || c === 'R') draw.push({ y: y + 0.5, f: () => this.drawBlock(g, c, x, y, ts, T) }); }
-    for (const u of this.units()) draw.push({ y: u.y + (u.anim.dy || 0) + 0.6, f: () => this.drawUnit(g, u, t) });
-    draw.sort((a, b) => a.y - b.y).forEach((d) => d.f());
+    // wave label + hero
+    g.fillStyle = '#c9b27a'; g.font = '16px Anton, Impact, sans-serif'; g.textAlign = 'left';
+    g.fillText('WAVE ' + this.wave + ' / ' + this.maxWave, ox, oy + cs * B + 26);
+    g.textAlign = 'right'; g.fillText(this.region.name.toUpperCase(), ox + cs * B, oy + cs * B + 26);
+    const hero = HEROES.find((h) => h.id === this.p.hero);
+    g.save(); if (this.heroHit > 0.5) g.filter = 'brightness(3) saturate(0)'; drawHero(g, hero, this.heroX, this.heroY, 0.75); g.restore();
+    this.heroHit = Math.max(0, (this.heroHit || 0) - 0.06);
     // fx
     for (const f of this.fx) {
       if (f.kind === 'p') { f.x += f.vx; f.y += f.vy; f.vy += 0.15; f.life -= 0.03; g.globalAlpha = Math.max(0, f.life); g.fillStyle = f.color; g.fillRect(f.x - 2, f.y - 2, 4, 4); }
-      if (f.kind === 'bolt') { const x = f.x + (f.tx - f.x) * f.t, y = f.y + (f.ty - f.y) * f.t; g.globalAlpha = 1; g.strokeStyle = f.color; g.lineWidth = 4; g.beginPath(); g.moveTo(x - (f.tx - f.x) * 0.12, y - (f.ty - f.y) * 0.12); g.lineTo(x, y); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); }
-      if (f.kind === 'ring') { f.t += 0.05; f.r = f.max * f.t; g.globalAlpha = Math.max(0, 1 - f.t); g.strokeStyle = f.color; g.lineWidth = 6; g.beginPath(); g.ellipse(f.x, f.y, f.r, f.r * 0.55, 0, 0, Math.PI * 2); g.stroke(); if (f.t >= 1) f.life = 0; else f.life = 1; }
+      if (f.kind === 'flash') { f.t += 0.06; f.life = 1 - f.t; g.globalAlpha = Math.max(0, 0.7 * (1 - f.t)); g.fillStyle = f.color; for (const k of f.cells) { const r = Math.floor(k / B), c = k % B; g.fillRect(ox + c * cs, oy + r * cs, cs, cs); } }
     }
-    g.globalAlpha = 1;
-    this.fx = this.fx.filter((f) => f.kind === 'bolt' || f.life > 0);
+    g.globalAlpha = 1; this.fx = this.fx.filter((f) => f.life > 0);
     g.textAlign = 'center';
-    for (const f of this.floats) { f.y -= 0.6; f.life -= 0.018; g.globalAlpha = Math.max(0, Math.min(1, f.life * 1.5)); g.font = `${Math.round(ts * 0.3 * f.size)}px "Bangers", "Impact", sans-serif`; g.lineWidth = 4; g.strokeStyle = '#120c10'; g.strokeText(f.text, f.x, f.y); g.fillStyle = f.color; g.fillText(f.text, f.x, f.y); }
+    for (const f of this.floats) { f.y -= 0.7; f.life -= 0.02; g.globalAlpha = Math.max(0, Math.min(1, f.life * 1.6)); g.font = `${Math.round(20 * f.size)}px Bangers, Impact, sans-serif`; g.lineWidth = 4; g.strokeStyle = '#120c10'; g.strokeText(f.text, f.x, f.y); g.fillStyle = f.color; g.fillText(f.text, f.x, f.y); }
     g.globalAlpha = 1; this.floats = this.floats.filter((f) => f.life > 0);
     g.restore();
-    for (const u of this.units()) u.anim.hit = Math.max(0, u.anim.hit - 0.08);
     this.raf = requestAnimationFrame(this.loop);
   }
-  drawBlock(g, c, x, y, ts, T) {
-    const cx = x * ts + ts / 2, by = y * ts + ts * 0.9;
-    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(cx, by, ts * 0.38, ts * 0.12, 0, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = '#120c10'; g.lineWidth = 2;
-    if (c === 'T') { g.fillStyle = '#4a3020'; g.fillRect(cx - ts * 0.06, by - ts * 0.5, ts * 0.12, ts * 0.5); g.fillStyle = T.deco; g.beginPath(); g.arc(cx, by - ts * 0.7, ts * 0.36, 0, Math.PI * 2); g.fill(); g.stroke(); g.fillStyle = shade(T.deco, 0.15); g.beginPath(); g.arc(cx - ts * 0.1, by - ts * 0.8, ts * 0.14, 0, Math.PI * 2); g.fill(); }
-    else { g.fillStyle = '#6a6070'; g.beginPath(); g.moveTo(cx - ts * 0.38, by); g.lineTo(cx - ts * 0.26, by - ts * 0.5); g.lineTo(cx + ts * 0.1, by - ts * 0.62); g.lineTo(cx + ts * 0.38, by - ts * 0.2); g.lineTo(cx + ts * 0.32, by); g.closePath(); g.fill(); g.stroke(); }
-  }
-  drawUnit(g, u, t) {
-    const p = this.px(u), ts = this.ts;
-    g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(p.x, p.y, ts * 0.3, ts * 0.1, 0, 0, Math.PI * 2); g.fill();
-    if (u.side === 'hero') {
-      if (!this.busy && !this.over && this.mode === 'idle' && !this.moved && !this.acted) { g.strokeStyle = `rgba(227,167,47,${0.5 + 0.5 * Math.sin(t * 5)})`; g.lineWidth = 2; g.beginPath(); g.ellipse(p.x, p.y, ts * 0.38, ts * 0.13, 0, 0, Math.PI * 2); g.stroke(); }
-      const hero = HEROES.find((h) => h.id === this.p.hero);
-      g.save(); if (u.anim.hit > 0.5) g.filter = 'brightness(3)'; drawHero(g, hero, p.x, p.y, ts / 82); g.restore();
-    } else {
-      const s = ts / 88 * (u.m.ai === 'boss' ? 1.35 : u.m.shape === 'dwarf' || u.m.shape === 'thorn' ? 0.8 : 1);
-      const bob = u.m.fly ? Math.sin(t * 3 + u.x) * ts * 0.05 - ts * 0.08 : 0;
-      drawMonster(g, u.id, u.m, p.x, p.y + bob, s, t, u.anim.hit);
-      // hp bar
-      const w = ts * 0.7; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(p.x - w / 2, p.y - ts * 1.05 - (u.m.ai === 'boss' ? ts * 0.4 : 0), w, 5);
-      g.fillStyle = '#c8342e'; g.fillRect(p.x - w / 2, p.y - ts * 1.05 - (u.m.ai === 'boss' ? ts * 0.4 : 0), w * u.hp / u.st.hp, 5);
-      const st = Object.keys(u.status); if (st.length) { g.font = `${Math.round(ts * 0.16)}px Karla, sans-serif`; g.fillStyle = '#ffe066'; g.textAlign = 'center'; g.fillText(st.join(' '), p.x, p.y - ts * 1.12); }
-    }
-  }
-  destroy() { cancelAnimationFrame(this.raf); this.cv.onpointerdown = null; }
+  destroy() { cancelAnimationFrame(this.raf); this.cv.onpointerdown = this.cv.onpointermove = this.cv.onpointerleave = null; }
 }

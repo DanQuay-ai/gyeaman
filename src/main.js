@@ -1,8 +1,8 @@
 // Gyeaman RPG — screens and game flow.
 import { HEROES, REGIONS, SPELLS, RARITY, WEAPON_TYPES, MONSTERS, xpForLevel, GEAR_BASES } from './data.js';
 import { newPlayer, maxStats, weaponType, gainXp, rollLoot, makeGear, save, load, wipe, availableSpells, rnd, pick, heroOf } from './state.js';
-import { drawHero, drawGearIcon, drawMonster } from './art.js';
-import { Battle } from './battle.js';
+import { drawHero, drawGearIcon, drawMonster, img as imgAsset } from './art.js';
+import { Battle, SPELL_ACTIONS } from './battle.js';
 import { sfx, unlockAudio } from './sfx.js';
 
 const app = document.getElementById('app');
@@ -45,7 +45,7 @@ function title() {
   </section>`);
   screen(s);
   s.querySelector('#new').onclick = () => { unlockAudio(); if (P && !s.querySelector('#new').dataset.sure) { s.querySelector('#new').dataset.sure = 1; s.querySelector('#new').textContent = 'Tap again to replace your hunter'; return; } select(); };
-  const c = s.querySelector('#cont'); if (c) c.onclick = () => { unlockAudio(); town(); };
+  const c = s.querySelector('#cont'); if (c) c.onclick = () => { unlockAudio(); hub(); };
 }
 
 // ---------------- hero select ----------------
@@ -61,7 +61,7 @@ function select() {
       <p class="wpn">Starts with ${w.name} (${w.kind}): ${w.note}.</p>
       <button class="primary" id="pick">Hunt as ${hero.name}</button></div>`;
     det.querySelector('.dport').append(portrait(hero, 150, 220));
-    det.querySelector('#pick').onclick = () => { P = newPlayer(chosen.id); save(P); sfx('level'); town(); };
+    det.querySelector('#pick').onclick = () => { P = newPlayer(chosen.id); save(P); sfx('level'); hub(); };
   };
   for (const hero of HEROES) {
     const card = h(`<button class="hcard" data-id="${hero.id}" type="button"><span class="nm">${hero.name}</span><span class="tt">${hero.title}</span></button>`);
@@ -71,161 +71,147 @@ function select() {
   screen(s); show(chosen);
 }
 
-// ---------------- town (hub) ----------------
-function heroPanel() {
-  const st = maxStats(P), need = xpForLevel(P.level), w = weaponType(P);
-  const el = h(`<div class="hpanel"><div class="pp"></div><div class="pinfo">
-    <div class="eyebrow">${esc(heroOf(P).title)}</div><h2>${esc(P.name)} <small>Lv ${P.level}</small></h2>
-    <div class="xp"><i style="--f:${P.xp / need}"></i><span>${P.xp} / ${need} XP</span></div>
-    <div class="hpmp"><span>HP ${P.hp}/${st.hp}</span><span>MP ${P.mp}/${st.mp}</span><span class="gold">${P.gold} gold</span></div>
-    <div class="stats sm">${['atk', 'mag', 'def', 'spd', 'crit'].map((k) => `<div><b>${st[k]}</b><span>${k.toUpperCase()}</span></div>`).join('')}</div>
-    <div class="wpn">${w.kind}: ${esc(P.equip.weapon.name)}</div></div></div>`);
-  el.querySelector('.pp').append(portrait(heroOf(P), 110, 160));
-  return el;
+// ---------------- world map (hub) ----------------
+const WAVES = { forest: 10, marsh: 12, grove: 14, gate: 16 };
+const MAP_POS = { kumasi: [0.66, 0.36], forest: [0.22, 0.32], marsh: [0.18, 0.74], grove: [0.5, 0.66], gate: [0.84, 0.72] };
+let mapSel = 'forest';
+function prog(id) { P.progress = P.progress || {}; return (P.progress[id] = P.progress[id] || { wave: 1, best: 0 }); }
+
+function drawMap(g, w, h, t) {
+  // placeholder painted map; replaced by assets/map.png when present
+  const im = mapImg(); if (im.ok) { g.drawImage(im.el, 0, 0, w, h); return; }
+  g.fillStyle = '#7fae5a'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#2f6b3a'; g.beginPath(); g.ellipse(w * 0.2, h * 0.3, w * 0.28, h * 0.32, 0.2, 0, 6.28); g.fill();
+  for (let i = 0; i < 60; i++) { const x = (i * 97) % (w * 0.45), y = (i * 53) % (h * 0.6); g.fillStyle = i % 2 ? '#24572e' : '#3b7a40'; g.beginPath(); g.arc(x + 10, y + 10, 9, 0, 6.28); g.fill(); }
+  g.fillStyle = '#5e7a62'; g.beginPath(); g.ellipse(w * 0.17, h * 0.78, w * 0.2, h * 0.16, 0, 0, 6.28); g.fill();
+  g.fillStyle = '#8a5a3a'; g.beginPath(); g.moveTo(w * 0.6, h); g.lineTo(w * 0.78, h * 0.42); g.lineTo(w, h * 0.3); g.lineTo(w, h); g.fill();
+  g.fillStyle = '#a06a44'; g.beginPath(); g.moveTo(w * 0.38, h * 0.85); g.lineTo(w * 0.5, h * 0.52); g.lineTo(w * 0.62, h * 0.85); g.fill();
+  g.strokeStyle = '#4f8fd0'; g.lineWidth = w * 0.025; g.beginPath(); g.moveTo(0, h * 0.95); g.bezierCurveTo(w * 0.3, h * 0.82, w * 0.55, h * 0.98, w * 0.8, h * 0.88); g.stroke();
+  g.fillStyle = '#d9c9a0'; g.beginPath(); g.ellipse(w * 0.66, h * 0.36, w * 0.11, h * 0.09, 0, 0, 6.28); g.fill();
+  g.strokeStyle = '#8a7a6a'; g.lineWidth = 3; g.stroke();
+  for (let i = 0; i < 18; i++) { const a = i / 18 * 6.28; g.fillStyle = '#b5523a'; g.fillRect(w * 0.66 + Math.cos(a) * w * 0.07 - 3, h * 0.36 + Math.sin(a) * h * 0.055 - 3, 6, 6); }
 }
-function town() {
-  if (P.run) return runMenu();
-  const s = h(`<section class="town"><header class="bar"><span class="place">Kumasi · Hunters' Lodge</span></header></section>`);
-  s.append(heroPanel());
-  const menu = h(`<div class="menu">
-    <button class="primary" id="exp"><strong>Expedition</strong><small>Hunt monsters in the regions</small></button>
-    <button id="gear"><strong>Gear</strong><small>${P.bag.length} items in your bag</small></button>
-    <button id="spells"><strong>Spells</strong><small>${P.spells.length} of 4 equipped</small></button>
-    <button id="shop"><strong>Market</strong><small>Tonics, ethers, gear</small></button>
-    <button id="inn"><strong>Rest</strong><small>${restCost() ? restCost() + ' gold' : 'Free'} · full HP and MP</small></button>
-  </div>`);
-  s.append(menu);
-  s.append(h(`<p class="fine">Kills ${P.stats.kills} · Expeditions ${P.stats.runs} · Bosses ${P.stats.bosses} · <button class="link" id="wipe">Delete save</button></p>`));
+function mapImg() { return imgAsset('assets/map.png'); }
+
+function hub() {
+  const st = maxStats(P), need = xpForLevel(P.level);
+  const s = h(`<section class="hub">
+    <div class="mapwrap"><canvas id="map"></canvas></div>
+    <div class="loc"></div>
+    <div class="dock">
+      <div class="dk stats"><div class="row"><b>${st.atk}</b><span>ATK</span></div><div class="row"><b>${st.def}</b><span>DEF</span></div><div class="row"><b>${st.mag}</b><span>MAG</span></div>
+        <button id="skills" class="dbtn">Skills · Lv ${P.level}</button></div>
+      <div class="dk mid"><div class="hp"><i style="--f:${P.hp / st.hp}"></i><span>${P.hp}/${st.hp}</span></div>
+        <div class="slots"></div>
+        <div class="xp"><i style="--f:${P.xp / need}"></i><span>Lv ${P.level} · ${P.xp}/${need} XP</span></div></div>
+      <div class="dk right"><button id="rest" class="dbtn">Rest</button><button id="bag" class="dbtn">Bag (${P.bag.length})</button>
+        <div class="gold">${P.gold} gold · tonic ×${P.potions} · ether ×${P.ethers}</div></div>
+    </div>
+    <p class="fine">Kills ${P.stats.kills} · Bosses ${P.stats.bosses} · <button class="link" id="wipe">Delete save</button></p>
+  </section>`);
   screen(s);
-  menu.querySelector('#exp').onclick = regions;
-  menu.querySelector('#gear').onclick = () => gear(town);
-  menu.querySelector('#spells').onclick = () => spells(town);
-  menu.querySelector('#shop').onclick = shop;
-  menu.querySelector('#inn').onclick = () => {
-    const c = restCost(); if (P.gold < c) return toast('Not enough gold.');
-    P.gold -= c; const st = maxStats(P); P.hp = st.hp; P.mp = st.mp; save(P); sfx('heal'); toast('You rest by the fire. Fully healed.'); town();
-  };
+  const slots = s.querySelector('.slots');
+  for (const k of ['weapon', 'head', 'body', 'charm']) { const b = h(`<button class="slotb" type="button" title="${k}"></button>`); b.append(gearCanvas(P.equip[k], 40)); b.onclick = () => gear(hub); slots.append(b); }
+  s.querySelector('#skills').onclick = () => spells(hub);
+  s.querySelector('#bag').onclick = () => gear(hub);
+  s.querySelector('#rest').onclick = () => { P.hp = st.hp; save(P); sfx('heal'); toast('Rested. HP full.'); hub(); };
   s.querySelector('#wipe').onclick = (e) => { if (!e.target.dataset.sure) { e.target.dataset.sure = 1; e.target.textContent = 'Tap again to delete'; return; } wipe(); P = null; title(); };
+  // map canvas
+  const cv = s.querySelector('#map'), dpr = Math.min(2, devicePixelRatio || 1);
+  const size = () => { const r = cv.getBoundingClientRect(); cv.width = r.width * dpr; cv.height = r.height * dpr; return r; };
+  let rect = size();
+  const places = [{ id: 'kumasi', name: 'Kumasi' }, ...REGIONS.map((r) => ({ id: r.id, name: r.name, r }))];
+  let raf;
+  const draw = (now) => {
+    if (!cv.isConnected) return cancelAnimationFrame(raf);
+    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = rect.width, hh = rect.height, t = now / 1000;
+    drawMap(g, w, hh, t);
+    for (const p of places) {
+      const [px, py] = MAP_POS[p.id], x = px * w, y = py * hh;
+      const open = p.id === 'kumasi' || P.unlocked.includes(p.id);
+      g.globalAlpha = open ? 1 : 0.45;
+      if (p.r) drawMonster(g, p.r.boss, MONSTERS[p.r.boss], x, y + 18, 0.3, t, 0);
+      g.globalAlpha = 1;
+      if (mapSel === p.id) { const k = 26 + 3 * Math.sin(t * 4); g.strokeStyle = '#e8c35a'; g.lineWidth = 3; for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.moveTo(x + dx * k, y + dy * k * 0.6); g.lineTo(x + dx * k, y + dy * (k * 0.6 + 10)); g.moveTo(x + dx * k, y + dy * k * 0.6); g.lineTo(x + dx * (k - 10), y + dy * k * 0.6); g.stroke(); } }
+      g.font = '13px Anton, Impact, sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(20,12,16,.85)'; g.strokeText(p.name, x, y + 34); g.fillStyle = open ? '#fff6dc' : '#bbb'; g.fillText(p.name, x, y + 34);
+    }
+    raf = requestAnimationFrame(draw);
+  };
+  raf = requestAnimationFrame(draw);
+  cv.onpointerdown = (e) => {
+    rect = cv.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width, y = (e.clientY - rect.top) / rect.height;
+    let best = null, bd = 0.08;
+    for (const p of places) { const [px, py] = MAP_POS[p.id]; const d = Math.hypot(px - x, (py - y) * 0.75); if (d < bd) { bd = d; best = p.id; } }
+    if (best) { mapSel = best; sfx('click'); showLoc(s.querySelector('.loc')); }
+  };
+  showLoc(s.querySelector('.loc'));
 }
-const restCost = () => (P.level <= 2 ? 0 : P.level * 4);
 
-// ---------------- regions + runs ----------------
-function regions() {
-  const s = h(`<section><header class="bar"><button class="back" id="b">Back</button><span class="place">Choose a region</span></header><div class="regions"></div></section>`);
-  const list = s.querySelector('.regions');
-  REGIONS.forEach((r, i) => {
-    const open = P.unlocked.includes(r.id);
-    const card = h(`<button class="region ${open ? '' : 'locked'}" type="button" ${open ? '' : 'disabled'}>
-      <canvas width="10" height="10"></canvas>
-      <div><div class="eyebrow">${open ? 'Recommended level ' + r.lvl : 'Clear ' + REGIONS[i - 1].name + ' to unlock'}${P.cleared.includes(r.id) ? ' · Cleared' : ''}</div>
-      <h3>${r.name}</h3><p>${r.desc}</p><p class="fine">${r.floors} floors · Boss: ${MONSTERS[r.boss].name}</p></div></button>`);
-    const cv = card.querySelector('canvas'); const dpr = Math.min(2, devicePixelRatio || 1); cv.width = 90 * dpr; cv.height = 100 * dpr; cv.style.width = '90px'; cv.style.height = '100px';
-    const g = cv.getContext('2d'); g.scale(dpr, dpr); drawMonster(g, r.boss, MONSTERS[r.boss], 45, 96, 0.72, 0, 0);
-    if (open) card.onclick = () => startRun(r);
-    list.append(card);
-  });
-  screen(s); s.querySelector('#b').onclick = town;
-}
-function startRun(region) {
-  P.run = { region: region.id, floor: 1, loot: [], gold: 0 }; P.stats.runs++; save(P);
-  sfx('click'); fight();
-}
-function regionOf() { return REGIONS.find((r) => r.id === P.run.region); }
-function enemiesFor(region, floor) {
-  const lvl = Math.max(region.lvl, Math.round(region.lvl + (floor - 1) * 0.6 + (P.level - region.lvl) * 0.35));
-  if (floor === region.floors) {
-    const out = [{ id: region.boss, lvl }];
-    const minions = region.id === 'forest' ? 2 : 2 + rnd(2);
-    for (let i = 0; i < minions; i++) out.push({ id: pick(region.pool), lvl: Math.max(1, lvl - 1) });
-    return out;
+function showLoc(el) {
+  if (mapSel === 'kumasi') {
+    el.innerHTML = `<div class="eyebrow">Capital of the Asante</div><h3>Kumasi</h3><p>The Kejetia market sells tonics, ether gourds and gear.</p><button class="primary" id="mk">Enter the market</button>`;
+    el.querySelector('#mk').onclick = shop; return;
   }
-  const n = Math.min(5, 2 + Math.floor(floor / 2) + (Math.random() < 0.35 ? 1 : 0));
-  const out = [];
-  for (let i = 0; i < n; i++) out.push({ id: pick(region.pool), lvl });
-  if (floor === region.floors - 1) out[0] = { id: pick(region.elite), lvl: lvl + 1 };
-  return out;
+  const r = REGIONS.find((x) => x.id === mapSel), open = P.unlocked.includes(r.id), pr = prog(r.id), max = WAVES[r.id];
+  el.innerHTML = `<div class="eyebrow">${open ? 'Monster level ' + r.lvl + '+' : 'Locked'}${P.cleared.includes(r.id) ? ' · Cleared' : ''}</div><h3>${r.name}</h3><p>${r.desc}</p>
+    <p class="fine">Waves ${max} · checkpoint every 5 · boss: ${MONSTERS[r.boss].name} · best wave ${pr.best}</p>
+    ${open ? `<button class="primary" id="go">Fight wave ${pr.wave}</button>` : `<p class="fine">Defeat the boss of the previous region to open this path.</p>`}`;
+  if (open) el.querySelector('#go').onclick = () => { if (P.hp <= 0) return toast('Rest first.'); fight(r); };
 }
 
-function fight() {
-  const region = regionOf(), floor = P.run.floor;
-  const boss = floor === region.floors;
-  const s = h(`<section class="battle"><header class="bar"><span class="place">${region.name} · ${boss ? 'Boss floor' : 'Floor ' + floor + ' of ' + region.floors}</span><span class="lv">${esc(P.name)} Lv ${P.level}</span></header>
-    <div class="board"><canvas id="bc"></canvas></div><div class="bui"></div></section>`);
+function fight(region) {
+  const pr = prog(region.id), max = WAVES[region.id];
+  const s = h(`<section class="battle2"><header class="bar"><button class="back" id="flee">Retreat</button><span class="place">${region.name}</span><span class="lv">${esc(P.name)} Lv ${P.level}</span></header>
+    <div class="bwrap"><canvas id="bc"></canvas></div><div class="bui"></div></section>`);
   screen(s);
-  battle = new Battle({ canvas: s.querySelector('#bc'), ui: s.querySelector('.bui'), player: P, region, floor, enemies: enemiesFor(region, floor), sfx, onEnd: (r) => afterFight(r) });
+  battle = new Battle({ canvas: s.querySelector('#bc'), ui: s.querySelector('.bui'), player: P, region, wave: pr.wave, maxWave: max, sfx, onEnd: (r) => afterFight(region, r) });
+  s.querySelector('#flee').onclick = () => { if (battle) { P.hp = battle.hero.hp; battle.destroy(); battle = null; } pr.wave = Math.max(1, Math.floor((pr.wave - 1) / 5) * 5 + 1); save(P); toast('You retreat to the last checkpoint.'); hub(); };
 }
 
-function afterFight(r) {
+function afterFight(region, r) {
   battle = null;
-  const region = regionOf();
-  if (!r.win) {
-    // Hybrid rule: keep XP and levels, lose the run's unbanked loot and half its gold.
-    const lostItems = P.run.loot.length, keptGold = Math.floor(P.run.gold / 2);
-    const msgs = gainXp(P, Math.floor(r.xp / 2));
-    P.gold += keptGold; P.stats.kills += r.kills;
-    const st = maxStats(P); P.hp = Math.ceil(st.hp * 0.5); P.mp = st.mp;
-    P.run = null; save(P); sfx('lose');
-    const s = h(`<section class="result lose"><div class="brush red">Fallen</div>
-      <p>Hunters carry you back to Kumasi. You keep your level and equipped gear.</p>
-      <ul><li>Lost ${lostItems} unbanked item${lostItems === 1 ? '' : 's'}</li><li>Kept ${keptGold} gold</li><li>+${Math.floor(r.xp / 2)} XP</li>${msgs.map((m) => `<li class="up">${m}</li>`).join('')}</ul>
-      <button class="primary" id="ok">Return to town</button></section>`);
-    screen(s); s.querySelector('#ok').onclick = town; return;
-  }
-  const msgs = gainXp(P, r.xp);
-  P.run.gold += r.gold; P.stats.kills += r.kills;
+  const pr = prog(region.id), max = WAVES[region.id];
+  const msgs = gainXp(P, r.win ? r.xp : Math.floor(r.xp / 2));
+  P.gold += r.win ? r.gold : Math.floor(r.gold / 2); P.stats.kills += r.kills;
   const drops = [];
-  const dropChance = r.hasBoss ? 1 : 0.55;
-  if (Math.random() < dropChance) drops.push(rollLoot(Math.max(1, region.lvl + P.run.floor - 1), r.hasBoss ? 0.35 : 0));
-  if (r.hasBoss) drops.push(rollLoot(region.lvl + 2, 0.25));
-  P.run.loot.push(...drops);
-  if (msgs.length) sfx('level'); else sfx('win');
-  const boss = P.run.floor === region.floors;
-  if (boss) {
-    P.gold += P.run.gold; P.bag.push(...P.run.loot); P.stats.bosses++;
-    if (!P.cleared.includes(region.id)) P.cleared.push(region.id);
-    const next = REGIONS[REGIONS.indexOf(region) + 1]; if (next && !P.unlocked.includes(next.id)) P.unlocked.push(next.id);
-    const banked = P.run.loot.length, gold = P.run.gold; P.run = null; save(P);
-    const s = h(`<section class="result"><div class="brush">Region cleared</div>
-      <p>${MONSTERS[region.boss].name} is defeated. ${next ? next.name + ' is now open.' : 'The spirits are banished. You are the Gyeaman of the Akan lands.'}</p>
-      <ul><li>+${r.xp} XP</li><li>${gold} gold banked</li><li>${banked} items banked</li>${msgs.map((m) => `<li class="up">${m}</li>`).join('')}</ul>
-      <div class="drops"></div><button class="primary" id="ok">Return to town</button></section>`);
-    drops.forEach((d) => s.querySelector('.drops').append(itemCard(d)));
-    screen(s); s.querySelector('#ok').onclick = town; return;
+  if (!r.win) {
+    pr.wave = Math.max(1, Math.floor((pr.wave - 1) / 5) * 5 + 1);
+    P.hp = 0; save(P); sfx('lose');
+    const s = h(`<section class="result lose"><div class="brush red">Fallen</div><p>You crawl back to Kumasi. Rest to recover. Progress returns to wave ${pr.wave} (last checkpoint).</p>
+      <ul><li>+${Math.floor(r.xp / 2)} XP · +${Math.floor(r.gold / 2)} gold</li>${msgs.map((m) => `<li class="up">${m}</li>`).join('')}</ul><button class="primary" id="ok">Back to the map</button></section>`);
+    screen(s); s.querySelector('#ok').onclick = hub; return;
   }
-  P.run.floor++; save(P);
-  const s = h(`<section class="result"><div class="brush">Victory</div>
-    <ul><li>+${r.xp} XP</li><li>+${r.gold} gold (unbanked)</li>${msgs.map((m) => `<li class="up">${m}</li>`).join('')}</ul>
+  const ilvl = region.lvl + Math.floor((pr.wave - 1) / 2);
+  if (Math.random() < (r.boss ? 1 : pr.wave % 5 === 0 ? 0.9 : 0.4)) drops.push(rollLoot(ilvl, r.boss ? 0.35 : pr.wave % 5 === 0 ? 0.2 : 0));
+  if (r.boss) drops.push(rollLoot(ilvl + 1, 0.3));
+  if (Math.random() < 0.25) { P.potions++; drops.push(null); }
+  P.bag.push(...drops.filter(Boolean));
+  pr.best = Math.max(pr.best, pr.wave);
+  let extra = '';
+  if (r.boss) {
+    P.stats.bosses++; if (!P.cleared.includes(region.id)) P.cleared.push(region.id);
+    const next = REGIONS[REGIONS.indexOf(region) + 1]; if (next && !P.unlocked.includes(next.id)) { P.unlocked.push(next.id); extra = next.name + ' is now open on the map.'; }
+    pr.wave = 1;
+  } else pr.wave++;
+  save(P); sfx(msgs.length ? 'level' : 'win');
+  const s = h(`<section class="result"><div class="brush">${r.boss ? 'Boss slain' : 'Wave cleared'}</div>${extra ? `<p>${extra}</p>` : ''}
+    <ul><li>+${r.xp} XP · +${r.gold} gold · ${r.kills} monsters</li>${drops.includes(null) ? '<li>Found a herbal tonic</li>' : ''}${msgs.map((m) => `<li class="up">${m}</li>`).join('')}</ul>
     <div class="drops"></div>
-    <p class="fine">Unbanked loot is lost if you fall. Return to town to keep it safe.</p>
-    <h3>Choose one before the next floor</h3>
-    <div class="menu">
-      <button id="shrine"><strong>Shrine of Asase Yaa</strong><small>Heal 40% HP and MP</small></button>
-      <button id="chest"><strong>Forest cache</strong><small>One more random item</small></button>
-      <button id="press" class="primary"><strong>Press on</strong><small>+25% gold on the next floor</small></button>
-      <button id="home" class="ghost"><strong>Return to town</strong><small>Bank ${P.run.loot.length} items and ${P.run.gold} gold, end the expedition</small></button>
-    </div></section>`);
-  drops.forEach((d) => s.querySelector('.drops').append(itemCard(d)));
+    <div class="menu">${r.boss ? '' : `<button class="primary" id="next"><strong>Next wave (${pr.wave}/${max})</strong><small>HP carries over: ${P.hp}/${maxStats(P).hp}</small></button>`}
+      <button id="gearb"><strong>Gear</strong><small>Equip new drops</small></button>
+      <button class="ghost" id="map"><strong>Back to the map</strong><small>Progress is saved at wave ${pr.wave}</small></button></div></section>`);
+  drops.filter(Boolean).forEach((d) => s.querySelector('.drops').append(itemCard(d)));
   screen(s);
-  s.querySelector('#shrine').onclick = () => { const st = maxStats(P); P.hp = Math.min(st.hp, P.hp + Math.round(st.hp * 0.4)); P.mp = Math.min(st.mp, P.mp + Math.round(st.mp * 0.4)); sfx('heal'); save(P); runMenu(); };
-  s.querySelector('#chest').onclick = () => { const it = rollLoot(region.lvl + P.run.floor - 1, 0.1); P.run.loot.push(it); toast('Found ' + it.name); save(P); runMenu(); };
-  s.querySelector('#press').onclick = () => { P.run.gold = Math.round(P.run.gold * 1.25); save(P); fight(); };
-  s.querySelector('#home').onclick = () => { P.gold += P.run.gold; P.bag.push(...P.run.loot); P.run = null; save(P); toast('Loot banked.'); town(); };
+  const nb = s.querySelector('#next'); if (nb) nb.onclick = () => fight(region);
+  s.querySelector('#gearb').onclick = () => gear(() => afterFightMenu(region));
+  s.querySelector('#map').onclick = hub;
 }
-function runMenu() {
-  const region = regionOf(); const st = maxStats(P);
-  const s = h(`<section><header class="bar"><span class="place">${region.name} · before floor ${P.run.floor}</span></header>
-    <div class="menu">
-      <p class="fine">HP ${P.hp}/${st.hp} · MP ${P.mp}/${st.mp} · ${P.run.loot.length} unbanked items · ${P.run.gold} unbanked gold</p>
-      <button class="primary" id="go"><strong>Descend</strong><small>${P.run.floor === region.floors ? 'Boss: ' + MONSTERS[region.boss].name : 'Floor ' + P.run.floor}</small></button>
-      <button id="gear"><strong>Gear</strong><small>Equip what you found</small></button>
-      <button id="spells"><strong>Spells</strong><small>${P.spells.length} of 4 equipped</small></button>
-      <button class="ghost" id="home"><strong>Return to town</strong><small>Bank loot and end the expedition</small></button>
-    </div></section>`);
-  screen(s);
-  s.querySelector('#go').onclick = fight;
-  s.querySelector('#gear').onclick = () => gear(runMenu);
-  s.querySelector('#spells').onclick = () => spells(runMenu);
-  s.querySelector('#home').onclick = () => { P.gold += P.run.gold; P.bag.push(...P.run.loot); P.run = null; save(P); town(); };
+function afterFightMenu(region) {
+  const pr = prog(region.id);
+  const s = h(`<section><div class="menu"><button class="primary" id="next"><strong>Next wave (${pr.wave}/${WAVES[region.id]})</strong><small>HP ${P.hp}/${maxStats(P).hp}</small></button><button class="ghost" id="map"><strong>Back to the map</strong></button></div></section>`);
+  screen(s); s.querySelector('#next').onclick = () => fight(region); s.querySelector('#map').onclick = hub;
 }
 
 // ---------------- gear ----------------
@@ -263,7 +249,7 @@ function spells(back) {
   for (const [id, sp] of Object.entries(SPELLS)) {
     const known = sp.lvl <= P.level, on = P.spells.includes(id);
     const row = h(`<button type="button" class="spell ${on ? 'on' : ''}" ${known ? '' : 'disabled'} style="--sc:${sp.color}">
-      <i></i><div><strong>${sp.name}</strong> <span>${sp.en}</span><small>${known ? sp.mp + ' MP · range ' + sp.range.join('-') + (sp.area ? ' · area ' + sp.area : '') + (sp.status ? ' · ' + Object.keys(sp.status).join(', ') : '') : 'Learned at level ' + sp.lvl}</small></div><b>${on ? 'Equipped' : known ? 'Equip' : 'Lv ' + sp.lvl}</b></button>`);
+      <i></i><div><strong>${sp.name}</strong> <span>${sp.en}</span><small>${known ? SPELL_ACTIONS[id].st + ' stamina · ' + (SPELL_ACTIONS[id].self ? 'self' : SPELL_ACTIONS[id].pat) + (sp.status ? ' · ' + Object.keys(sp.status).join(', ') : '') + (SPELL_ACTIONS[id].ends ? '' : ' · extra turn') : 'Learned at level ' + sp.lvl}</small></div><b>${on ? 'Equipped' : known ? 'Equip' : 'Lv ' + sp.lvl}</b></button>`);
     if (known) row.onclick = () => {
       if (on) { if (P.spells.length > 1) P.spells = P.spells.filter((x) => x !== id); }
       else if (P.spells.length < 4) P.spells.push(id); else return toast('Unequip a spell first (max 4).');
@@ -286,7 +272,7 @@ function shop() {
   s.querySelector('#pot').onclick = () => buy(15, () => P.potions++);
   s.querySelector('#eth').onclick = () => buy(20, () => P.ethers++);
   stock.items.forEach((it) => s.querySelector('.bag').append(itemCard(it, [['Buy ' + it.value * 3 + 'g', () => buy(it.value * 3, () => { P.bag.push(it); stock.items = stock.items.filter((x) => x !== it); }), 'primary']])));
-  screen(s); s.querySelector('#b').onclick = town;
+  screen(s); s.querySelector('#b').onclick = hub;
 }
 
 title();

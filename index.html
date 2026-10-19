@@ -147,6 +147,40 @@ button:disabled { opacity: .4; cursor: default; }
 .spell small { display: block; font-size: 12px; color: var(--muted); }
 .spell b { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
 .spell.on { border-color: var(--sc); }
+/* map hub */
+.mapwrap { width: 100%; aspect-ratio: 4 / 3; border: 3px solid #c9b27a; border-radius: 4px; overflow: hidden; box-shadow: 6px 6px 0 var(--ink); }
+.mapwrap canvas { width: 100%; height: 100%; display: block; touch-action: manipulation; }
+.loc { background: #e9dfc2; color: var(--ink); border: 3px solid #c9b27a; border-radius: 4px; padding: 12px; margin-top: 10px; display: grid; gap: 4px; }
+.loc .eyebrow { color: #6a5e52; } .loc h3 { color: var(--ink); font-size: 24px; } .loc p { margin: 0; } .loc .fine { color: #6a5e52; }
+.loc .primary { justify-self: start; margin-top: 6px; }
+.dock { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; margin-top: 10px; }
+.dk { background: #b9ac78; color: var(--ink); border: 3px solid #8a7d4c; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dk .row { display: flex; align-items: baseline; gap: 6px; background: #8f8456; border-radius: 3px; padding: 2px 8px; color: #fff6dc; }
+.dk .row b { font-family: var(--display); font-size: 20px; font-variant-numeric: tabular-nums; } .dk .row span { font-size: 10px; letter-spacing: .1em; font-weight: 700; }
+.dbtn { background: #d8cc98; border: 2px solid #8a7d4c; border-radius: 3px; padding: 6px; font-family: var(--display); font-size: 15px; color: var(--ink); }
+.dk .hp, .dk .xp { position: relative; height: 20px; background: #6f6644; border-radius: 3px; overflow: hidden; }
+.dk .hp i, .dk .xp i { position: absolute; inset: 0; width: calc(var(--f) * 100%); background: var(--blood); }
+.dk .xp i { background: var(--spirit); }
+.dk .hp span, .dk .xp span { position: relative; font-size: 12px; font-weight: 700; color: #fff; padding-left: 6px; line-height: 20px; }
+.dk .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.slotb { background: none; border: 0; padding: 0; } .slotb canvas { width: 100% !important; height: auto !important; aspect-ratio: 1; }
+.dk .gold { font-size: 11px; font-weight: 700; }
+@media (max-width: 460px) { .dock { grid-template-columns: 1fr 1fr; } .dk.mid { grid-column: 1 / -1; order: -1; } }
+
+/* board battle */
+.bwrap { width: 100%; aspect-ratio: 1 / 1.22; max-height: 70vh; margin: 0 auto; }
+.bwrap canvas { width: 100%; height: 100%; display: block; touch-action: manipulation; }
+.stam { display: flex; align-items: center; gap: 4px; }
+.stam i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #8bd3ff; }
+.stam i.on { background: #8bd3ff; }
+.stam b { font-size: 12px; margin-left: 4px; }
+.acts2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.act { display: flex; flex-direction: column; gap: 1px; text-align: left; background: var(--panel); border: 2px solid var(--ac, var(--line)); border-radius: 4px; padding: 7px 8px; min-width: 0; }
+.act strong { font-family: var(--display); font-weight: 400; font-size: 16px; }
+.act small { font-size: 11px; color: var(--muted); }
+.act em { font-style: normal; font-size: 10.5px; color: #8bd3ff; }
+.act.weapon { --ac: #f3e7cf; } .act.item { --ac: var(--line); }
+.act.on { background: var(--ac); color: var(--ink); } .act.on small, .act.on em { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
