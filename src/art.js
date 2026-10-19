@@ -133,13 +133,15 @@ export function drawGearIcon(g, item, x, y, size, rarityColor) {
   if (im && im.ok) { g.drawImage(im.el, x + 3, y + 3, size - 6, size - 6); g.restore(); return; }
   g.translate(x + size / 2, y + size / 2);
   const k = size * 0.32; g.strokeStyle = rarityColor; g.fillStyle = rarityColor; g.lineWidth = Math.max(2, size * 0.07); g.lineCap = 'round';
-  const t = item.type || item.slot;
+  const t = { sword: 'afena', shield: 'shield', helmet: 'head', armour: 'body', ring: 'ring' }[item.kind] || item.type || item.slot;
   if (t === 'afena') { g.rotate(-0.8); g.beginPath(); g.moveTo(0, -k * 1.3); g.lineTo(0, k * 0.8); g.moveTo(-k * 0.5, k * 0.45); g.lineTo(k * 0.5, k * 0.45); g.stroke(); g.beginPath(); g.arc(0, -k * 1.0, k * 0.35, 0, Math.PI); g.stroke(); }
   else if (t === 'akuma') { g.rotate(-0.6); g.beginPath(); g.moveTo(0, -k * 1.2); g.lineTo(0, k * 1.2); g.stroke(); g.beginPath(); g.moveTo(0, -k); g.quadraticCurveTo(k * 1.2, -k * 0.9, k, -k * 0.1); g.lineTo(0, -k * 0.3); g.fill(); }
   else if (t === 'pea') { g.rotate(-0.8); g.beginPath(); g.moveTo(0, -k * 1.4); g.lineTo(0, k * 1.3); g.stroke(); g.beginPath(); g.moveTo(0, -k * 1.5); g.lineTo(k * 0.3, -k * 0.9); g.lineTo(-k * 0.3, -k * 0.9); g.fill(); }
   else if (t === 'agyan') { g.beginPath(); g.arc(-k * 0.4, 0, k * 1.1, -1.1, 1.1); g.stroke(); g.beginPath(); g.moveTo(-k * 0.4 + Math.cos(-1.1) * k * 1.1, Math.sin(-1.1) * k * 1.1); g.lineTo(-k * 0.4 + Math.cos(1.1) * k * 1.1, Math.sin(1.1) * k * 1.1); g.stroke(); g.beginPath(); g.moveTo(-k, 0); g.lineTo(k * 1.1, 0); g.stroke(); }
   else if (t === 'poma') { g.beginPath(); g.moveTo(0, k * 1.3); g.lineTo(0, -k * 0.6); g.stroke(); g.beginPath(); g.arc(0, -k * 0.95, k * 0.4, 0, Math.PI * 2); g.stroke(); }
   else if (t === 'sekan') { for (const d of [-1, 1]) { g.save(); g.rotate(d * 0.6); g.beginPath(); g.moveTo(0, -k * 1.1); g.lineTo(0, k * 0.7); g.stroke(); g.restore(); } }
+  else if (t === 'shield') { g.beginPath(); g.moveTo(0, -k * 1.1); g.lineTo(k, -k * 0.6); g.quadraticCurveTo(k, k * 0.7, 0, k * 1.2); g.quadraticCurveTo(-k, k * 0.7, -k, -k * 0.6); g.closePath(); g.stroke(); g.beginPath(); g.moveTo(0, -k * 0.6); g.lineTo(0, k * 0.7); g.stroke(); }
+  else if (t === 'ring') { g.beginPath(); g.arc(0, k * 0.2, k * 0.8, 0, Math.PI * 2); g.stroke(); g.fill(); g.fillStyle = '#1b1419'; g.beginPath(); g.arc(0, k * 0.2, k * 0.5, 0, Math.PI * 2); g.fill(); g.fillStyle = rarityColor; g.beginPath(); g.arc(0, -k * 0.8, k * 0.3, 0, Math.PI * 2); g.fill(); }
   else if (t === 'head') { g.beginPath(); g.arc(0, k * 0.3, k, Math.PI, 0); g.stroke(); g.beginPath(); g.moveTo(-k, k * 0.3); g.lineTo(k, k * 0.3); g.stroke(); }
   else if (t === 'body') { g.beginPath(); g.moveTo(-k, -k * 0.6); g.lineTo(-k * 0.4, -k); g.lineTo(k * 0.4, -k); g.lineTo(k, -k * 0.6); g.lineTo(k * 0.7, k); g.lineTo(-k * 0.7, k); g.closePath(); g.stroke(); }
   else { // charm: spiral
