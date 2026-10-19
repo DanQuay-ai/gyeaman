@@ -143,7 +143,7 @@ function fight(world) {
       <li>Coloured borders: blue buffer (triples an ally), purple caster (charges 3 rounds), yellow ranger, gold treasure (drops gear).</li>
       <li>The board refills until the enemy count is spent. The boss comes last.</li></ul></details></section>`);
   screen(s);
-  s.querySelector('.bwrap').style.aspectRatio = `${world.cols} / ${world.rows + 2.2}`;
+  s.querySelector('.bwrap').style.aspectRatio = `${world.cols} / ${world.rows + 2.6}`;
   battle = new Battle({ canvas: s.querySelector('#bc'), ui: s.querySelector('.bui'), player: P, world, sfx, onEnd: (r) => afterFight(world, r) });
   s.querySelector('#flee').onclick = () => { if (battle) { P.hp = battle.hero.hp; const r = { win: false, fled: true, xp: battle.xp, kills: battle.kills, total: battle.total, drops: battle.drops }; battle.destroy(); battle = null; afterFight(world, r); } };
 }

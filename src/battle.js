@@ -177,7 +177,7 @@ export class Battle {
       d = Math.max(1, Math.round(d * (0.9 + Math.random() * 0.2)));
       this.hero.hp = Math.max(0, this.hero.hp - d);
       this.heroHit = 1; this.shake = 7 + (mult > 1 ? 6 : 0); this.sfx(mult > 1 ? 'crit' : 'hurt');
-      this.floats.push({ x: this.heroX + (Math.random() - 0.5) * 40, y: this.heroY - 60, text: '-' + d, color: '#ff6a5a', life: 1, size: mult > 1 ? 1.3 : 1 });
+      this.floats.push({ x: this.heroX + (Math.random() - 0.5) * 40, y: this.heroY - this.heroScale * 80, text: '-' + d, color: '#ff6a5a', life: 1, size: mult > 1 ? 1.3 : 1 });
       await sleep(150);
       if (this.hero.hp <= 0) { this.finish(false); return; }
     }
@@ -226,7 +226,7 @@ export class Battle {
     this.cv.width = Math.round(r.width * dpr); this.cv.height = Math.round(r.height * dpr);
     this.cs = Math.min((r.width - 16) / this.C, (r.height - 130) / this.R);
     this.ox = (r.width - this.cs * this.C) / 2; this.oy = 26;
-    this.heroX = r.width / 2; this.heroY = this.oy + this.cs * this.R + 100;
+    this.heroX = r.width / 2; this.heroY = r.height - 4; this.heroScale = Math.max(0.6, Math.min(1.6, (r.height - (this.oy + this.cs * this.R) - 30) / 118));
   }
   cellAt(e) {
     const r = this.cv.getBoundingClientRect();
@@ -281,7 +281,7 @@ export class Battle {
       m.hit = Math.max(0, m.hit - 0.08); m.lunge = Math.max(0, m.lunge - 0.1);
     }
     const hero = HEROES.find((h) => h.id === this.p.hero);
-    g.save(); if (this.heroHit > 0.5) g.filter = 'brightness(3) saturate(0)'; drawHero(g, hero, this.heroX, this.heroY, 0.7); g.restore();
+    g.save(); if (this.heroHit > 0.5) g.filter = 'brightness(3) saturate(0)'; drawHero(g, hero, this.heroX, this.heroY, this.heroScale); g.restore();
     this.heroHit = Math.max(0, (this.heroHit || 0) - 0.06);
     for (const f of this.fx) {
       if (f.kind === 'p') { f.x += f.vx; f.y += f.vy; f.vy += 0.15; f.life -= 0.03; g.globalAlpha = Math.max(0, f.life); g.fillStyle = f.color; g.fillRect(f.x - 2, f.y - 2, 4, 4); }
