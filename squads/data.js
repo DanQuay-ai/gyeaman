@@ -7,26 +7,26 @@ export const RARITY = {
   SSR: { name: 'Legendary', color: '#e3b448', stars: 3, shards: 20 },
 };
 
-// row 0 = front line, 1 = back line. size = height relative to an average adult. spd = speed (turn order: higher acts sooner).
-// kit = [basic, skill, ultimate]. cd = skill cooldown in own turns. Ultimates need 100 energy.
-// role/kr: Twi role in Kɔradin-convention Latin spelling (CrV clusters take a vowel: Ɔbrafo -> Ɔberafo, Toprefo -> Toperefo).
+// 1v1 duels. kit = [basic, skill 1, skill 2, ultimate]; cd = cooldowns of the two skills in own turns; ultimate needs 100 energy.
+// spd = speed: the turn meter fills at this rate, so a much faster fighter sometimes acts twice in a row.
+// role is standard Twi spelling; kr is the same word in Kɔradin spelling (vowel inserted in CrV clusters), used only with the Kɔradin font.
 export const HEROES = {
-  blay:     { name: 'Blay',     role: 'Asafo',        en: 'Sword fighter', rarity: 'R',   row: 0, size: 1.06, hp: 420, atk: 46, def: 22, spd: 100, range: 0, cd: 2, flip: [0, 0, 0],
-    kit: ['Slash', 'Twin Cut', 'Gyawu Atiko'], notes: ['One afena cut.', 'Two cuts on one enemy and lowers its defence for 2 turns.', 'Valour of Gyawu: a huge cut through the three front enemies, then Blay hits harder for 2 turns.'], sym: 'gyawuAtiko' },
-  owureku:  { name: 'Owureku',  role: 'Ɔberafo',      en: 'Twin-axe bruiser', rarity: 'R', row: 0, size: 0.94, hp: 480, atk: 42, def: 28, spd: 92, range: 0, cd: 3, flip: [0, 0, 0],
-    kit: ['Axe Chop', 'Axe Toss', 'Ese Ne Tekerema'], notes: ['Heavy axe chop.', 'Hurls an axe at a back-row enemy and stuns it for 1 turn.', 'Teeth and tongue: a heavy blow, then the whole squad hits harder for 2 turns and moves 25% up the turn order.'], sym: 'eseNeTekrema' },
-  gyakari:  { name: 'Gyakari',  role: 'Banbɔfo',      en: 'Shield tank', rarity: 'R',     row: 0, size: 1.14, hp: 600, atk: 30, def: 44, spd: 84, range: 0, cd: 3, flip: [0, 0, 0],
-    kit: ['Spear Jab', 'Shield Bash', 'Eban'], notes: ['Spear jab that taunts the target for 1 turn.', 'Bashes one enemy and stuns it for 1 turn.', 'The fence: shields the squad for 2 turns and taunts every enemy.'], sym: 'eban' },
-  obiri:    { name: 'Obiri',    role: 'Toperefo',     en: 'Marksman', rarity: 'SR',       row: 1, size: 1.0,  hp: 320, atk: 54, def: 14, spd: 112, range: 1, cd: 3, flip: [0, 0, 0],
-    kit: ['Arrow', 'Volley', 'Hwemuduia'], notes: ['An arrow at any enemy.', 'Arrows on every enemy.', 'The measuring stick: one exact shot on the weakest enemy. A kill refunds half the energy.'], sym: 'hwemuDua' },
-  kuukua:   { name: 'Kuukua',   role: 'Asafo',        en: 'Spear lancer', rarity: 'SR',   row: 1, size: 1.08, hp: 360, atk: 48, def: 18, spd: 104, range: 1, cd: 2, flip: [0, 0, 0],
-    kit: ['Thrust', 'Pierce', 'Epa'], notes: ['Spear thrust that reaches any enemy.', 'Pierces one enemy and slows it for 2 turns.', 'No one escapes justice: spears fall on every enemy and lower their defence for 2 turns.'], sym: 'epa' },
-  kome:     { name: 'Kome',     role: 'Ɔkɔmfo',       en: 'Spirit priestess', rarity: 'SR', row: 1, size: 0.92, hp: 310, atk: 36, def: 14, spd: 108, range: 1, cd: 3, flip: [0, 0, 0],
-    kit: ['Spirit Bolt', 'Nyame Duia', 'Hye Won Hye'], notes: ['Fire bolt that burns for 2 turns.', 'Heals the weakest ally for 35% and clears stun and burn.', 'That which does not burn: heals the squad for 25% and burns every enemy.'], sym: 'hyeWonhye', sym2: 'nyameDua' },
-  afrakoma: { name: 'Afrakoma', role: 'Ɔberafo',      en: 'Axe berserker', rarity: 'SSR', row: 0, size: 1.0,  hp: 470, atk: 54, def: 24, spd: 98, range: 0, cd: 3, flip: [0, 0, 1],
-    kit: ['Cleave', 'Wide Cleave', 'Dwannimmen'], notes: ['Big cleave that splashes the next enemy.', 'Cleaves the two front enemies and heals for half the damage.', 'Ram\'s horns: cleaves every enemy and heals for half the damage.'], sym: 'dwannimen' },
-  dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', en: 'Night blade', rarity: 'SSR',   row: 1, size: 0.98, hp: 340, atk: 58, def: 16, spd: 128, range: 0, dive: 1, cd: 2, flip: [0, 0, 0],
-    kit: ['Night Cut', 'Shadow Step', 'Ɛnkyinkyim'], notes: ['Hunts the weakest enemy.', 'A certain critical strike, then Dufie moves 50% up the turn order.', 'The twisting path: six cuts across random enemies.'], sym: 'nkyimkyim' },
+  blay:     { name: 'Blay',     role: 'Asafo',        kr: 'asafo',        en: 'Sword fighter', rarity: 'R',   size: 1.06, hp: 1050, atk: 66, def: 26, spd: 100, cd: [2, 3], flip: [0, 0, 0],
+    kit: ['Slash', 'Twin Cut', 'Parry', 'Gyawu Atiko'], notes: ['One afena cut.', 'Two cuts and the enemy\'s defence drops for 2 turns.', 'Guard: the next hit is halved and Blay strikes back.', 'Valour of Gyawu: a huge cut. Kills outright below 30% health.'], sym: 'gyawuAtiko' },
+  owureku:  { name: 'Owureku',  role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Twin-axe bruiser', rarity: 'R', size: 0.94, hp: 1080, atk: 60, def: 30, spd: 92, cd: [3, 3], flip: [0, 0, 0],
+    kit: ['Axe Chop', 'Axe Toss', 'War Cry', 'Ese Ne Tekrema'], notes: ['Heavy axe chop.', 'Hurls an axe: damage and a 1-turn stun that cancels a charged attack.', 'Hits 30% harder for 3 turns and heals 10%.', 'Teeth and tongue: three heavy blows in a row.'], sym: 'eseNeTekrema' },
+  gyakari:  { name: 'Gyakari',  role: 'Banbɔfo',      kr: 'banbɔfo',      en: 'Shield tank', rarity: 'R',     size: 1.14, hp: 1250, atk: 42, def: 46, spd: 84, cd: [3, 3], flip: [0, 0, 0],
+    kit: ['Spear Jab', 'Shield Bash', 'Brace', 'Eban'], notes: ['Spear jab.', 'Bash: damage and a 1-turn stun that cancels a charged attack.', 'Raises his shield: absorbs 30% of his health for 2 turns.', 'The fence: a huge shield, then a counter-thrust that grows with the shield.'], sym: 'eban' },
+  obiri:    { name: 'Obiri',    role: 'Toprefo',      kr: 'toperefo',     en: 'Marksman', rarity: 'SR',       size: 1.0,  hp: 760, atk: 70, def: 16, spd: 112, cd: [2, 3], flip: [0, 0, 0],
+    kit: ['Arrow', 'Pinning Shot', 'Steady Aim', 'Hwemudua'], notes: ['An arrow.', 'Pins the enemy: damage and slowed for 2 turns.', 'The next attack is a critical hit that ignores defence.', 'The measuring stick: one exact shot for massive damage. Always critical.'], sym: 'hwemuDua' },
+  kuukua:   { name: 'Kuukua',   role: 'Asafo',        kr: 'asafo',        en: 'Spear lancer', rarity: 'SR',   size: 1.08, hp: 820, atk: 64, def: 20, spd: 104, cd: [2, 3], flip: [0, 0, 0],
+    kit: ['Thrust', 'Pierce', 'Sweep', 'Epa'], notes: ['Spear thrust.', 'Pierces armour: lowers defence for 2 turns.', 'Sweeps the legs: the enemy loses 40% of its turn meter.', 'No one escapes justice: a rain of spears, double damage on a slowed or weakened enemy.'], sym: 'epa' },
+  kome:     { name: 'Kome',     role: 'Ɔkɔmfo',       kr: 'ɔkɔmfo',       en: 'Spirit priestess', rarity: 'SR', size: 0.92, hp: 760, atk: 52, def: 16, spd: 108, cd: [3, 2], flip: [0, 0, 0],
+    kit: ['Spirit Bolt', 'Nyame Dua', 'Spirit Fire', 'Hye Won Hye'], notes: ['Fire bolt.', 'Heals 22% and clears stun and burn.', 'Sets the enemy burning for 3 turns.', 'That which does not burn: heals 20% and a blast that doubles on a burning enemy.'], sym: 'hyeWonhye', sym2: 'nyameDua' },
+  afrakoma: { name: 'Afrakoma', role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Axe berserker', rarity: 'SSR', size: 1.0,  hp: 980, atk: 72, def: 24, spd: 98, cd: [2, 3], flip: [0, 0, 0],
+    kit: ['Cleave', 'Bloodletting', 'Fury', 'Dwannimmen'], notes: ['Big cleave.', 'A cleave that heals for half the damage.', 'Hits 40% harder for 3 turns but costs 10% health.', 'Ram\'s horns: a crushing cleave that heals for half the damage.'], sym: 'dwannimen' },
+  dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', kr: 'anadwo sekan', en: 'Night blade', rarity: 'SSR',   size: 0.98, hp: 800, atk: 74, def: 18, spd: 128, cd: [2, 3], flip: [0, 0, 0],
+    kit: ['Night Cut', 'Shadow Step', 'Vanish', 'Nkyinkyim'], notes: ['Quick cut.', 'A certain critical strike, then Dufie moves 50% up the turn order.', 'Dodges the next attack completely.', 'The twisting path: six cuts in a row.'], sym: 'nkyimkyim' },
 };
 export const STARTERS = ['blay', 'gyakari', 'kome'];
 export const SKILL_MAX = 10;
@@ -36,15 +36,15 @@ export const STAR_SHARDS = [0, 0, 10, 20, 40, 80]; // shards needed to reach sta
 
 // Monsters: ult = 'heal' | 'aoe' | 'smash' (needs 100 energy, +34 per turn). on = basic-attack side effect.
 export const MONS = {
-  mmoatia:    { name: 'Ɛmmoatia',   size: 0.66, hp: 260, atk: 26, def: 10, spd: 104, range: 0, flip: [1, 1, 1] },
+  mmoatia:    { name: 'Mmoatia',   size: 0.66, hp: 260, atk: 26, def: 10, spd: 104, range: 0, flip: [1, 1, 1] },
   kakai:      { name: 'Kakai',      size: 0.92, hp: 230, atk: 30, def: 10, spd: 96, range: 1, shot: 'thorn', on: 'defDown', flip: [1, 1, 1] },
-  asanbosam:  { name: 'Asanbosam',  size: 1.12, hp: 420, atk: 40, def: 20, spd: 88, range: 0, on: 'drain', flip: [0, 1, 0] },
+  asanbosam:  { name: 'Asanbosam',  size: 1.12, hp: 420, atk: 40, def: 20, spd: 88, range: 0, on: 'drain', flip: [0, 0, 0] },
   bayie:      { name: 'Bayie',      size: 1.0,  hp: 300, atk: 42, def: 12, spd: 94, range: 1, shot: 'hex', ult: 'aoe', flip: [0, 0, 0] },
   saman:      { name: 'Saman',      size: 1.02, hp: 340, atk: 22, def: 16, spd: 86, range: 1, shot: 'hex', ult: 'heal', flip: [0, 0, 0] },
   sasabonsam: { name: 'Sasabonsam', size: 1.32, hp: 620, atk: 52, def: 28, spd: 90, range: 0, ult: 'smash', flip: [1, 1, 1] },
-  sika:       { name: 'Sika Kwaku', size: 0.6,  hp: 300, atk: 12, def: 30, spd: 70, range: 0, gold: 1, flip: [1, 1, 0] },
-  mmoatiaHene:{ name: 'Ɛmmoatia Hene', size: 1.2, hp: 1500, atk: 48, def: 26, spd: 92, range: 0, boss: 1, ult: 'smash', flip: [1, 0, 0] },
-  bayieQueen: { name: 'Bayie Ɔhemmaa', size: 1.3, hp: 2000, atk: 60, def: 24, spd: 96, range: 1, shot: 'hex', boss: 1, ult: 'aoe', flip: [0, 1, 0] },
+  sika:       { name: 'Sika Kwaku', size: 0.6,  hp: 300, atk: 12, def: 30, spd: 70, range: 0, gold: 1, flip: [1, 1, 1] },
+  mmoatiaHene:{ name: 'Mmoatia Hene', size: 1.2, hp: 1500, atk: 48, def: 26, spd: 92, range: 0, boss: 1, ult: 'smash', flip: [1, 0, 0] },
+  bayieQueen: { name: 'Bayie Ɔhemmaa', size: 1.3, hp: 2000, atk: 60, def: 24, spd: 96, range: 1, shot: 'hex', boss: 1, ult: 'aoe', flip: [1, 1, 1] },
   sasaKing:   { name: 'Sasabonsam Elder', size: 1.55, hp: 2800, atk: 70, def: 34, spd: 90, range: 0, boss: 1, ult: 'smash', flip: [1, 1, 1] },
   abonsam:    { name: 'Abonsam', size: 1.6, hp: 3800, atk: 80, def: 38, spd: 96, range: 1, shot: 'hex', boss: 1, ult: 'aoe', flip: [1, 1, 1] },
 };
@@ -58,7 +58,7 @@ export const DIFF = [
 // Regions of chapter 1 (Akan). Stage x,y are fractions of the map image.
 // ground = top and bottom of the walkable floor in the background image (fractions of its height)
 export const REGIONS = {
-  forest: { name: 'Ɛmmoatia Forest', bg: 'forest', ground: [.8, .97] },
+  forest: { name: 'Mmoatia Forest', bg: 'forest', ground: [.8, .97] },
   marsh:  { name: 'Bayie Marsh',    bg: 'marsh', ground: [.71, .86] },
   grove:  { name: 'Sasabonsam Grove', bg: 'grove', ground: [.8, .97] },
   gate:   { name: 'Abonsam Gate',   bg: 'gate', ground: [.77, .97] },
@@ -90,7 +90,7 @@ export const STAGES = [
 // Stage strength multipliers, tuned with the headless turn-based sim. A player who clears each stage once
 // (levels from that XP, a few skill upgrades, 1-2 summoned heroes) wins normal stages when using skills;
 // Auto (basics + ultimates only) can lose from stage 1, and bosses need skills, stuns and heals.
-export const STAGE_POW = [2.15, 1.26, 1.1, 1.13, 1.06, 0.93, 1.08, 0.84, 0.98, 0.96, 0.85, 0.75, 0.89, 0.88, 0.73, 0.58, 0.64, 0.69, 0.67, 0.52];
+export const STAGE_POW = [2.15, 1.26, 1.1, 1.13, 1.06, 0.56, 0.85, 0.67, 0.77, 0.76, 0.68, 0.59, 0.7, 0.69, 0.58, 0.46, 0.5, 0.55, 0.53, 0.41];
 STAGES.forEach((t, i) => { t.pow = STAGE_POW[i]; });
 
 export const LOCKED_CHAPTERS = ['Yoruba', 'Edo', 'Igbo', 'Haitian', 'Japan'];

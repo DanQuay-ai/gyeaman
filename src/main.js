@@ -110,7 +110,7 @@ function title() {
   const n = h(`<button class="btn ${P ? 'ghost' : 'hot'} wide" type="button">${P ? 'New hunter' : 'Begin'}</button>`);
   n.onclick = () => { unlockAudio(); sfx('click'); if (P && !n.dataset.sure) { n.dataset.sure = 1; n.textContent = 'Tap again: this replaces your hunter'; return; } create(0); };
   menu.append(n);
-  menu.append(h(`<a class="btn ghost wide" href="squads/" style="text-decoration:none">Squads (beta) · new mode</a>`));
+  menu.append(h(`<a class="btn ghost wide" href="squads/" style="text-decoration:none">Duels (beta) · new mode</a>`));
   show(s);
 }
 
