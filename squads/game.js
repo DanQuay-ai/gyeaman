@@ -64,21 +64,24 @@ function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
 }
-// Veo-generated sprite clips (12 fps, keyed). fw/fh frame size, ax = body centre x, fy = feet y, bh = body height in frame px.
+// Veo-generated sprite clips, 12 fps, keyed with an ink outline. Sheets hold `per` frames in `cols` columns (kept under ~4 MP for mobile GPUs).
+// ax/fy = body centre x and feet y inside a frame, bh = body height in frame px (matched to the static pose 0).
+const clip = (name, m, play) => ({ ...m, sheets: m.sheets.map((f) => A + 'anim/' + f), play: play || [...Array(m.n).keys()] });
 const ANIM = {
   dufie: {
-    idle: { src: A + 'anim/dufie_idle.webp', n: 96, cols: 12, fw: 240, fh: 360, ax: 120, fy: 325, bh: 273 },
-    atk: { src: A + 'anim/dufie_atk.webp', n: 48, cols: 8, fw: 400, fh: 360, ax: 200, fy: 325, bh: 273, from: 18, to: 33 },
+    idle: clip('idle', { n: 22, fw: 465, fh: 540, per: 12, cols: 4, ax: 232, fy: 507, bh: 450, sheets: ['dufie_idle_0.webp', 'dufie_idle_1.webp'] }),
+    atk: clip('atk', { n: 35, fw: 825, fh: 540, per: 8, cols: 4, ax: 404, fy: 507, bh: 450, sheets: ['dufie_atk_0.webp', 'dufie_atk_1.webp', 'dufie_atk_2.webp', 'dufie_atk_3.webp', 'dufie_atk_4.webp'] }, [...Array(20).keys()]),
   },
 };
+for (const id in ANIM) { for (const c of Object.values(ANIM[id])) c.sheets.forEach((u) => img(u)); ['s1', 's2'].forEach((k) => img(`${A}${id}_${k}.webp`)); }
 // draw one clip frame with feet at (0,0) and body height bodyH
-function drawClip(g, clip, fi, bodyH) {
-  const im = img(clip.src); if (!im.ok) return false;
-  const k = bodyH / clip.bh, i = Math.max(0, Math.min(clip.n - 1, fi));
-  g.drawImage(im.el, (i % clip.cols) * clip.fw, Math.floor(i / clip.cols) * clip.fh, clip.fw, clip.fh, -clip.ax * k, -clip.fy * k, clip.fw * k, clip.fh * k);
+function drawClip(g, c, fi, bodyH) {
+  fi = Math.max(0, Math.min(c.n - 1, fi | 0));
+  const im = img(c.sheets[Math.floor(fi / c.per)]); if (!im.ok) return false;
+  const j = fi % c.per, k = bodyH / c.bh;
+  g.drawImage(im.el, (j % c.cols) * c.fw, Math.floor(j / c.cols) * c.fh, c.fw, c.fh, -c.ax * k, -c.fy * k, c.fw * k, c.fh * k);
   return true;
 }
-const clipFrame = (clip, p) => clip.from + Math.floor(p * (clip.to - clip.from)); // beta: Veo-generated idle loops
 const poseSrc = (id, k) => `${A}${id}_${k}.webp`;
 const faceSrc = (id) => (HEROES[id] ? `${A}face_${id}.webp` : poseSrc(id, 0));
 function scaled(e, th) {
@@ -240,76 +243,128 @@ function pickScreen() {
   draw();
 }
 
-// ---------------- heroes ----------------
-let heroSel = null, poseLoop = null, heroTab = 'skills';
+// ---------------- heroes (Dislyte-style: art first, panels on demand) ----------------
+const ICO = {
+  guardian: '<path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/>',
+  warrior: '<path d="M19 2h3v3L10 17l-3-3zM3 18l3-3 3 3-3 3zM6 13l5 5-2 2-5-5z"/>',
+  sage: '<path d="M12 2a10 10 0 1 0 10 10h-3a7 7 0 1 1-7-7 4 4 0 1 1-4 4H5a7 7 0 1 0 7-7z"/>',
+  hunter: '<path d="M2 21 15 8l-3-1 8-5-5 8-1-3L2 21z"/>',
+  shadow: '<path d="M14 2C8 2 4 7 4 12s4 10 10 10c-4-2-6-6-6-10s2-8 6-10zM18 6l-6 6 1 1 6-6z"/>',
+  skills: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
+  growth: '<path d="M12 3 4 11h5v10h6V11h5z"/>',
+  stars: '<path d="m12 2 3 7 7 .6-5.3 4.6L18.4 22 12 18l-6.4 4 1.7-7.8L2 9.6 9 9z"/>',
+  lore: '<path d="M4 3h11l5 5v13H4zm10 1v5h5"/>',
+  play: '<path d="M7 4v16l13-8z"/>',
+  close: '<path d="m5 5 14 14M19 5 5 19" stroke="currentColor" stroke-width="3" fill="none"/>',
+};
+const icon = (k, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${ICO[k]}</svg>`;
+let heroSel = null, poseLoop = null, heroTab = null, heroFilter = 'all';
+const rarOrder = (r) => 'R SR SSR'.indexOf(r);
+function heroList() {
+  return Object.keys(HEROES).sort((a, b) => (SAVE.heroes[b] ? 1 : 0) - (SAVE.heroes[a] ? 1 : 0) || (SAVE.heroes[a] && SAVE.heroes[b] ? power(b) - power(a) : 0) || rarOrder(HEROES[b].rarity) - rarOrder(HEROES[a].rarity));
+}
+const needsYou = (id) => SAVE.heroes[id] && (canPromote(id) || freePts(id) > 0);
 function heroesScreen(id) {
   if (poseLoop) { cancelAnimationFrame(poseLoop); poseLoop = null; }
-  if (id) heroSel = id;
+  if (id) { heroSel = id; heroTab = null; }
   if (!heroSel) {
-    const ids = Object.keys(HEROES).sort((a, b) => (SAVE.heroes[b] ? 1 : 0) - (SAVE.heroes[a] ? 1 : 0) || 'R SR SSR'.indexOf(HEROES[b].rarity) - 'R SR SSR'.indexOf(HEROES[a].rarity));
-    const s = h(`<div class="screen"><div class="head"><div><h2>Heroes</h2><span class="sub">${Object.keys(SAVE.heroes).length} of 8 recruited</span></div></div><div class="grid">${ids.map((x) => heroCard(x)).join('')}</div></div>`);
+    const ids = heroList().filter((x) => heroFilter === 'all' || HEROES[x].cls === heroFilter);
+    const s = h(`<div class="screen hlist"><div class="head"><div><h2>Heroes</h2><span class="sub">${Object.keys(SAVE.heroes).length} of ${Object.keys(HEROES).length} recruited</span></div></div>
+      <div class="cfilter">${['all', ...Object.keys(CLASSES)].map((c) => `<button type="button" data-c="${c}" class="${heroFilter === c ? 'on' : ''}">${c === 'all' ? 'All' : icon(c) + CLASSES[c].name}</button>`).join('')}</div>
+      <div class="hgrid">${ids.map((x) => { const H = HEROES[x], sv = SAVE.heroes[x];
+        return `<button class="hcard ${sv ? '' : 'locked'}" type="button" data-id="${x}" style="--rc:${RARITY[H.rarity].color}"><img src="${faceSrc(x)}" alt="" loading="lazy">
+          <span class="cl" title="${CLASSES[H.cls].name}">${icon(H.cls)}</span>${sv ? `<span class="stars">${'★'.repeat(sv.stars)}</span>` : ''}${needsYou(x) ? '<i class="dot"></i>' : ''}
+          <span class="lab"><b>${H.name}</b><span>${sv ? 'Lv ' + sv.lvl : 'Not recruited'}</span></span></button>`; }).join('')}</div></div>`);
     shell('heroes', s);
-    s.querySelectorAll('.hc').forEach((c) => { if (SAVE.heroes[c.dataset.id] && (canPromote(c.dataset.id) || freePts(c.dataset.id) > 0)) c.append(h('<i class="dot"></i>')); c.onclick = () => { SFX.click(); heroesScreen(c.dataset.id); }; });
+    s.querySelectorAll('.cfilter button').forEach((b) => (b.onclick = () => { heroFilter = b.dataset.c; SFX.click(); heroesScreen(); }));
+    s.querySelectorAll('.hcard').forEach((c) => (c.onclick = () => { SFX.click(); heroesScreen(c.dataset.id); }));
     return;
   }
-  const H = HEROES[heroSel], s0 = SAVE.heroes[heroSel], own = !!s0, R = RARITY[H.rarity], AD = ADINKRA[H.sym];
-  const st = own ? statsOf(heroSel) : { hp: H.hp, atk: H.atk, def: H.def, spd: H.spd };
-  const s = h(`<div class="screen hero"><div class="head"><button class="back" type="button" aria-label="Back">${CHEV(180)}</button><div><h2>${H.name}</h2><span class="sub"><b style="color:${R.color}">${R.name}</b> · ${CLASSES[H.cls].name} · ${H.en}</span></div></div>
-    <div class="stage3"><canvas aria-label="${H.name}"></canvas><span class="krole" title="${H.role} in Kɔradin">${H.kr}</span>
-      <div class="poses"><button data-p="0" type="button" class="on">Idle</button><button data-p="1" type="button">Attack</button><button data-p="2" type="button">Ultimate</button></div></div>
-    <div class="tabs"><button data-t="skills" type="button">Skills</button><button data-t="stats" type="button">Growth${own && freePts(heroSel) > 0 ? '<i class="dot"></i>' : ''}</button><button data-t="symbol" type="button">Symbol</button></div>
-    <div class="pane"></div></div>`);
+  const H = HEROES[heroSel], s0 = SAVE.heroes[heroSel], own = !!s0, R = RARITY[H.rarity], C = CLASSES[H.cls], AD = ADINKRA[H.sym];
+  const st = own ? statsOf(heroSel) : { hp: H.hp, atk: H.atk, def: H.def, spd: C.spd, mag: 100 };
+  const order = heroList(), idx = order.indexOf(heroSel);
+  const s = h(`<div class="hdet" style="--rc:${R.color}">
+    <canvas class="hart" aria-label="${H.name}"></canvas><div class="hshade"></div>
+    <div class="htop"><button class="back" type="button" aria-label="Back">${CHEV(180)}</button>
+      <div class="hname"><span class="rar">${R.name}</span><h2>${H.name}</h2><span class="hcls">${icon(H.cls)}${C.name}<i>·</i><span class="kr" title="${H.role}">${H.kr}</span></span></div></div>
+    <div class="hstats">${own ? `<div class="pw"><span>Power</span><b>${fmt(power(heroSel))}</b></div><div class="lv">Lv <b>${s0.lvl}</b> <span>${'★'.repeat(s0.stars)}</span></div>` : '<div class="lv locked">Not recruited</div>'}
+      <ul><li><span>HP</span><b>${fmt(st.hp)}</b></li><li><span>ATK</span><b>${st.atk}</b></li><li><span>SPD</span><b>${st.spd}</b></li></ul></div>
+    <nav class="hrail">${[['skills', 'Skills'], ['growth', 'Growth'], ['stars', 'Stars'], ['lore', 'Symbol']].map(([k, l]) => `<button type="button" data-t="${k}" aria-label="${l}">${icon(k)}<span>${l}</span>${(k === 'growth' && own && freePts(heroSel) > 0) || (k === 'stars' && own && canPromote(heroSel)) ? '<i class="dot"></i>' : ''}</button>`).join('')}
+      <button type="button" class="play" aria-label="Preview moves">${icon('play')}<span>Moves</span></button></nav>
+    <div class="hnav"><button type="button" class="prevh" aria-label="Previous hero">${CHEV(180)}</button><span>${idx + 1} / ${order.length}</span><button type="button" class="nexth" aria-label="Next hero">${CHEV(0)}</button></div>
+    <div class="hsheet" aria-hidden="true"><div class="hs-head"><b></b><button type="button" class="hs-x" aria-label="Close">${icon('close')}</button></div><div class="hs-body"></div></div></div>`);
   shell('heroes', s);
+  const go = (d) => { const n = order[(idx + d + order.length) % order.length]; SFX.click(); const t = heroTab; heroesScreen(n); if (t) { heroTab = t; } };
   $('.back', s).onclick = () => { heroSel = null; heroesScreen(); };
-  const pane = $('.pane', s);
-  const show = (t) => {
-    heroTab = t; s.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
-    if (t === 'stats') {
-      const p = own ? ptsOf(heroSel) : { hp: 0, atk: 0, spd: 0, mag: 0 }, free = own ? freePts(heroSel) : 0, C = CLASSES[H.cls];
-      const stt = own ? statsOf(heroSel) : { ...st, spd: C.spd, mag: 100 };
-      const G = [['hp', 'Health', stt.hp, '+5% health'], ['atk', 'Attack', stt.atk, '+5% basic and skill damage'], ['mag', 'Magic', stt.mag + '%', '+5% skill, ultimate and healing power'], ['spd', 'Speed', stt.spd, `+${GROWTH.spd} speed · costs ${GROWTH.spdCost} · max ${GROWTH.spdCap}`]];
-      pane.innerHTML = `${own ? `<div class="lvl"><b>Level ${s0.lvl}</b><span class="st5">${'★'.repeat(s0.stars)}<i>${'★'.repeat(5 - s0.stars)}</i></span></div><div class="bar"><i style="transform:scaleX(${s0.xp / xpNeed(s0.lvl)})"></i></div>` : '<p class="note">Not recruited yet. Call heroes at the Shrine.</p>'}
-        <div class="row card cls"><div><span class="sub">Class</span><b>${C.name} · base speed ${C.spd}</b><small>${C.desc}</small></div></div>
-        ${own ? `<div class="gpts"><b>${free}</b> growth point${free === 1 ? '' : 's'} to spend <small>One per level. Free reset in beta.</small></div>` : ''}
+  $('.prevh', s).onclick = () => go(-1); $('.nexth', s).onclick = () => go(1);
+  const sheet = $('.hsheet', s), body = $('.hs-body', sheet);
+  const close = () => { heroTab = null; s.classList.remove('open'); sheet.setAttribute('aria-hidden', 'true'); s.querySelectorAll('.hrail button').forEach((b) => b.classList.remove('on')); };
+  $('.hs-x', s).onclick = () => { SFX.click(); close(); };
+  const open = (t) => {
+    heroTab = t; s.classList.add('open'); sheet.setAttribute('aria-hidden', 'false');
+    s.querySelectorAll('.hrail button[data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
+    $('.hs-head b', s).textContent = { skills: 'Skills', growth: 'Growth', stars: 'Stars', lore: 'Symbol' }[t];
+    if (t === 'growth') {
+      const p = own ? ptsOf(heroSel) : { hp: 0, atk: 0, spd: 0, mag: 0 }, free = own ? freePts(heroSel) : 0;
+      const G = [['hp', 'Health', st.hp, '+5% health'], ['atk', 'Attack', st.atk, '+5% damage'], ['mag', 'Magic', st.mag + '%', '+5% skills, ultimate, healing'], ['spd', 'Speed', st.spd, `+${GROWTH.spd} · costs ${GROWTH.spdCost} · max ${GROWTH.spdCap}`]];
+      body.innerHTML = `${own ? `<div class="lvrow"><b>Lv ${s0.lvl}</b><div class="bar"><i style="transform:scaleX(${s0.xp / xpNeed(s0.lvl)})"></i></div><span>${s0.xp}/${xpNeed(s0.lvl)} XP</span></div>
+          <div class="gpts"><b>${free}</b> point${free === 1 ? '' : 's'} to spend<small>One per level. ${C.name}s start at speed ${C.spd}. Free reset in beta.</small></div>` : `<p class="note">${C.name} · base speed ${C.spd}. Recruit at the Shrine to grow.</p>`}
         <div class="growth">${G.map(([k, l, v, n]) => { const can = own && (k === 'spd' ? free >= GROWTH.spdCost && p.spd < GROWTH.spdCap : free >= 1);
           return `<div class="gr"><div><span>${l}</span><b>${v}</b><small>${n}</small></div><em>${p[k] || 0}${k === 'spd' ? '/' + GROWTH.spdCap : ''}</em>${own ? `<button class="btn sm" type="button" data-g="${k}" ${can ? '' : 'disabled'} aria-label="Add a point to ${l}">+</button>` : ''}</div>`; }).join('')}</div>
-        ${own ? `<div class="row card"><div><b>Power ${power(heroSel)}</b><small>Shards ${s0.shards} / ${s0.stars < 5 ? STAR_SHARDS[s0.stars + 1] : 'max'} · each star adds 15% and a little speed.</small></div><button class="btn sm" id="promo" type="button" ${canPromote(heroSel) ? '' : 'disabled'}>Promote</button></div>
-          <button class="btn ghost sm" id="respec" type="button" ${p.hp + p.atk + p.mag + p.spd ? '' : 'disabled'}>Reset growth points</button>` : ''}`;
-      pane.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { ptsOf(heroSel)[b.dataset.g]++; SFX.heal(); store(); heroesScreen(); }));
-      const rs = $('#respec', pane); if (rs) rs.onclick = () => { s0.pts = { hp: 0, atk: 0, spd: 0, mag: 0 }; SFX.click(); store(); heroesScreen(); };
-      const pr = $('#promo', pane); if (pr) pr.onclick = () => { s0.shards -= STAR_SHARDS[s0.stars + 1]; s0.stars++; SFX.win(); store(); toast(`${H.name} reached ${s0.stars} stars`); heroesScreen(); };
-    } else if (t === 'symbol') {
-      pane.innerHTML = `<div class="codex">${adinkraSvg(H.sym)}<div><span class="sub">Ultimate symbol</span><b>${AD.name}</b><p>${AD.meaning}</p></div></div>
+        ${own && p.hp + p.atk + p.mag + p.spd ? '<button class="btn ghost sm" id="respec" type="button">Reset points</button>' : ''}`;
+      body.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { ptsOf(heroSel)[b.dataset.g]++; SFX.heal(); store(); heroesScreen(heroSel); heroTab = 'growth'; reopen(); }));
+      const rs = $('#respec', body); if (rs) rs.onclick = () => { s0.pts = { hp: 0, atk: 0, spd: 0, mag: 0 }; SFX.click(); store(); heroesScreen(heroSel); heroTab = 'growth'; reopen(); };
+    } else if (t === 'stars') {
+      body.innerHTML = own ? `<div class="starbig">${'★'.repeat(s0.stars)}<i>${'★'.repeat(5 - s0.stars)}</i></div>
+        <div class="row card"><div>${COIN('shard')} <b>${s0.shards} / ${s0.stars < 5 ? STAR_SHARDS[s0.stars + 1] : 'max'} shards</b><small>Duplicates from the Shrine give shards. Each star adds 15% to all stats and +${SPD_STAR} speed.</small></div>
+        <button class="btn sm" id="promo" type="button" ${canPromote(heroSel) ? '' : 'disabled'}>Promote</button></div>` : '<p class="note">Not recruited yet. Call heroes at the Shrine.</p>';
+      const pr = $('#promo', body); if (pr) pr.onclick = () => { s0.shards -= STAR_SHARDS[s0.stars + 1]; s0.stars++; SFX.win(); store(); toast(`${H.name} reached ${s0.stars} stars`); heroesScreen(heroSel); heroTab = 'stars'; reopen(); };
+    } else if (t === 'lore') {
+      body.innerHTML = `<div class="codex">${adinkraSvg(H.sym)}<div><span class="sub">Ultimate symbol</span><b>${AD.name}</b><p>${AD.meaning}</p></div></div>
         <div class="codex kr"><span class="krbig">${H.kr}</span><div><span class="sub">Role in Kɔradin</span><b>${H.role}</b><p>${H.en}</p></div></div>`;
     } else {
-      pane.innerHTML = '';
-      ['Basic', 'Skill', 'Skill', 'Ultimate'].forEach((tag, i) => {
-        const lvl = own ? s0.sk[i] : 1, cost = skillCost(lvl), extra = i === 1 || i === 2 ? ` · cooldown ${H.cd[i - 1]} turns` : i === 3 ? ' · 100 energy' : '';
-        const row = h(`<div class="row card"><div><span class="sub">${tag}${extra}</span><b>${H.kit[i]} ${own ? `<em>Lv ${lvl}</em>` : ''}</b><small>${H.notes[i]}${own && lvl > 1 ? ` +${Math.round((skMult(heroSel, i) - 1) * 100)}% power.` : ''}</small></div>
-          ${own ? `<button class="btn sm ghost" type="button" ${lvl >= SKILL_MAX || SAVE.gold < cost ? 'disabled' : ''}>${lvl >= SKILL_MAX ? 'Max' : `${COIN('gold')}${fmt(cost)}`}</button>` : ''}</div>`);
-        const b = $('button', row); if (b) b.onclick = () => { SAVE.gold -= cost; s0.sk[i]++; SFX.heal(); store(); heroesScreen(); };
-        pane.append(row);
-      });
+      body.innerHTML = '<div class="sktabs"></div><div class="skdetail"></div>';
+      const tabsEl = $('.sktabs', body), det = $('.skdetail', body);
+      const tags = ['Basic', 'Skill 1', 'Skill 2', 'Ultimate'];
+      const pick = (i) => {
+        tabsEl.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', i === j));
+        const lvl = own ? s0.sk[i] : 1, cost = skillCost(lvl), meta = i === 1 || i === 2 ? `Cooldown ${H.cd[i - 1]} turns` : i === 3 ? '100 energy' : 'No cooldown';
+        det.innerHTML = `<div class="skh"><b>${H.kit[i]}</b><span>${tags[i]} · ${meta}</span></div><p>${H.notes[i]}${own && lvl > 1 ? ` <em>+${Math.round((skMult(heroSel, i) - 1) * 100)}% power</em>` : ''}</p>
+          ${own ? `<div class="skup"><span>Level <b>${lvl}</b> / ${SKILL_MAX}</span><button class="btn sm" type="button" ${lvl >= SKILL_MAX || SAVE.gold < cost ? 'disabled' : ''}>${lvl >= SKILL_MAX ? 'Max' : `Upgrade ${COIN('gold')}${fmt(cost)}`}</button></div>` : ''}`;
+        const b = $('.skup button', det); if (b) b.onclick = () => { SAVE.gold -= cost; s0.sk[i]++; SFX.heal(); store(); pick(i); };
+      };
+      tabsEl.innerHTML = tags.map((tg, i) => `<button type="button"><span>${tg}</span><b>${H.kit[i]}</b>${own ? `<em>${s0.sk[i]}</em>` : ''}</button>`).join('');
+      tabsEl.querySelectorAll('button').forEach((b, i) => (b.onclick = () => { SFX.click(); pick(i); }));
+      pick(0);
     }
   };
-  s.querySelectorAll('.tabs button').forEach((b) => (b.onclick = () => { SFX.click(); show(b.dataset.t); }));
-  show(heroTab);
-  // pose stage
-  const cv = $('canvas', s); let pose = 0, poseT = 0;
-  s.querySelectorAll('.poses button').forEach((b) => (b.onclick = () => { pose = +b.dataset.p; poseT = performance.now(); s.querySelectorAll('.poses button').forEach((x) => x.classList.toggle('on', x === b)); if (pose === 2) SFX.ult(); else if (pose === 1) SFX.hit(); }));
+  const reopen = () => { if (heroTab) { const t = heroTab; const scr = $('.hdet'); if (scr) $(`.hrail [data-t=${t}]`, scr).click(); } };
+  s.querySelectorAll('.hrail button[data-t]').forEach((b) => (b.onclick = () => { SFX.click(); if (heroTab === b.dataset.t && s.classList.contains('open')) close(); else open(b.dataset.t); }));
+  if (heroTab) open(heroTab);
+  // art: idle loop; Moves cycles attack, skills, ultimate
+  const cv = $('.hart', s); let pose = 0, poseT = 0, clipName = null;
+  const MOVES = [['atk', 1], [null, 's1'], [null, 's2'], [null, 2]];
+  let mi = -1;
+  $('.play', s).onclick = () => { mi = (mi + 1) % MOVES.length; const [c, p] = MOVES[mi]; const AN = ANIM[heroSel]; clipName = AN && AN[c] ? c : null; pose = clipName ? 0 : (typeof p === 'string' && !AN ? 1 : p); poseT = performance.now(); if (p === 2) SFX.ult(); else SFX.hit(); };
+  let sx = null; cv.onpointerdown = (e) => { sx = e.clientX; }; cv.onpointerup = (e) => { if (sx !== null && Math.abs(e.clientX - sx) > 50) go(e.clientX < sx ? 1 : -1); sx = null; };
   const draw = (now) => {
     if (!cv.isConnected) return;
-    const r = cv.getBoundingClientRect(), dpr = Math.min(3, devicePixelRatio || 1);
-    if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+    const r = cv.getBoundingClientRect(), dpr = Math.min(2.5, devicePixelRatio || 1);
+    if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
     const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
-    const e0 = img(poseSrc(heroSel, 0)), e = img(poseSrc(heroSel, pose));
-    if (e.ok && e0.ok) {
-      const Hh = (r.height - 54) * 0.92, k = Hh / e0.el.naturalHeight, ph = Math.min(r.height - 54, e.el.naturalHeight * k), pw = e.el.naturalWidth * (ph / e.el.naturalHeight);
-      const sc = scaled(e, ph * dpr), x = r.width / 2, y = r.height - 48 + Math.sin(now / 500) * 1.5;
-      if (pose === 2) { const t = Math.min(1, (now - poseT) / 600), ink = inkSymbol(H.sym, '#e3b448'), S = Math.min(r.width, r.height) * .8; g.save(); g.globalAlpha = .9 * t; g.beginPath(); g.rect(x - S / 2, y - ph * .5 - S / 2, S * t, S); g.clip(); g.drawImage(ink, x - S / 2, y - ph * .5 - S / 2, S, S); g.restore(); }
-      const AN = ANIM[heroSel]; let dn = false;
-      if (AN && pose !== 2) { g.save(); g.translate(x, y); dn = pose === 0 ? drawClip(g, AN.idle, Math.floor(now / 1000 * 12) % AN.idle.n, Hh) : drawClip(g, AN.atk, Math.floor((now - poseT) / 1000 * 12) % AN.atk.n, Hh); g.restore(); }
-      if (sc && !dn) { g.save(); if (H.flip[pose]) { g.translate(x, 0); g.scale(-1, 1); g.translate(-x, 0); } g.drawImage(sc, x - pw / 2, y - ph, pw, ph); g.restore(); }
+    const sheetOpen = s.classList.contains('open');
+    const floorY = sheetOpen ? r.height * .44 : r.height * .86, bodyH = Math.min(sheetOpen ? r.height * .34 : r.height * .56, r.width * 1.1);
+    const x = r.width * (sheetOpen ? .5 : .56), y = floorY;
+    const AN = ANIM[heroSel];
+    if (clipName && AN) { const c = AN[clipName], f = Math.floor((now - poseT) / 1000 * 12); if (f >= c.play.length) clipName = null; else { g.save(); g.translate(x, y); drawClip(g, c, c.play[f], bodyH); g.restore(); } }
+    if (!clipName) {
+      const e0 = img(poseSrc(heroSel, 0)), e = img(poseSrc(heroSel, pose));
+      if (pose !== 0 && now - poseT > 1600) pose = 0;
+      if (pose === 2) { const t = Math.min(1, (now - poseT) / 600), ink = inkSymbol(H.sym, '#e3b448'), S = Math.min(r.width, r.height) * .7; g.save(); g.globalAlpha = .85 * t; g.drawImage(ink, x - S / 2, y - bodyH * .55 - S / 2, S, S); g.restore(); }
+      let dn = false;
+      if (AN && pose === 0) { g.save(); g.translate(x, y); dn = drawClip(g, AN.idle, AN.idle.play[Math.floor(now / 1000 * 12) % AN.idle.play.length], bodyH); g.restore(); }
+      if (!dn && e.ok && e0.ok) { const k = bodyH / e0.el.naturalHeight, ph = e.el.naturalHeight * k, pw = e.el.naturalWidth * k, sc = scaled(e, ph * dpr);
+        if (sc) { g.save(); g.translate(x, y + Math.sin(now / 500) * 2); if (H.flip[pose]) g.scale(-1, 1); g.drawImage(sc, -pw / 2, -ph, pw, ph); g.restore(); } }
     }
     poseLoop = requestAnimationFrame(draw);
   };
@@ -382,7 +437,7 @@ const spdOf = (u) => u.spd * (u.st.slow ? .7 : 1);
 function pos(u) { const W = B.w; const dir = u.side ? -1 : 1; return [u.fx * W + dir * u.dash * u.reach + (u.enter || 0) * (u.side ? 1 : -1) * W * .5, B.gy0 + u.fy * (B.gy1 - B.gy0)]; }
 const wait = (ms) => new Promise((res) => { const b = B; if (!b || b.dead) return; b.waits.push({ t: b.t + ms / 1000, res }); });
 function fx(type, dur, o) { B.fx.push({ type, t0: B.t, dur: dur / 1000, ...o }); }
-function setPose(u, p, ms) { u.pose = p; u.poseT = ms / 1000; u.poseD = ms / 1000; }
+function setPose(u, p, ms, clipName = null) { u.pose = p; u.poseT = ms / 1000; u.poseD = ms / 1000; u.clip = clipName; }
 function float(u, t, c, size = 1) { const [x, y] = pos(u); B.floats.push({ x: x + rnd(-10, 10), y: y - u.h * .85, t, c, life: 1, size }); }
 function burst(x, y, cols, n, sp) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = sp * rnd(.4, 1.2); B.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: .15, life: 1, c: cols[i % cols.length], sz: rnd(2, 4) }); } }
 const foeOf = (u) => (u.side ? B.hero : B.foe);
@@ -556,6 +611,8 @@ async function monUlt(m, kind, tg) {
 }
 async function basicStrike(u, tg, mult, o = {}) {
   if (!tg || !tg.alive) return 0;
+  const AC = ANIM[u.id] && ANIM[u.id].atk;
+  if (AC && !u.side) return animStrike(u, tg, mult, o, AC);
   setPose(u, 1, 420);
   const [x0, y0] = pos(u);
   let dealt = 0;
@@ -576,6 +633,19 @@ async function basicStrike(u, tg, mult, o = {}) {
   return dealt;
 }
 const hitStop = (ms) => { B.freeze = ms / 1000; };
+// animated basic: lunge clip with two hand-drawn slash arcs (forehand then backhand)
+async function animStrike(u, tg, mult, o, AC) {
+  const dur = AC.play.length / 14 * 1000; setPose(u, 1, dur, 'atk');
+  u.reach = Math.max(0, Math.abs(pos(tg)[0] - pos(u)[0]) - tg.w * .4 - u.w * .25); u.dashTo = 1;
+  await wait(dur * .3);
+  const [x, y] = pos(tg), c = o.color || '#c58bff';
+  fx('arc', 300, { x, y: y - tg.h * .5, r: tg.h * .55, c, dir: 1 }); SFX.hit && SFX.hit();
+  const d1 = hit(u, tg, mult * .6, o); hitStop(60);
+  await wait(dur * .28);
+  if (tg.alive) { fx('arc', 300, { x, y: y - tg.h * .45, r: tg.h * .5, c, dir: -1, flipY: 1 }); hit(u, tg, mult * .4, { ...o, quiet: 1 }); }
+  await wait(dur * .3); u.dashTo = 0; await wait(dur * .12);
+  return d1;
+}
 async function skillBeat(u, i) { float(u, u.d.kit[i], '#f08a24', .9); setPose(u, 1, 500); await wait(200); }
 async function ultIntro(u, sym, color) {
   const [x, y] = pos(u);
@@ -587,17 +657,18 @@ async function ultIntro(u, sym, color) {
   await wait(900);
 }
 // fullscreen ultimate cutscene: dedicated art (or a Veo clip once generated), push-in, speed lines, X-slash, title
-const CUTS = { dufie: { img: A + 'cut_dufie.webp' } };
+const CUTS = { dufie: { img: A + 'cut_dufie.webp', video: A + 'anim/dufie_ult.mp4', rate: 1.35 } };
 function cutscene(u, sym, color) {
   const C = CUTS[u.id] || { img: poseSrc(u.id, 2), pose: 1 };
-  const media = C.video ? `<video src="${C.video}" muted playsinline autoplay></video>` : `<img src="${C.img}" alt="" class="${C.pose ? 'pose' : ''} ${C.pose && u.flip[2] ? 'flip' : ''}">`;
+  const media = C.video ? `<video poster="${C.img}" muted playsinline autoplay preload="auto"><source src="${C.video.replace('.mp4', '.webm')}" type="video/webm"><source src="${C.video}" type="video/mp4"></video>` : `<img src="${C.img}" alt="" class="${C.pose ? 'pose' : ''} ${C.pose && u.flip[2] ? 'flip' : ''}">`;
   const el = h(`<div class="ultcs" style="--rc:${color}"><div class="cs-bg"></div><div class="cs-art">${media}</div><div class="cs-lines"></div>
     <div class="cs-sym">${adinkraSvg(sym)}</div><i class="cs-x a"></i><i class="cs-x b"></i><div class="cs-flash"></div>
     <div class="cs-title"><span>${u.name.toUpperCase()} · ${u.d.role.toUpperCase()}</span><b>${u.d.kit[3]}</b></div></div>`);
   document.body.append(el);
-  const dur = C.video ? 2600 : 1900;
+  const vid = el.querySelector('video'); if (vid) { vid.playbackRate = C.rate || 1; el.classList.add('vid'); vid.play().catch(() => {}); }
+  const dur = C.video ? 6000 / (C.rate || 1) - 150 : 1900;
   return new Promise((res) => { let done = false; const end = () => { if (done) return; done = true; el.classList.add('out'); setTimeout(() => el.remove(), 220); res(); };
-    el.onclick = end; setTimeout(() => SFX.hit && SFX.hit(), 1150); setTimeout(end, dur / (B && B.speed > 1 ? 1.5 : 1)); });
+    el.onclick = end; if (vid) vid.onended = end; setTimeout(() => SFX.hit && SFX.hit(), C.video ? 2400 / (C.rate || 1) : 1150); setTimeout(end, dur / (B && B.speed > 1 ? 1.5 : 1)); });
 }
 async function impactFrames(targets, src) {
   B.cam.tx = targets.reduce((a, t) => a + pos(t)[0], 0) / targets.length / B.w; B.cam.ty = B.rest.y;
@@ -636,8 +707,10 @@ async function doHero(u, i) {
       case 'kome2': await basicStrike(u, f, .7 * m, { color: '#ffb43c' }); fx('boom', 700, { unit: f }); addSt(f, 'burn', 3, { burnPow: u.atk * .7 * m }); break;
       case 'afrakoma1': { const d = await basicStrike(u, f, 1.25 * m, { color: '#ff8a3c' }); hitStop(100); heal(u, d * .5, true); break; }
       case 'afrakoma2': addSt(u, 'atkUp', 3); u.atkUpK = 1.4; u.hp = Math.max(1, Math.round(u.hp - u.max * .1)); float(u, '−10%', '#ff6a5a'); await wait(400); break;
-      case 'dufie1': { u.reach = Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .3); u.dashTo = 1; await wait(160); const [x, y] = pos(f); fx('x', 300, { unit: f, c: '#c58bff' }); hitStop(120); hit(u, f, 1.4 * m, { color: '#c58bff', crit: true }); await wait(200); u.dashTo = 0; pushTM(u, .5); break; }
-      case 'dufie2': u.st.evade = 1; float(u, 'VANISH', '#c58bff'); await wait(400); break;
+      case 'dufie1': { const [x0, y0] = pos(u); fx('smoke', 700, { x: x0, y: y0, r: u.h * .35, c: '#c58bff', n: 9 }); setPose(u, 's1', 900);
+        u.reach = Math.max(0, Math.abs(pos(f)[0] - x0) - f.w * .3); u.dashTo = 1; fx('streak', 380, { x0, x1: pos(f)[0], y: y0 - u.h * .45, h: u.h * .5, c: '#7b3fd6' }); await wait(200);
+        const [x, y] = pos(f); fx('star', 420, { x, y: y - f.h * .5, r: f.h * .7, c: '#c58bff' }); fx('arc', 300, { x, y: y - f.h * .5, r: f.h * .6, c: '#c58bff', dir: 1 }); hitStop(130); hit(u, f, 1.4 * m, { color: '#c58bff', crit: true }); await wait(260); u.dashTo = 0; pushTM(u, .5); break; }
+      case 'dufie2': { const [x0, y0] = pos(u); setPose(u, 's2', 900); fx('smoke', 1100, { x: x0, y: y0, r: u.h * .55, c: '#c58bff', n: 16, rise: 1 }); u.st.evade = 1; float(u, 'VANISH', '#c58bff'); await wait(600); break; }
     }
     await wait(220); return;
   }
@@ -652,7 +725,7 @@ async function doHero(u, i) {
     case 'kuukua': { await impactFrames(T, u); fx('rain', 600, { unit: f }); hit(u, f, (f.st.slow || f.st.defDown ? 3.6 : 1.8) * m, { color: '#e6edf5', big: 1 }); break; }
     case 'kome': { heal(u, u.max * .2 * m); await impactFrames(T, u); fx('boom', 800, { unit: f }); hit(u, f, (f.st.burn ? 3.4 : 1.7) * m, { color: '#ffb43c', big: 1 }); SFX.heal(); break; }
     case 'afrakoma': { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#ff8a3c', dir: 1, big: 1 }); const d = hit(u, f, 3.0 * m, { color: '#ff8a3c', big: 1 }); heal(u, d * .5, true); break; }
-    case 'dufie': { await impactFrames(T, u); for (let k = 0; k < 6 && f.alive; k++) { fx('x', 220, { unit: f, c: '#c58bff' }); hit(u, f, .62 * m, { color: '#c58bff' }); await wait(100); } break; }
+    case 'dufie': { await impactFrames(T, u); const [x, y] = pos(f); for (let k = 0; k < 6 && f.alive; k++) { fx('arc', 260, { x: x + rnd(-8, 8), y: y - f.h * (.35 + .3 * Math.random()), r: f.h * rnd(.45, .7), c: k % 2 ? '#ffffff' : '#c58bff', dir: k % 2 ? -1 : 1, tilt: rnd(-.6, .6) }); hit(u, f, .62 * m, { color: '#c58bff' }); await wait(110); } fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: '#c58bff' }); fx('smoke', 900, { x, y, r: f.h * .5, c: '#c58bff', n: 12 }); break; }
   }
   await wait(600); endUlt(); await wait(220);
 }
@@ -751,8 +824,8 @@ function loop(now) {
     const ring = u.side && u.charging && u.alive ? '#ff3b2a' : null;
     if (ring) { const sil = silhouette(e, th, ring); if (sil) { g.save(); g.globalAlpha *= .85; for (const [ox, oy] of [[-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, 2], [-2, 2], [2, -2]]) g.drawImage(sil, -pw / 2 + ox, -ph + oy, pw, ph); g.restore(); } }
     const AN = ANIM[u.id], bodyH = e0.el.naturalHeight * k; let drawn = false;
-    if (AN && u.alive && u.pose === 0) drawn = drawClip(g, AN.idle, Math.floor(B.t * 12) % AN.idle.n, bodyH);
-    else if (AN && AN.atk && u.pose === 1) drawn = drawClip(g, AN.atk, clipFrame(AN.atk, 1 - Math.max(0, u.poseT) / (u.poseD || 1)), bodyH);
+    if (AN && u.alive && u.pose === 0) { const P = AN.idle.play; drawn = drawClip(g, AN.idle, P[Math.floor(B.t * 12) % P.length], bodyH); }
+    else if (AN && u.clip && AN[u.clip]) { const c = AN[u.clip], P = c.play, pr = 1 - Math.max(0, u.poseT) / (u.poseD || 1); drawn = drawClip(g, c, P[Math.min(P.length - 1, Math.floor(pr * P.length))], bodyH); }
     if (!drawn) { const sc = scaled(e, th); if (sc) g.drawImage(sc, -pw / 2, -ph, pw, ph); }
     if (u.hurt > .45) { const sil = silhouette(e, th, '#ffffff'); if (sil) { g.globalAlpha = (u.hurt - .45) * 1.4; g.drawImage(sil, -pw / 2, -ph, pw, ph); } }
     g.restore();
@@ -824,6 +897,26 @@ function drawFx(g, f) {
       else { const col = f.kind === 'fire' ? ['#fff8d0', '#ffb43c', 'rgba(255,90,30,0)'] : ['#f6ecff', '#c58bff', 'rgba(110,50,200,0)']; const rg = g.createRadialGradient(0, 0, 1, 0, 0, 11); rg.addColorStop(0, col[0]); rg.addColorStop(.45, col[1]); rg.addColorStop(1, col[2]); g.fillStyle = rg; g.beginPath(); g.arc(0, 0, 11, 0, 6.28); g.fill(); }
       break;
     }
+    case 'arc': { // anime crescent slash: filled crescent with a white core and coloured rim, swept in fast
+      const sw = Math.min(1, p / .35), fade = p < .45 ? 1 : 1 - (p - .45) / .55, dir = f.dir || 1;
+      g.translate(f.x, f.y); g.rotate((f.tilt || 0) + (dir < 0 ? Math.PI : 0)); if (f.flipY) g.scale(1, -1); g.globalCompositeOperation = 'lighter';
+      const a0 = -2.4, a1 = a0 + 2.6 * sw, R0 = f.r, th = f.r * .22 * (1 - p * .4);
+      const crescent = (r, t) => { g.beginPath(); g.arc(0, 0, r, a0, a1); g.arc(t * .3, -t * .25, r - t, a1, a0, true); g.closePath(); };
+      g.globalAlpha = fade * .55; g.fillStyle = f.c; crescent(R0 * 1.06, th * 1.5); g.fill();
+      g.globalAlpha = fade; g.fillStyle = '#ffffff'; crescent(R0, th * .55); g.fill();
+      g.globalCompositeOperation = 'source-over'; break; }
+    case 'streak': { const e = Math.min(1, p / .4), fade = 1 - p; g.globalCompositeOperation = 'lighter';
+      const x0 = f.x0, x1 = f.x0 + (f.x1 - f.x0) * e;
+      for (let i = 0; i < 5; i++) { g.globalAlpha = fade * (.5 - i * .08); g.fillStyle = i % 2 ? '#ffffff' : f.c; const yy = f.y + (i - 2) * f.h * .14, hh = f.h * (.1 - i * .012); g.fillRect(Math.min(x0, x1), yy - hh / 2, Math.abs(x1 - x0), hh); }
+      g.globalCompositeOperation = 'source-over'; break; }
+    case 'star': { const e = Math.min(1, p / .2), fade = p < .3 ? 1 : 1 - (p - .3) / .7, R = f.r * (.4 + .6 * e); g.translate(f.x, f.y); g.rotate(p * .6); g.globalCompositeOperation = 'lighter';
+      for (const [col, sc, al] of [[f.c, 1, .6], ['#ffffff', .55, 1]]) { g.globalAlpha = fade * al; g.fillStyle = col; g.beginPath(); for (let i = 0; i < 8; i++) { const ang = i * Math.PI / 4, rr = (i % 2 ? .12 : 1) * R * sc; g.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr); } g.closePath(); g.fill(); }
+      g.globalCompositeOperation = 'source-over'; break; }
+    case 'smoke': { if (!f.puffs) { f.puffs = Array.from({ length: f.n || 10 }, () => ({ a: Math.random() * 6.28, s: rnd(.4, 1), r: rnd(.25, .5), d: rnd(0, .25), w: rnd(-1, 1) })); }
+      for (const q of f.puffs) { const t = Math.max(0, (p - q.d) / (1 - q.d)); if (!t) continue; const dist = f.r * q.s * (.3 + t * 1.1), px = f.x + Math.cos(q.a) * dist + q.w * t * f.r * .3, py = f.y - (f.rise ? t * f.r * 2.2 * q.s : 0) + Math.sin(q.a) * dist * .35 - f.r * .25, rr = f.r * q.r * (.6 + t * 1.2);
+        const rg = g.createRadialGradient(px, py, rr * .1, px, py, rr); rg.addColorStop(0, 'rgba(14,6,20,.95)'); rg.addColorStop(.55, 'rgba(40,14,60,.75)'); rg.addColorStop(.8, f.c + '55'); rg.addColorStop(1, 'rgba(20,8,30,0)');
+        g.globalAlpha = (1 - t) ** .7; g.fillStyle = rg; g.beginPath(); g.arc(px, py, rr, 0, 6.28); g.fill(); }
+      break; }
     case 'beam': { g.globalAlpha = (1 - p) * .9; g.strokeStyle = f.c; g.lineWidth = 8 * (1 - p) + 2; g.beginPath(); g.moveTo(f.x0, f.y0); g.lineTo(f.x1, f.y1); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); break; }
     case 'boom': { if (!f.unit) break; const S = FXS[f.hex ? 'hex' : 'fire'], [a, b] = S.peak, [x, y] = pos(f.unit); sprite(g, f.hex ? 'hex' : 'fire', a + p * (b - a + 1), x, y, f.unit.h * .95, (p > .7 ? (1 - p) / .3 : 1) * .78); break; }
     case 'spr': { const S = FXS[f.k], [a, b] = S.peak || [0, S.n - 1], [x, y] = pos(f.unit); sprite(g, f.k, a + p * (b - a + 1), x, y, f.unit.h * f.hs, (p > .75 ? (1 - p) / .25 : 1) * (f.a || 1)); break; }
