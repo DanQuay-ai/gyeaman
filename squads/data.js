@@ -10,22 +10,32 @@ export const RARITY = {
 // 1v1 duels. kit = [basic, skill 1, skill 2, ultimate]; cd = cooldowns of the two skills in own turns; ultimate needs 100 energy.
 // spd = speed: the turn meter fills at this rate, so a much faster fighter sometimes acts twice in a row.
 // role is standard Twi spelling; kr is the same word in Kɔradin spelling (vowel inserted in CrV clusters), used only with the Kɔradin font.
+// Locked archetypes: base speed is fixed by class, never by the individual hero.
+export const CLASSES = {
+  guardian: { name: 'Guardian', spd: 84,  desc: 'Holds the line. Slowest, toughest.' },
+  warrior:  { name: 'Warrior',  spd: 100, desc: 'Steady melee damage.' },
+  sage:     { name: 'Sage',     spd: 104, desc: 'Heals, cleanses and burns with spirit power.' },
+  hunter:   { name: 'Hunter',   spd: 108, desc: 'Strikes from reach.' },
+  shadow:   { name: 'Shadow',   spd: 124, desc: 'Fastest class. Acts often, breaks easily.' },
+};
+// Growth: one point per level. Speed points cost 2 and cap at SPD_CAP points.
+export const GROWTH = { hp: 0.05, atk: 0.05, mag: 0.05, spd: 2, spdCost: 2, spdCap: 5 };
 export const HEROES = {
-  blay:     { name: 'Blay',     role: 'Asafo',        kr: 'asafo',        en: 'Sword fighter', rarity: 'R',   size: 1.06, hp: 1050, atk: 66, def: 26, spd: 100, cd: [2, 3], flip: [0, 0, 0],
+  blay:     { name: 'Blay',     role: 'Asafo',        kr: 'asafo',        en: 'Sword fighter', rarity: 'R',   size: 1.06, hp: 1050, atk: 66, def: 26, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Slash', 'Twin Cut', 'Parry', 'Gyawu Atiko'], notes: ['One afena cut.', 'Two cuts and the enemy\'s defence drops for 2 turns.', 'Guard: the next hit is halved and Blay strikes back.', 'Valour of Gyawu: a huge cut. Kills outright below 30% health.'], sym: 'gyawuAtiko' },
-  owureku:  { name: 'Owureku',  role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Twin-axe bruiser', rarity: 'R', size: 0.94, hp: 1080, atk: 60, def: 30, spd: 92, cd: [3, 3], flip: [0, 0, 0],
+  owureku:  { name: 'Owureku',  role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Twin-axe bruiser', rarity: 'R', size: 0.94, hp: 1080, atk: 60, def: 30, cls: 'warrior', spd: 100, cd: [3, 3], flip: [0, 0, 0],
     kit: ['Axe Chop', 'Axe Toss', 'War Cry', 'Ese Ne Tekrema'], notes: ['Heavy axe chop.', 'Hurls an axe: damage and a 1-turn stun that cancels a charged attack.', 'Hits 30% harder for 3 turns and heals 10%.', 'Teeth and tongue: three heavy blows in a row.'], sym: 'eseNeTekrema' },
-  gyakari:  { name: 'Gyakari',  role: 'Banbɔfo',      kr: 'banbɔfo',      en: 'Shield tank', rarity: 'R',     size: 1.14, hp: 1250, atk: 42, def: 46, spd: 84, cd: [3, 3], flip: [0, 0, 0],
+  gyakari:  { name: 'Gyakari',  role: 'Banbɔfo',      kr: 'banbɔfo',      en: 'Shield tank', rarity: 'R',     size: 1.14, hp: 1250, atk: 42, def: 46, cls: 'guardian', spd: 84, cd: [3, 3], flip: [0, 0, 0],
     kit: ['Spear Jab', 'Shield Bash', 'Brace', 'Eban'], notes: ['Spear jab.', 'Bash: damage and a 1-turn stun that cancels a charged attack.', 'Raises his shield: absorbs 30% of his health for 2 turns.', 'The fence: a huge shield, then a counter-thrust that grows with the shield.'], sym: 'eban' },
-  obiri:    { name: 'Obiri',    role: 'Toprefo',      kr: 'toperefo',     en: 'Marksman', rarity: 'SR',       size: 1.0,  hp: 760, atk: 70, def: 16, spd: 112, cd: [2, 3], flip: [0, 0, 0],
+  obiri:    { name: 'Obiri',    role: 'Toprefo',      kr: 'toperefo',     en: 'Marksman', rarity: 'SR',       size: 1.0,  hp: 760, atk: 70, def: 16, cls: 'hunter', spd: 108, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Arrow', 'Pinning Shot', 'Steady Aim', 'Hwemudua'], notes: ['An arrow.', 'Pins the enemy: damage and slowed for 2 turns.', 'The next attack is a critical hit that ignores defence.', 'The measuring stick: one exact shot for massive damage. Always critical.'], sym: 'hwemuDua' },
-  kuukua:   { name: 'Kuukua',   role: 'Asafo',        kr: 'asafo',        en: 'Spear lancer', rarity: 'SR',   size: 1.08, hp: 820, atk: 64, def: 20, spd: 104, cd: [2, 3], flip: [0, 0, 0],
+  kuukua:   { name: 'Kuukua',   role: 'Asafo',        kr: 'asafo',        en: 'Spear lancer', rarity: 'SR',   size: 1.08, hp: 820, atk: 64, def: 20, cls: 'hunter', spd: 108, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Thrust', 'Pierce', 'Sweep', 'Epa'], notes: ['Spear thrust.', 'Pierces armour: lowers defence for 2 turns.', 'Sweeps the legs: the enemy loses 40% of its turn meter.', 'No one escapes justice: a rain of spears, double damage on a slowed or weakened enemy.'], sym: 'epa' },
-  kome:     { name: 'Kome',     role: 'Ɔkɔmfo',       kr: 'ɔkɔmfo',       en: 'Spirit priestess', rarity: 'SR', size: 0.92, hp: 760, atk: 52, def: 16, spd: 108, cd: [3, 2], flip: [0, 0, 0],
+  kome:     { name: 'Kome',     role: 'Ɔkɔmfo',       kr: 'ɔkɔmfo',       en: 'Spirit priestess', rarity: 'SR', size: 0.92, hp: 760, atk: 52, def: 16, cls: 'sage', spd: 104, cd: [3, 2], flip: [0, 0, 0],
     kit: ['Spirit Bolt', 'Nyame Dua', 'Spirit Fire', 'Hye Won Hye'], notes: ['Fire bolt.', 'Heals 22% and clears stun and burn.', 'Sets the enemy burning for 3 turns.', 'That which does not burn: heals 20% and a blast that doubles on a burning enemy.'], sym: 'hyeWonhye', sym2: 'nyameDua' },
-  afrakoma: { name: 'Afrakoma', role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Axe berserker', rarity: 'SSR', size: 1.0,  hp: 980, atk: 72, def: 24, spd: 98, cd: [2, 3], flip: [0, 0, 0],
+  afrakoma: { name: 'Afrakoma', role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Axe berserker', rarity: 'SSR', size: 1.0,  hp: 980, atk: 72, def: 24, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Cleave', 'Bloodletting', 'Fury', 'Dwannimmen'], notes: ['Big cleave.', 'A cleave that heals for half the damage.', 'Hits 40% harder for 3 turns but costs 10% health.', 'Ram\'s horns: a crushing cleave that heals for half the damage.'], sym: 'dwannimen' },
-  dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', kr: 'anadwo sekan', en: 'Night blade', rarity: 'SSR',   size: 0.98, hp: 800, atk: 74, def: 18, spd: 128, cd: [2, 3], flip: [0, 0, 0],
+  dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', kr: 'anadwo sekan', en: 'Night blade', rarity: 'SSR',   size: 0.98, hp: 800, atk: 74, def: 18, cls: 'shadow', spd: 124, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Night Cut', 'Shadow Step', 'Vanish', 'Nkyinkyim'], notes: ['Quick cut.', 'A certain critical strike, then Dufie moves 50% up the turn order.', 'Dodges the next attack completely.', 'The twisting path: six cuts in a row.'], sym: 'nkyimkyim' },
 };
 export const STARTERS = ['blay', 'gyakari', 'kome', 'dufie']; // beta: Dufie (animated) is free

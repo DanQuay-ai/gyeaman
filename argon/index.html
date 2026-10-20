@@ -1,0 +1,2894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gyeaman Duels</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0a0e;
+    --panel: #16131a;
+    --panel-light: #221d28;
+    --gold: #f5b700;
+    --crimson: #e62e2d;
+    --jade: #00c48c;
+    --cyan: #00d9ff;
+    --violet: #a259ff;
+    --ink: #050406;
+    --paper: #f4efe6;
+    --text: #f4efe6;
+    --muted: #8a8194;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    color: var(--text);
+  }
+  #app {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 100%;
+    margin: 0 auto;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(245,183,0,0.15);
+  }
+  h1, h2, h3, .display-font {
+    font-family: 'Syne', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* TOP BAR */
+  #topbar {
+    height: 52px;
+    background: linear-gradient(180deg, #1a1520 0%, #0c0a0e 100%);
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    z-index: 20;
+    flex-shrink: 0;
+  }
+  .brand {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .currencies {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .curr-pill {
+    background: var(--panel-light);
+    border: 1px solid rgba(245,183,0,0.35);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transform: skewX(-10deg);
+  }
+  .curr-pill span { transform: skewX(10deg); }
+
+  /* SCREENS */
+  .screen {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+  }
+  .screen.active {
+    display: flex;
+  }
+
+  /* BOTTOM NAV */
+  #navbar {
+    height: 62px;
+    background: #100d14;
+    border-top: 2px solid #2b2435;
+    display: flex;
+    z-index: 20;
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    position: relative;
+    transition: 0.15s;
+  }
+  .nav-btn.active {
+    color: var(--gold);
+    background: linear-gradient(0deg, rgba(245,183,0,0.14) 0%, transparent 100%);
+  }
+  .nav-btn.active::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 20%;
+    right: 20%;
+    height: 3px;
+    background: var(--gold);
+  }
+  .nav-icon {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+  }
+
+  /* CAMPAIGN SCREEN */
+  .camp-header {
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(22,19,26,0.9);
+    border-bottom: 1px solid #2b2435;
+  }
+  .diff-toggle {
+    display: flex;
+    background: #09070b;
+    border: 1px solid #382e46;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .diff-btn {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .diff-btn.active {
+    background: var(--crimson);
+    color: #fff;
+  }
+  .diff-btn.normal.active {
+    background: var(--gold);
+    color: #000;
+  }
+  .stage-card-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px 14px;
+    position: relative;
+    background: radial-gradient(circle at 50% 35%, #271b32 0%, #0c0a0e 75%);
+  }
+  .stage-nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .arrow-btn {
+    width: 44px;
+    height: 44px;
+    background: var(--panel-light);
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    font-size: 20px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transform: skewX(-8deg);
+  }
+  .arrow-btn:disabled {
+    opacity: 0.3;
+    border-color: var(--muted);
+    color: var(--muted);
+  }
+  .stage-title-box {
+    text-align: center;
+    flex: 1;
+  }
+  .stage-num {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    font-weight: 700;
+  }
+  .stage-name {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--paper);
+    line-height: 1.1;
+  }
+  .stars-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 18px;
+  }
+  .star { color: #3a3244; }
+  .star.earned { color: var(--gold); text-shadow: 0 0 8px rgba(245,183,0,0.6); }
+
+  .stage-art-box {
+    flex: 1;
+    position: relative;
+    margin: 8px 0;
+    border: 2px solid #2e2638;
+    background: #120e17;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  #stagePreviewCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .stage-lore-overlay {
+    position: relative;
+    z-index: 2;
+    background: linear-gradient(0deg, rgba(12,10,14,0.95) 0%, rgba(12,10,14,0.6) 75%, transparent 100%);
+    padding: 18px 12px 10px;
+  }
+  .duel-wave-pills {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .wave-pill {
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(230,46,45,0.2);
+    border: 1px solid var(--crimson);
+    color: #ff9b9b;
+    padding: 2px 8px;
+  }
+  .stage-desc {
+    font-size: 12px;
+    color: #cfc6dc;
+    line-height: 1.35;
+  }
+  .camp-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fighter-select-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel);
+    border: 1px solid #352c42;
+    padding: 6px 10px;
+  }
+  .fighter-mini {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .arch-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    background: var(--gold);
+    color: #000;
+    text-transform: uppercase;
+  }
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--gold);
+    color: #050406;
+    border: 2px solid #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 var(--crimson);
+    transition: transform 0.1s;
+  }
+  .btn-primary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--crimson);
+  }
+  .btn-primary:disabled {
+    background: #3a3342;
+    color: #776e82;
+    border-color: #52495c;
+    box-shadow: none;
+  }
+
+  /* HEROES SCREEN (Dislyte uncluttered style) */
+  #screen-heroes {
+    position: relative;
+    background: radial-gradient(circle at 60% 30%, #2a1e38 0%, #0b090e 70%);
+  }
+  #heroFullCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+  .hero-ui-layer {
+    position: relative;
+    z-index: 5;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px 14px;
+    pointer-events: none;
+  }
+  .hero-ui-layer > * {
+    pointer-events: auto;
+  }
+  .hero-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .hero-identity {
+    background: rgba(12,10,14,0.78);
+    border-left: 4px solid var(--gold);
+    padding: 6px 12px;
+    backdrop-filter: blur(4px);
+  }
+  .hero-name-big {
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--paper);
+  }
+  .hero-sub {
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 700;
+    margin-top: 3px;
+  }
+  .hero-swipe-controls {
+    display: flex;
+    gap: 6px;
+  }
+  .key-stats-float {
+    align-self: flex-start;
+    background: rgba(12,10,14,0.82);
+    border: 1px solid #3b3048;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: auto;
+    margin-bottom: 10px;
+  }
+  .kstat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .kstat-lbl {
+    font-size: 10px;
+    color: var(--muted);
+    width: 34px;
+    font-weight: 700;
+  }
+  .kstat-val {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--paper);
+  }
+  .hero-bottom-panel {
+    background: rgba(16,13,20,0.94);
+    border: 1px solid #3c314a;
+    border-top: 2px solid var(--gold);
+    padding: 10px;
+    min-height: 185px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .hero-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .htab {
+    flex: 1;
+    padding: 6px;
+    background: #1c1724;
+    border: 1px solid #352c42;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+  .htab.active {
+    background: var(--gold);
+    color: #000;
+    border-color: #fff;
+  }
+  .htab-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .skills-strip {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .sk-icon-btn {
+    width: 44px;
+    height: 44px;
+    background: #241d2e;
+    border: 2px solid #4a3d5c;
+    color: var(--paper);
+    font-weight: 800;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .sk-icon-btn.active {
+    border-color: var(--gold);
+    background: #382a18;
+    color: var(--gold);
+  }
+  .growth-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .alloc-btn {
+    background: #231c2c;
+    border: 1px solid #483b59;
+    color: var(--paper);
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .alloc-btn:disabled {
+    opacity: 0.4;
+  }
+  .alloc-plus {
+    background: var(--gold);
+    color: #000;
+    padding: 1px 5px;
+    font-weight: 800;
+  }
+
+  /* SUMMON SCREEN */
+  .summon-wrap {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    background: radial-gradient(circle at 50% 40%, #332018 0%, #0c0a0e 75%);
+    text-align: center;
+  }
+  #summonCanvas {
+    width: 240px;
+    height: 240px;
+    border: 2px solid var(--gold);
+    background: #120e17;
+    box-shadow: 0 0 30px rgba(245,183,0,0.2);
+  }
+  .summon-result-box {
+    min-height: 68px;
+    background: var(--panel);
+    border: 1px solid #3d314c;
+    width: 100%;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .summon-btns {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+
+  /* BATTLE OVERLAY SCREEN */
+  #battle-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+  }
+  #battle-overlay.active {
+    display: flex;
+  }
+  .battle-hud-top {
+    height: 54px;
+    background: rgba(12,10,14,0.92);
+    border-bottom: 2px solid #2b2336;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .turn-bar-track {
+    flex: 1;
+    height: 28px;
+    background: #1a1522;
+    border: 1px solid #403450;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+  .turn-marker {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    width: 24px;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    transition: left 0.08s linear;
+  }
+  .turn-marker.player { background: var(--gold); color: #000; z-index: 3; }
+  .turn-marker.enemy { background: var(--crimson); color: #fff; z-index: 2; }
+
+  .b-ctrl-btn {
+    padding: 5px 8px;
+    background: #231c2e;
+    border: 1px solid #4c3e60;
+    color: var(--paper);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .b-ctrl-btn.on {
+    background: var(--gold);
+    color: #000;
+    border-color: #fff;
+  }
+
+  .battle-stage-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  #battleCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .combatants-hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    pointer-events: none;
+  }
+  .fighter-plate {
+    flex: 1;
+    background: rgba(12,10,14,0.85);
+    border: 1px solid #3c314a;
+    padding: 6px 8px;
+  }
+  .fighter-plate.enemy {
+    border-color: var(--crimson);
+    text-align: right;
+  }
+  .fp-name {
+    font-size: 12px;
+    font-weight: 800;
+    display: flex;
+    justify-content: space-between;
+  }
+  .hp-bar-outer {
+    height: 10px;
+    background: #261f2e;
+    margin-top: 4px;
+    position: relative;
+    border: 1px solid #000;
+  }
+  .hp-bar-inner {
+    height: 100%;
+    background: var(--jade);
+    transition: width 0.2s;
+  }
+  .hp-bar-inner.enemy { background: var(--crimson); }
+  .shield-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: rgba(0,217,255,0.65);
+    pointer-events: none;
+  }
+  .en-bar-outer {
+    height: 5px;
+    background: #1b1622;
+    margin-top: 3px;
+  }
+  .en-bar-inner {
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.2s;
+  }
+  .status-row {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    min-height: 16px;
+  }
+  .st-tag {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 4px;
+    text-transform: uppercase;
+    background: #332a40;
+    color: #fff;
+  }
+  .st-tag.STUN { background: var(--gold); color: #000; }
+  .st-tag.BURN { background: #ff5722; }
+  .st-tag.SHIELD { background: var(--cyan); color: #000; }
+  .st-tag.ATK_UP { background: var(--crimson); }
+  .st-tag.DEF_DOWN { background: var(--violet); }
+  .st-tag.SLOW { background: #607d8b; }
+  .st-tag.EVADE { background: var(--jade); color: #000; }
+  .st-tag.CHARGE { background: #ff0055; animation: pulse 0.5s infinite alternate; }
+
+  @keyframes pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.08); }
+  }
+
+  .battle-controls-bottom {
+    height: 120px;
+    background: #120e17;
+    border-top: 2px solid var(--gold);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .battle-skill-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    flex: 1;
+  }
+  .b-skill-btn {
+    background: #211a2a;
+    border: 2px solid #483a5c;
+    color: var(--paper);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    cursor: pointer;
+    position: relative;
+    text-align: left;
+  }
+  .b-skill-btn.ult {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, #3b2a10 0%, #1d1526 100%);
+  }
+  .b-skill-btn:disabled {
+    opacity: 0.4;
+    filter: grayscale(0.8);
+  }
+  .bsk-name {
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .bsk-meta {
+    font-size: 10px;
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  /* MODAL */
+  #modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5,4,6,0.88);
+    z-index: 80;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #modal-overlay.active { display: flex; }
+  .modal-card {
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    width: 100%;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 6px 6px 0 var(--crimson);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- TOP BAR -->
+  <header id="topbar">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M8 8c2 2 6 2 8 0M8 16c2-2 6-2 8 0M12 3v18"/>
+      </svg>
+      GYEAMAN DUELS
+    </div>
+    <div class="currencies">
+      <div class="curr-pill" title="Cowries"><span>🐚 <b id="ui-cowries">0</b></span></div>
+      <div class="curr-pill" title="Sika (Gold)"><span>🪙 <b id="ui-gold">0</b></span></div>
+      <div class="curr-pill" title="Sunsum XP"><span>🔥 <b id="ui-xp">0</b></span></div>
+    </div>
+  </header>
+
+  <!-- SCREEN 1: CAMPAIGN -->
+  <section id="screen-campaign" class="screen active">
+    <div class="camp-header">
+      <div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;">ASANTEMAN TRAIL</div>
+        <div style="font-size:14px;font-weight:800;" id="camp-progress-lbl">Stage 1 / 20</div>
+      </div>
+      <div class="diff-toggle">
+        <button class="diff-btn normal active" id="btn-diff-normal" onclick="setDifficulty('normal')">NORMAL</button>
+        <button class="diff-btn" id="btn-diff-hard" onclick="setDifficulty('hard')">HARD</button>
+      </div>
+    </div>
+
+    <div class="stage-card-wrap" id="camp-touch-area">
+      <div class="stage-nav-row">
+        <button class="arrow-btn" id="btn-prev-stage" onclick="changeStage(-1)">&#9664;</button>
+        <div class="stage-title-box">
+          <div class="stage-num" id="st-num">STAGE 01</div>
+          <div class="stage-name display-font" id="st-name">KWAHU SCARP</div>
+          <div class="stars-row" id="st-stars">
+            <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+          </div>
+        </div>
+        <button class="arrow-btn" id="btn-next-stage" onclick="changeStage(1)">&#9654;</button>
+      </div>
+
+      <div class="stage-art-box">
+        <canvas id="stagePreviewCanvas" width="420" height="320"></canvas>
+        <div class="stage-lore-overlay">
+          <div class="duel-wave-pills" id="st-waves"></div>
+          <div class="stage-desc" id="st-desc"></div>
+        </div>
+      </div>
+
+      <div class="camp-footer">
+        <div class="fighter-select-bar">
+          <div class="fighter-mini">
+            <span class="arch-badge" id="camp-hero-arch">STRIKER</span>
+            <div>
+              <div style="font-size:13px;font-weight:800;" id="camp-hero-name">Dufie</div>
+              <div style="font-size:10px;color:var(--muted);" id="camp-hero-pwr">Lv.1 • SPD 115</div>
+            </div>
+          </div>
+          <button class="b-ctrl-btn" onclick="cycleSelectedHero(1)">CHANGE HERO &#8635;</button>
+        </div>
+        <button class="btn-primary" id="btn-start-duel" onclick="startStageBattle()">ENTER DUEL</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREEN 2: HEROES (Uncluttered Dislyte layout) -->
+  <section id="screen-heroes" class="screen">
+    <canvas id="heroFullCanvas" width="450" height="720"></canvas>
+    <div class="hero-ui-layer" id="hero-touch-area">
+      <div class="hero-top-row">
+        <div class="hero-identity">
+          <div class="hero-name-big display-font" id="h-name">DUFIE</div>
+          <div class="hero-sub" id="h-title">Gye Nyame • Vanguard</div>
+          <div style="font-size:11px;color:#fff;margin-top:2px;" id="h-lvl-badge">Lv. 1 (0 Shards)</div>
+        </div>
+        <div class="hero-swipe-controls">
+          <button class="arrow-btn" onclick="cycleHeroView(-1)">&#9664;</button>
+          <button class="arrow-btn" onclick="cycleHeroView(1)">&#9654;</button>
+        </div>
+      </div>
+
+      <!-- 3 Key Stats + Fixed Speed -->
+      <div class="key-stats-float">
+        <div class="kstat"><span class="kstat-lbl">HP</span><span class="kstat-val" id="h-stat-hp">1200</span></div>
+        <div class="kstat"><span class="kstat-lbl">ATK</span><span class="kstat-val" id="h-stat-atk">140</span></div>
+        <div class="kstat"><span class="kstat-lbl">SPD</span><span class="kstat-val" id="h-stat-spd" style="color:var(--gold)">125</span></div>
+        <div class="kstat"><span class="kstat-lbl">MAG</span><span class="kstat-val" id="h-stat-mag" style="color:var(--cyan)">100</span></div>
+      </div>
+
+      <div class="hero-bottom-panel">
+        <div class="hero-tabs">
+          <button class="htab active" id="htab-skills" onclick="setHeroTab('skills')">⚔ SKILLS</button>
+          <button class="htab" id="htab-growth" onclick="setHeroTab('growth')">▲ GROWTH</button>
+          <button class="htab" id="htab-symbol" onclick="setHeroTab('symbol')">❖ SYMBOL</button>
+        </div>
+        <div class="htab-content" id="hero-tab-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: SUMMON (Kente Shrine) -->
+  <section id="screen-summon" class="screen">
+    <div class="summon-wrap">
+      <div>
+        <div style="font-size:11px;color:var(--gold);letter-spacing:2px;font-weight:700;">ADINKRA SHRINE</div>
+        <h2 class="display-font" style="font-size:24px;">CALL THE ANCESTORS</h2>
+        <p style="font-size:12px;color:var(--muted);margin-top:2px;">Offer Cowries to summon Heroes, Shards & Sunsum XP</p>
+      </div>
+
+      <canvas id="summonCanvas" width="240" height="240"></canvas>
+
+      <div class="summon-result-box" id="summon-result">
+        <div style="font-size:13px;color:var(--muted);">Touch the Golden Stool altar below to divine your fate.</div>
+      </div>
+
+      <div class="summon-btns">
+        <button class="btn-primary" style="flex:1;font-size:14px;padding:12px 6px;" onclick="doSummon(1)">
+          1x DIVINE<br><span style="font-size:11px;">🐚 100 Cowries</span>
+        </button>
+        <button class="btn-primary" style="flex:1;font-size:14px;padding:12px 6px;background:var(--crimson);color:#fff;" onclick="doSummon(5)">
+          5x DIVINE<br><span style="font-size:11px;">🐚 450 Cowries</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav id="navbar">
+    <button class="nav-btn active" id="nav-campaign" onclick="switchScreen('campaign')">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5l-6-3 6-3 6 3-6 3zm0 2.5l-10-5v10l10 5 10-5V7l-10 5z"/></svg>
+      Campaign
+    </button>
+    <button class="nav-btn" id="nav-heroes" onclick="switchScreen('heroes')">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+      Heroes
+    </button>
+    <button class="nav-btn" id="nav-summon" onclick="switchScreen('summon')">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/></svg>
+      Shrine
+    </button>
+  </nav>
+
+  <!-- BATTLE OVERLAY -->
+  <div id="battle-overlay">
+    <div class="battle-hud-top">
+      <div style="font-size:11px;font-weight:800;color:var(--gold);min-width:52px;" id="b-wave-ind">DUEL 1/2</div>
+      <div class="turn-bar-track" id="turn-bar-track">
+        <div class="turn-marker player" id="tm-player">P</div>
+        <div class="turn-marker enemy" id="tm-enemy">E</div>
+      </div>
+      <button class="b-ctrl-btn" id="btn-speed" onclick="toggleBattleSpeed()">1x</button>
+      <button class="b-ctrl-btn" id="btn-auto" onclick="toggleAutoBattle()">AUTO</button>
+      <button class="b-ctrl-btn" onclick="retreatBattle()">✕</button>
+    </div>
+
+    <div class="battle-stage-wrap">
+      <canvas id="battleCanvas" width="450" height="580"></canvas>
+
+      <div class="combatants-hud">
+        <div class="fighter-plate">
+          <div class="fp-name">
+            <span id="bp-pname">Dufie</span>
+            <span id="bp-php" style="font-size:10px;color:var(--jade)">1000/1000</span>
+          </div>
+          <div class="hp-bar-outer">
+            <div class="hp-bar-inner" id="bp-php-bar" style="width:100%"></div>
+            <div class="shield-bar" id="bp-pshield-bar" style="width:0%"></div>
+          </div>
+          <div class="en-bar-outer">
+            <div class="en-bar-inner" id="bp-pen-bar" style="width:0%"></div>
+          </div>
+          <div class="status-row" id="bp-pstatuses"></div>
+        </div>
+
+        <div class="fighter-plate enemy">
+          <div class="fp-name">
+            <span id="bp-ehp" style="font-size:10px;color:#ff8a8a">1000/1000</span>
+            <span id="bp-ename">Mmoatia</span>
+          </div>
+          <div class="hp-bar-outer">
+            <div class="hp-bar-inner enemy" id="bp-ehp-bar" style="width:100%"></div>
+            <div class="shield-bar" id="bp-eshield-bar" style="width:0%"></div>
+          </div>
+          <div class="en-bar-outer">
+            <div class="en-bar-inner" id="bp-een-bar" style="width:0%"></div>
+          </div>
+          <div class="status-row" id="bp-estatuses" style="justify-content:flex-end;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="battle-controls-bottom">
+      <div style="font-size:10px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span id="b-turn-prompt">YOUR TURN — SELECT AN ART</span>
+        <span id="b-energy-lbl" style="color:var(--gold);font-weight:700;">ENERGY: 0 / 100</span>
+      </div>
+      <div class="battle-skill-row" id="b-skills-container"></div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div id="modal-overlay">
+    <div class="modal-card">
+      <h2 class="display-font" id="modal-title" style="font-size:24px;color:var(--gold);">VICTORY</h2>
+      <div id="modal-stars" style="font-size:24px;margin:6px 0;"></div>
+      <p id="modal-body" style="font-size:13px;color:#ddd;margin-bottom:16px;line-height:1.4;"></p>
+      <button class="btn-primary" onclick="closeModal()">CONTINUE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   GYEAMAN DUELS - CORE DATA & AKAN MYTHOLOGY
+   ============================================================================ */
+
+const ARCHETYPES = {
+  Vanguard: { baseSpd: 96,  hpMult: 1.35, atkMult: 0.9,  desc: 'Iron bulwark of Asanteman. High fortitude.' },
+  Striker:  { baseSpd: 108, hpMult: 1.05, atkMult: 1.25, desc: 'Relentless frontline blade dancer.' },
+  Shadow:   { baseSpd: 126, hpMult: 0.88, atkMult: 1.30, desc: 'Lethal night-stalker with unmatched velocity.' },
+  Sage:     { baseSpd: 104, hpMult: 1.00, atkMult: 0.95, desc: 'Channeler of Bosomtwe waters and ancestral wards.' },
+  Hunter:   { baseSpd: 114, hpMult: 0.94, atkMult: 1.20, desc: 'Deadly marksman who delays enemy rhythm.' }
+};
+
+const HERO_DB = [
+  {
+    id: 'dufie',
+    name: 'Dufie',
+    title: 'Oath of the Golden Stool',
+    archetype: 'Vanguard',
+    adinkra: 'Gye Nyame',
+    adinkraMeaning: 'Except for God — supremacy of the Creator and immortal resilience.',
+    palette: { primary: '#f5b700', secondary: '#9e1b1b', hair: '#111', skin: '#5c3824' },
+    weapon: 'akrafena_shield',
+    baseHp: 1380, baseAtk: 115, baseMag: 105,
+    skills: [
+      { name: 'Akrafena Cleave', type: 'basic', cd: 0, mult: 1.05, desc: 'Heavy slash that grants +25 Energy and 15% Shield for 1 turn.', eff: 'SELF_MINI_SHIELD' },
+      { name: 'Sika Ban', type: 'skill', cd: 3, mult: 0.9, desc: 'Slams shield to grant 30% Max HP Shield (2t) and 45% chance to Stun.', eff: 'SHIELD_STUN' },
+      { name: 'Kumasi Tremor', type: 'skill', cd: 4, mult: 1.5, desc: 'Crushing earth strike that inflicts DEF Down & Slow (2t).', eff: 'DEBUFF_DEF_SLOW' },
+      { name: 'Gye Nyame Aegis', type: 'ult', cd: 0, mult: 2.3, desc: 'ULTIMATE: Calls divine judgment, Stunning (1t), healing 20% HP, and dealing massive damage.', eff: 'ULT_DUFIE' }
+    ]
+  },
+  {
+    id: 'blay',
+    name: 'Blay',
+    title: 'Twin-Blade of Nzema',
+    archetype: 'Shadow',
+    adinkra: 'Akofena',
+    adinkraMeaning: 'Sword of War — valor, gallantry, and lightning execution.',
+    palette: { primary: '#00d9ff', secondary: '#1c192b', hair: '#e8e8e8', skin: '#4a2c1d' },
+    weapon: 'twin_swords',
+    baseHp: 940, baseAtk: 152, baseMag: 95,
+    skills: [
+      { name: 'Shadow Fang', type: 'basic', cd: 0, mult: 1.1, desc: 'Swift twin cut that delays target Turn Meter by 12%.', eff: 'TM_PUSHBACK_12' },
+      { name: 'Phantom Step', type: 'skill', cd: 3, mult: 1.45, desc: 'Grants Evade & ATK Up (2t) before slicing vitals.', eff: 'EVADE_ATKUP' },
+      { name: 'Sever Sunsum', type: 'skill', cd: 4, mult: 1.65, desc: 'Applies Burn (2t), Slow (2t), and steals 30% Turn Meter.', eff: 'BURN_STEAL_TM' },
+      { name: 'Akofena Eclipse', type: 'ult', cd: 0, mult: 2.65, desc: 'ULTIMATE: 9-fold ink slash that Stuns charging foes and ignores 35% DEF.', eff: 'ULT_BLAY' }
+    ]
+  },
+  {
+    id: 'gyakari',
+    name: 'Gyakari',
+    title: 'Ash-Crowned Berserker',
+    archetype: 'Striker',
+    adinkra: 'Dwennimmen',
+    adinkraMeaning: 'Ram’s Horns — strength of body tempered by humility of heart.',
+    palette: { primary: '#e62e2d', secondary: '#f5b700', hair: '#2a0808', skin: '#663c26' },
+    weapon: 'great_axe',
+    baseHp: 1160, baseAtk: 148, baseMag: 90,
+    skills: [
+      { name: 'Horned Smash', type: 'basic', cd: 0, mult: 1.15, desc: 'Brutal axe swing that inflicts Burn (1t).', eff: 'BURN_1' },
+      { name: 'Feyiase Roar', type: 'skill', cd: 3, mult: 1.35, desc: 'Grants ATK Up (2t) and shatters enemy DEF (2t).', eff: 'ATKUP_DEFDOWN' },
+      { name: 'Skullbreaker', type: 'skill', cd: 4, mult: 1.75, desc: 'overhead leap that Stuns (1t) and crushes shields.', eff: 'STUN_1' },
+      { name: 'Dwennimmen Cataclysm', type: 'ult', cd: 0, mult: 2.8, desc: 'ULTIMATE: Volcanic ram cleave. Deals +40% damage if target is Burned or DEF Down.', eff: 'ULT_GYAKARI' }
+    ]
+  },
+  {
+    id: 'kome',
+    name: 'Kome',
+    title: 'Oracle of Bosomtwe',
+    archetype: 'Sage',
+    adinkra: 'Sankofa',
+    adinkraMeaning: 'Go back and get it — wisdom drawn from the sacred past.',
+    palette: { primary: '#00c48c', secondary: '#f5b700', hair: '#152420', skin: '#543322' },
+    weapon: 'staff',
+    baseHp: 1120, baseAtk: 110, baseMag: 145,
+    skills: [
+      { name: 'Ripple Bolt', type: 'basic', cd: 0, mult: 1.0, desc: 'Spirit bolt scaling with Magic. Restores 8% HP.', eff: 'LIFESTEAL_8' },
+      { name: 'Waters of Tano', type: 'skill', cd: 3, mult: 0.8, desc: 'Cleanses debuffs, heals 28% Max HP, and grants Shield (2t).', eff: 'HEAL_SHIELD' },
+      { name: 'Time Reversal', type: 'skill', cd: 4, mult: 1.4, desc: 'Pushes enemy Turn Meter back 40% and inflicts Slow (2t).', eff: 'TM_PUSHBACK_40' },
+      { name: 'Sankofa Awakening', type: 'ult', cd: 0, mult: 2.35, desc: 'ULTIMATE: Sacred bird of memory restores 35% HP, Stuns (1t), and blasts spirit fire.', eff: 'ULT_KOME' }
+    ]
+  },
+  {
+    id: 'obiri',
+    name: 'Obiri',
+    title: 'Thunderbow of Kwahu',
+    archetype: 'Hunter',
+    adinkra: 'Nsoromma',
+    adinkraMeaning: 'Child of the Heavens — starlight guidance and unerring aim.',
+    palette: { primary: '#a259ff', secondary: '#00d9ff', hair: '#1a1228', skin: '#4f301e' },
+    weapon: 'greatbow',
+    baseHp: 1020, baseAtk: 142, baseMag: 110,
+    skills: [
+      { name: 'Starlight Shaft', type: 'basic', cd: 0, mult: 1.1, desc: 'Piercing shot that reduces enemy Turn Meter by 15%.', eff: 'TM_PUSHBACK_15' },
+      { name: 'Pinning Volley', type: 'skill', cd: 3, mult: 1.4, desc: 'Inflicts Slow (2t) and DEF Down (2t).', eff: 'DEBUFF_DEF_SLOW' },
+      { name: 'Windstep Snipe', type: 'skill', cd: 4, mult: 1.65, desc: 'Gains Evade (2t) and Stuns charging monsters.', eff: 'EVADE_STUN' },
+      { name: 'Nsoromma Meteor', type: 'ult', cd: 0, mult: 2.6, desc: 'ULTIMATE: Fires a celestial arrow that resets enemy Turn Meter to 0 and Burns (2t).', eff: 'ULT_OBIRI' }
+    ]
+  },
+  {
+    id: 'kuukua',
+    name: 'Kuukua',
+    title: 'Crimson Weaver of Bonwire',
+    archetype: 'Striker',
+    adinkra: 'Aya',
+    adinkraMeaning: 'The Fern — endurance, defiance, and thriving through adversity.',
+    palette: { primary: '#ff3864', secondary: '#f5b700', hair: '#240b15', skin: '#6b422b' },
+    weapon: 'spear',
+    baseHp: 1140, baseAtk: 144, baseMag: 115,
+    skills: [
+      { name: 'Thorn Thrust', type: 'basic', cd: 0, mult: 1.1, desc: 'Spear jab that applies Burn (2t).', eff: 'BURN_2' },
+      { name: 'Kente Lash', type: 'skill', cd: 3, mult: 1.4, desc: 'Binds enemy legs: Slow (2t) and Stun (1t).', eff: 'STUN_SLOW' },
+      { name: 'Defiant Bloom', type: 'skill', cd: 3, mult: 1.35, desc: 'Gains ATK Up (2t) and Shield (25% HP).', eff: 'ATKUP_SHIELD' },
+      { name: 'Aya Tempest', type: 'ult', cd: 0, mult: 2.7, desc: 'ULTIMATE: Blazing spear cyclone that detonates Burns and heals 25% of damage dealt.', eff: 'ULT_KUUKUA' }
+    ]
+  },
+  {
+    id: 'owureku',
+    name: 'Owureku',
+    title: 'Night-Crocodile of Pra',
+    archetype: 'Shadow',
+    adinkra: 'Denkyem',
+    adinkraMeaning: 'The Crocodile — adaptability in water and air, ruthless ambush.',
+    palette: { primary: '#2de2e6', secondary: '#00c48c', hair: '#0d1f1d', skin: '#3d2518' },
+    weapon: 'claws',
+    baseHp: 960, baseAtk: 150, baseMag: 100,
+    skills: [
+      { name: 'Jaw Snap', type: 'basic', cd: 0, mult: 1.12, desc: 'Rending strike with 50% chance to inflict DEF Down (1t).', eff: 'DEFDOWN_1' },
+      { name: 'Submerge', type: 'skill', cd: 3, mult: 1.4, desc: 'Grants Evade (2t) and boosts own Turn Meter by 35%.', eff: 'EVADE_TMBOOST' },
+      { name: 'Death Roll', type: 'skill', cd: 4, mult: 1.7, desc: 'Violent twist that Stuns (1t) and inflicts Burn (2t).', eff: 'STUN_BURN' },
+      { name: 'Denkyem Abyss', type: 'ult', cd: 0, mult: 2.7, desc: 'ULTIMATE: Drags foe into ink depths, Stunning (1t) and stealing 50% Turn Meter.', eff: 'ULT_OWUREKU' }
+    ]
+  },
+  {
+    id: 'afrakoma',
+    name: 'Afrakoma',
+    title: 'Golden Flute Priestess',
+    archetype: 'Sage',
+    adinkra: 'Bese Saka',
+    adinkraMeaning: 'Sack of Cola Nuts — abundance, unity, and spiritual nourishment.',
+    palette: { primary: '#ffbe0b', secondary: '#a259ff', hair: '#1f1124', skin: '#5e3925' },
+    weapon: 'flute_staff',
+    baseHp: 1150, baseAtk: 108, baseMag: 150,
+    skills: [
+      { name: 'Resonant Note', type: 'basic', cd: 0, mult: 1.05, desc: 'Harmonic wave that grants +30 Energy.', eff: 'EXTRA_ENERGY' },
+      { name: 'Abundance Hymn', type: 'skill', cd: 3, mult: 0.9, desc: 'Heals 25% HP and grants ATK Up & Shield (2t).', eff: 'HEAL_ATK_SHIELD' },
+      { name: 'Lullaby of Anansi', type: 'skill', cd: 4, mult: 1.45, desc: 'Hypnotic melody that Stuns (1t) and Slows (2t).', eff: 'STUN_SLOW' },
+      { name: 'Bese Saka Symphony', type: 'ult', cd: 0, mult: 2.45, desc: 'ULTIMATE: Golden soundwave shatters enemy DEF, heals 30% HP, and deals heavy Magic damage.', eff: 'ULT_AFRAKOMA' }
+    ]
+  }
+];
+
+const MONSTER_TYPES = {
+  Mmoatia:     { name: 'Mmoatia',     title: 'Forest Trickster Dwarf', color: '#00c48c', sec: '#f5b700', spd: 112, hp: 850,  atk: 105, shape: 'imp',    chargeName: 'Poison Dart Barrage' },
+  Sasabonsam:  { name: 'Sasabonsam',  title: 'Iron-Teeth Canopy Fiend', color: '#e62e2d', sec: '#111111', spd: 106, hp: 1150, atk: 125, shape: 'winged', chargeName: 'Blood-Canopy Dive' },
+  Asanbosam:   { name: 'Asanbosam',   title: 'Hook-Footed Stalker',     color: '#a259ff', sec: '#e62e2d', spd: 118, hp: 1000, atk: 130, shape: 'fangs',  chargeName: 'Iron-Hook Guillotine' },
+  Sika:        { name: 'Sika Honhom', title: 'Golden Dust Wraith',      color: '#f5b700', sec: '#00d9ff', spd: 110, hp: 1250, atk: 120, shape: 'wraith', chargeName: 'Molten Sika Supernova' },
+  Abonsam:     { name: 'Abonsam',     title: 'Lord of the Abyssal Pit', color: '#ff0055', sec: '#f5b700', spd: 115, hp: 1550, atk: 142, shape: 'demon',  chargeName: 'Asamando Eclipse' }
+};
+
+const CAMPAIGN_STAGES = [
+  { id: 1,  name: 'Kwahu Scarp',        waves: ['Mmoatia'],                          desc: 'Mischievous Mmoatia dwarves guard the misty cliff path with curved feet and blowdarts.' },
+  { id: 2,  name: 'Atwea Sacred Grove', waves: ['Mmoatia', 'Mmoatia'],               desc: 'Whistles echo between silk-cotton trees as two forest spirits test your Sunsum.' },
+  { id: 3,  name: 'Birim River Crossing',waves:['Sika'],                             desc: 'A Sika Honhom born from alluvial gold dust rises from the shimmering riverbanks.' },
+  { id: 4,  name: 'Kakum High Canopy',  waves: ['Sasabonsam'],                       desc: 'Dangling from high branches, a winged Sasabonsam bares its iron fangs.' },
+  { id: 5,  name: 'Adansi Deep Woods',  waves: ['Mmoatia', 'Sasabonsam'],            desc: 'Trickster illusions mask the sudden descent of a canopy fiend.' },
+  { id: 6,  name: 'Obuasi Gold Veins',  waves: ['Sika', 'Asanbosam'],                desc: 'Deep beneath the golden quartz, an iron-hooked Asanbosam stalks miners.' },
+  { id: 7,  name: 'Lake Bosomtwe Rim',  waves: ['Asanbosam', 'Sika'],                desc: 'Sacred crater waters tremble as ancient spirits challenge the worthy.' },
+  { id: 8,  name: 'Bonwire Loom Hall',  waves: ['Mmoatia', 'Asanbosam'],             desc: 'Shadow threads weave across the looms; strike before they finish charging!' },
+  { id: 9,  name: 'Tano River Shrine',  waves: ['Sasabonsam', 'Sasabonsam'],         desc: 'Twin canopy terrors descend under a blood-orange harmattan sky.' },
+  { id: 10, name: 'Feyiase Battlefield',waves: ['Sika', 'Abonsam'],                  desc: 'Mid-campaign boss! An Abonsam warlord manifests from ancestral war smoke.' },
+  { id: 11, name: 'Kintampo Falls',     waves: ['Mmoatia', 'Sika', 'Asanbosam'],     desc: 'Three sequential duels behind the roaring curtain of black rock.' },
+  { id: 12, name: 'Bono Manso Ruins',   waves: ['Asanbosam', 'Sasabonsam'],          desc: 'Crumbling red-clay walls hide lethal predators of the savannah edge.' },
+  { id: 13, name: 'Pra Confluence',     waves: ['Sika', 'Sika', 'Sasabonsam'],       desc: 'Blinding golden mirages drain the stamina of slow warriors.' },
+  { id: 14, name: 'Begoro Mist Peaks',  waves: ['Asanbosam', 'Asanbosam', 'Mmoatia'],desc: 'Relentless ambushers with razor hooks test your turn-meter mastery.' },
+  { id: 15, name: 'Mampong Escarpment', waves: ['Sasabonsam', 'Sika', 'Abonsam'],    desc: 'An Abonsam commander backed by sworn spirits blocks the royal road.' },
+  { id: 16, name: 'Ejisu Queen’s Gate', waves: ['Asanbosam', 'Abonsam'],             desc: 'Only those who interrupt the Abyssal Charge survive Ejisu’s trial.' },
+  { id: 17, name: 'Ankaase Iron Forge', waves: ['Sika', 'Sasabonsam', 'Asanbosam'],  desc: 'Sparks and black ink collide inside the subterranean forge.' },
+  { id: 18, name: 'Bantama War Drums',  waves: ['Sasabonsam', 'Abonsam', 'Sika'],    desc: 'Fontomfrom drums beat at double tempo as night spirits converge.' },
+  { id: 19, name: 'Manhyia Threshold',  waves: ['Asanbosam', 'Sasabonsam', 'Abonsam'],desc: 'The penultimate gauntlet of three ferocious folklore titans.' },
+  { id: 20, name: 'Asamando Rift',      waves: ['Sika', 'Abonsam', 'Abonsam'],       desc: 'Final Stage: Seal the rift against the Twin Lords of Abonsam!' }
+];
+
+/* ============================================================================
+   STATE & SAVE MANAGEMENT
+   ============================================================================ */
+
+const SAVE_KEY = 'gyeaman_duels_save_v1';
+
+let state = {
+  cowries: 300,
+  gold: 500,
+  xp: 250,
+  selectedHeroId: 'dufie',
+  heroViewIndex: 0,
+  heroTab: 'skills',
+  selectedSkillIdx: 0,
+  currentStageIdx: 0,
+  difficulty: 'normal',
+  unlockedNormal: 1,
+  unlockedHard: 0,
+  starsNormal: {},
+  starsHard: {},
+  heroes: {}
+};
+
+function initDefaultState() {
+  HERO_DB.forEach((h, idx) => {
+    state.heroes[h.id] = {
+      unlocked: idx < 3, // Dufie, Blay, Gyakari unlocked initially
+      level: 1,
+      shards: 0,
+      pts: 0,
+      alloc: { hp: 0, atk: 0, spd: 0, mag: 0 }
+    };
+  });
+}
+
+function loadState() {
+  initDefaultState();
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      state.cowries = parsed.cowries ?? 300;
+      state.gold = parsed.gold ?? 500;
+      state.xp = parsed.xp ?? 250;
+      state.selectedHeroId = parsed.selectedHeroId || 'dufie';
+      state.currentStageIdx = parsed.currentStageIdx || 0;
+      state.difficulty = parsed.difficulty || 'normal';
+      state.unlockedNormal = parsed.unlockedNormal || 1;
+      state.unlockedHard = parsed.unlockedHard || 0;
+      state.starsNormal = parsed.starsNormal || {};
+      state.starsHard = parsed.starsHard || {};
+      if (parsed.heroes) {
+        Object.keys(parsed.heroes).forEach(k => {
+          if (state.heroes[k]) {
+            state.heroes[k] = { ...state.heroes[k], ...parsed.heroes[k] };
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Save load error', e);
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  } catch (e) {}
+  updateTopBar();
+}
+
+function getHeroComputedStats(heroId) {
+  const db = HERO_DB.find(h => h.id === heroId);
+  const st = state.heroes[heroId];
+  const arch = ARCHETYPES[db.archetype];
+  const lvlMult = 1 + (st.level - 1) * 0.08 + st.shards * 0.03;
+
+  const hp = Math.round((db.baseHp * arch.hpMult * lvlMult) + st.alloc.hp * 95);
+  const atk = Math.round((db.baseAtk * arch.atkMult * lvlMult) + st.alloc.atk * 14);
+  const mag = Math.round((db.baseMag * lvlMult) + st.alloc.mag * 15);
+  const spd = arch.baseSpd + st.alloc.spd * 3; // Fixed archetype base speed + capped upgrades
+
+  return { hp, atk, mag, spd, baseSpd: arch.baseSpd };
+}
+
+/* ============================================================================
+   ADINKRA & BLEACH-STYLE INK ART ENGINE (Canvas 2D)
+   ============================================================================ */
+
+function drawAdinkraSymbol(ctx, name, cx, cy, r, color = '#f5b700', lineWidth = 4) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  switch (name) {
+    case 'Gye Nyame': {
+      // Iconic coiled fist/spine motif
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.85);
+      ctx.lineTo(0, r * 0.85);
+      ctx.stroke();
+      for (let s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(s * r * 0.45, -r * 0.45, r * 0.32, 0, Math.PI * 1.65);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(s * r * 0.45, r * 0.45, r * 0.32, Math.PI, Math.PI * 2.65);
+        ctx.stroke();
+      }
+      ctx.fillRect(-r * 0.22, -r * 0.18, r * 0.44, r * 0.36);
+      break;
+    }
+    case 'Akofena': {
+      // Crossed ceremonial Ashanti state swords
+      for (let s of [-1, 1]) {
+        ctx.save();
+        ctx.rotate(s * 0.48);
+        ctx.beginPath();
+        ctx.moveTo(0, r * 0.5);
+        ctx.quadraticCurveTo(s * r * 0.28, -r * 0.2, 0, -r * 0.9);
+        ctx.quadraticCurveTo(-s * r * 0.08, -r * 0.2, 0, r * 0.5);
+        ctx.stroke();
+        // Pommel spheres
+        ctx.beginPath();
+        ctx.arc(0, r * 0.55, r * 0.12, 0, Math.PI * 2);
+        ctx.arc(0, r * 0.82, r * 0.12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      break;
+    }
+    case 'Dwennimmen': {
+      // Four inward-curling ram's horns
+      for (let a = 0; a < 4; a++) {
+        ctx.save();
+        ctx.rotate(a * Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(r * 0.7, 0, r * 0.8, -r * 0.7, r * 0.3, -r * 0.7);
+        ctx.bezierCurveTo(0, -r * 0.7, 0.1 * r, -r * 0.3, r * 0.35, -r * 0.35);
+        ctx.stroke();
+        ctx.restore();
+      }
+      break;
+    }
+    case 'Sankofa': {
+      // Stylized heart / bird looking back
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.75);
+      ctx.bezierCurveTo(-r * 0.95, r * 0.1, -r * 0.85, -r * 0.8, 0, -r * 0.35);
+      ctx.bezierCurveTo(r * 0.85, -r * 0.8, r * 0.95, r * 0.1, 0, r * 0.75);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(-r * 0.32, -r * 0.3, r * 0.16, 0, Math.PI * 1.5);
+      ctx.arc(r * 0.32, -r * 0.3, r * 0.16, Math.PI * 1.5, Math.PI * 3);
+      ctx.stroke();
+      break;
+    }
+    case 'Nsoromma': {
+      // 8-point celestial star with hollow center
+      for (let i = 0; i < 4; i++) {
+        ctx.save();
+        ctx.rotate(i * Math.PI / 4);
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.85, 0);
+        ctx.lineTo(r * 0.85, 0);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+      ctx.fillStyle = '#0c0a0e';
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
+    case 'Aya': {
+      // Fern stem with symmetrical fronds
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.85);
+      ctx.lineTo(0, -r * 0.85);
+      ctx.stroke();
+      for (let i = -2; i <= 2; i++) {
+        const y = i * r * 0.28;
+        const w = (1 - Math.abs(i) * 0.18) * r * 0.55;
+        ctx.beginPath();
+        ctx.moveTo(0, y + r * 0.1);
+        ctx.quadraticCurveTo(-w, y - r * 0.1, -w * 0.8, y - r * 0.25);
+        ctx.moveTo(0, y + r * 0.1);
+        ctx.quadraticCurveTo(w, y - r * 0.1, w * 0.8, y - r * 0.25);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'Denkyem': {
+      // Angular crocodile with splayed legs
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.88);
+      ctx.lineTo(r * 0.25, 0);
+      ctx.lineTo(0, r * 0.88);
+      ctx.lineTo(-r * 0.25, 0);
+      ctx.closePath();
+      ctx.stroke();
+      for (let y of [-r * 0.35, r * 0.35]) {
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.75, y - r * 0.2);
+        ctx.lineTo(-r * 0.2, y);
+        ctx.lineTo(r * 0.2, y);
+        ctx.lineTo(r * 0.75, y - r * 0.2);
+        ctx.stroke();
+      }
+      break;
+    }
+    default: {
+      // Bese Saka - 4 diamonds around center knot
+      for (let i = 0; i < 4; i++) {
+        ctx.save();
+        ctx.rotate(i * Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.2);
+        ctx.lineTo(r * 0.35, -r * 0.55);
+        ctx.lineTo(0, -r * 0.9);
+        ctx.lineTo(-r * 0.35, -r * 0.55);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.18, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+/* Draw Bleach-inspired angular long-limbed Akan Hero */
+function drawBleachHero(ctx, hero, x, y, scale = 1, animTime = 0, opts = {}) {
+  const { silhouette = null, hitFlash = false, attackOffset = 0 } = opts;
+  ctx.save();
+  ctx.translate(x + attackOffset, y);
+  ctx.scale(scale, scale);
+
+  const bob = Math.sin(animTime * 3.5) * 4;
+  const capeSway = Math.cos(animTime * 2.8) * 8;
+
+  const ink = silhouette ? silhouette : '#050406';
+  const cPrim = silhouette ? silhouette : (hitFlash ? '#fff' : hero.palette.primary);
+  const cSec  = silhouette ? silhouette : (hitFlash ? '#fff' : hero.palette.secondary);
+  const cSkin = silhouette ? silhouette : (hitFlash ? '#fff' : hero.palette.skin);
+  const cHair = silhouette ? silhouette : (hitFlash ? '#fff' : hero.palette.hair);
+
+  ctx.lineWidth = 4.5;
+  ctx.lineJoin = 'miter';
+  ctx.strokeStyle = ink;
+
+  // 1. Flowing Kente Sash / Cloak behind
+  ctx.fillStyle = cSec;
+  ctx.beginPath();
+  ctx.moveTo(-18, -95 + bob);
+  ctx.lineTo(-65 + capeSway, 35);
+  ctx.lineTo(-22 + capeSway * 0.5, 48);
+  ctx.lineTo(15, -75 + bob);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // High-contrast black ink shadow wedge on cloak
+  if (!silhouette) {
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.moveTo(-18, -85 + bob);
+    ctx.lineTo(-48 + capeSway, 15);
+    ctx.lineTo(-15, -20 + bob);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 2. Long Angular Legs (Hakama / Wrapped Kente trousers)
+  ctx.fillStyle = silhouette ? silhouette : '#16131d';
+  // Back leg
+  ctx.beginPath();
+  ctx.moveTo(4, -22 + bob);
+  ctx.lineTo(30, 38);
+  ctx.lineTo(42, 92);
+  ctx.lineTo(16, 92);
+  ctx.lineTo(-4, 24);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Front leg
+  ctx.beginPath();
+  ctx.moveTo(-12, -22 + bob);
+  ctx.lineTo(-34, 40);
+  ctx.lineTo(-42, 95);
+  ctx.lineTo(-14, 95);
+  ctx.lineTo(6, 22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Gold Kente geometric shin bands
+  ctx.fillStyle = cPrim;
+  ctx.fillRect(-36, 55, 18, 12);
+  ctx.strokeRect(-36, 55, 18, 12);
+  ctx.fillRect(18, 52, 18, 12);
+  ctx.strokeRect(18, 52, 18, 12);
+
+  // 3. Sharp Angular Torso
+  ctx.fillStyle = cSkin;
+  ctx.beginPath();
+  ctx.moveTo(-26, -98 + bob);
+  ctx.lineTo(24, -96 + bob);
+  ctx.lineTo(12, -22 + bob);
+  ctx.lineTo(-14, -22 + bob);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Chest Kente Cross-Wrap & Waist Sash
+  ctx.fillStyle = cPrim;
+  ctx.beginPath();
+  ctx.moveTo(-26, -98 + bob);
+  ctx.lineTo(16, -22 + bob);
+  ctx.lineTo(-14, -22 + bob);
+  ctx.lineTo(-28, -75 + bob);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Waist Kente Belt
+  ctx.fillStyle = cSec;
+  ctx.fillRect(-18, -32 + bob, 34, 14);
+  ctx.strokeRect(-18, -32 + bob, 34, 14);
+
+  // 4. Angular Head & Fierce Eyes
+  ctx.fillStyle = cSkin;
+  ctx.beginPath();
+  ctx.moveTo(-14, -135 + bob);
+  ctx.lineTo(16, -135 + bob);
+  ctx.lineTo(19, -112 + bob);
+  ctx.lineTo(4, -98 + bob);
+  ctx.lineTo(-12, -106 + bob);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  if (!silhouette) {
+    // Bleach-style sharp eye + cheekbone shadow
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.moveTo(-12, -118 + bob);
+    ctx.lineTo(2, -112 + bob);
+    ctx.lineTo(-10, -106 + bob);
+    ctx.fill();
+
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(2, -121 + bob);
+    ctx.lineTo(15, -123 + bob);
+    ctx.lineTo(11, -117 + bob);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Spiky / Locs Hair Silhouette
+  ctx.fillStyle = cHair;
+  ctx.beginPath();
+  ctx.moveTo(-18, -126 + bob);
+  ctx.lineTo(-38, -148 + bob);
+  ctx.lineTo(-12, -142 + bob);
+  ctx.lineTo(-22, -168 + bob);
+  ctx.lineTo(4, -148 + bob);
+  ctx.lineTo(20, -162 + bob);
+  ctx.lineTo(18, -132 + bob);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Gold Headband
+  ctx.fillStyle = cPrim;
+  ctx.fillRect(-15, -136 + bob, 32, 7);
+  ctx.strokeRect(-15, -136 + bob, 32, 7);
+
+  // 5. Weapon & Forearm
+  ctx.save();
+  ctx.translate(14, -78 + bob);
+  ctx.rotate(Math.sin(animTime * 3) * 0.08 - (attackOffset > 0 ? 0.45 : 0));
+
+  if (hero.weapon === 'akrafena_shield') {
+    // Curved Akrafena Sword
+    ctx.fillStyle = cPrim;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(55, -35, 78, -95);
+    ctx.quadraticCurveTo(35, -30, -6, -12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Shield on front arm
+    ctx.fillStyle = cSec;
+    ctx.beginPath();
+    ctx.moveTo(-25, -20);
+    ctx.lineTo(5, -35);
+    ctx.lineTo(12, 25);
+    ctx.lineTo(-18, 42);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else if (hero.weapon === 'great_axe') {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-20, 40);
+    ctx.lineTo(55, -85);
+    ctx.stroke();
+    ctx.fillStyle = cPrim;
+    ctx.beginPath();
+    ctx.moveTo(35, -60);
+    ctx.lineTo(85, -80);
+    ctx.lineTo(68, -25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else if (hero.weapon === 'greatbow') {
+    ctx.strokeStyle = cPrim;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(15, 0, 62, -Math.PI * 0.48, Math.PI * 0.48);
+    ctx.stroke();
+  } else {
+    // Long angular spiritual blade / staff
+    ctx.fillStyle = cPrim;
+    ctx.beginPath();
+    ctx.moveTo(-10, 15);
+    ctx.lineTo(85, -85);
+    ctx.lineTo(72, -92);
+    ctx.lineTo(-16, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.restore();
+}
+
+/* Draw Akan Folklore Monster */
+function drawFolkloreMonster(ctx, mKey, x, y, scale = 1, animTime = 0, opts = {}) {
+  const m = MONSTER_TYPES[mKey] || MONSTER_TYPES.Mmoatia;
+  const { silhouette = null, hitFlash = false, isCharging = false, attackOffset = 0 } = opts;
+
+  ctx.save();
+  ctx.translate(x - attackOffset, y);
+  ctx.scale(scale, scale);
+
+  const floatY = Math.sin(animTime * 4) * 6;
+  const ink = silhouette ? silhouette : '#050406';
+  const cMain = silhouette ? silhouette : (hitFlash ? '#fff' : m.color);
+  const cSec  = silhouette ? silhouette : (hitFlash ? '#fff' : m.sec);
+
+  // Charging Red Aura
+  if (isCharging && !silhouette) {
+    ctx.save();
+    ctx.strokeStyle = '#ff0055';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 6; i++) {
+      const ang = animTime * 4 + i * (Math.PI / 3);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(ang) * 45, -35 + Math.sin(ang) * 45);
+      ctx.lineTo(Math.cos(ang) * 85, -35 + Math.sin(ang) * 85);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  ctx.lineWidth = 4.5;
+  ctx.strokeStyle = ink;
+  ctx.lineJoin = 'miter';
+
+  // Monster Wing / Back Silhouette
+  if (m.shape === 'winged' || m.shape === 'demon') {
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.moveTo(0, -70 + floatY);
+    ctx.lineTo(95, -145 + floatY * 1.5);
+    ctx.lineTo(65, -25 + floatY);
+    ctx.lineTo(85, 20 + floatY);
+    ctx.lineTo(10, -15 + floatY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = cMain;
+    ctx.stroke();
+    ctx.strokeStyle = ink;
+  }
+
+  // Angular Hollow-like Body
+  ctx.fillStyle = cMain;
+  ctx.beginPath();
+  ctx.moveTo(-32, -95 + floatY);
+  ctx.lineTo(38, -108 + floatY);
+  ctx.lineTo(48, -20 + floatY);
+  ctx.lineTo(18, 75);
+  ctx.lineTo(-24, 75);
+  ctx.lineTo(-42, -25 + floatY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // High-contrast cel-shaded rib/mask markings
+  if (!silhouette) {
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.moveTo(-30, -65 + floatY);
+    ctx.lineTo(25, -45 + floatY);
+    ctx.lineTo(-20, -15 + floatY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Mask / Head with Horns
+  ctx.fillStyle = silhouette ? silhouette : '#f4efe6';
+  ctx.beginPath();
+  ctx.moveTo(-28, -135 + floatY);
+  ctx.lineTo(26, -135 + floatY);
+  ctx.lineTo(18, -78 + floatY);
+  ctx.lineTo(-18, -78 + floatY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Horns
+  ctx.fillStyle = cSec;
+  ctx.beginPath();
+  ctx.moveTo(-22, -132 + floatY);
+  ctx.lineTo(-55, -175 + floatY);
+  ctx.lineTo(-8, -135 + floatY);
+  ctx.moveTo(22, -132 + floatY);
+  ctx.lineTo(55, -175 + floatY);
+  ctx.lineTo(8, -135 + floatY);
+  ctx.fill();
+  ctx.stroke();
+
+  // Glowing Eyes & Iron Fangs
+  if (!silhouette) {
+    ctx.fillStyle = '#e62e2d';
+    ctx.fillRect(-18, -116 + floatY, 12, 6);
+    ctx.fillRect(4, -116 + floatY, 12, 6);
+  }
+
+  ctx.restore();
+}
+
+/* ============================================================================
+   UI NAVIGATION & SCREENS
+   ============================================================================ */
+
+function updateTopBar() {
+  document.getElementById('ui-cowries').textContent = state.cowries;
+  document.getElementById('ui-gold').textContent = state.gold;
+  document.getElementById('ui-xp').textContent = state.xp;
+}
+
+function switchScreen(scr) {
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('screen-' + scr).classList.add('active');
+  document.getElementById('nav-' + scr).classList.add('active');
+
+  if (scr === 'campaign') renderCampaignScreen();
+  if (scr === 'heroes') renderHeroScreen();
+  if (scr === 'summon') renderSummonCanvas();
+}
+
+/* ---------------- CAMPAIGN SCREEN ---------------- */
+function setDifficulty(diff) {
+  if (diff === 'hard' && state.unlockedNormal <= 20 && state.unlockedHard === 0) {
+    // Allow Hard on any stage already beaten on Normal
+    if ((state.starsNormal[1] || 0) === 0) {
+      showModal('HARD MODE LOCKED', '', 'Clear Stage 1 on Normal difficulty first to unlock Hard Mode!');
+      return;
+    }
+  }
+  state.difficulty = diff;
+  document.getElementById('btn-diff-normal').classList.toggle('active', diff === 'normal');
+  document.getElementById('btn-diff-hard').classList.toggle('active', diff === 'hard');
+  saveState();
+  renderCampaignScreen();
+}
+
+function changeStage(delta) {
+  const next = state.currentStageIdx + delta;
+  if (next < 0 || next >= CAMPAIGN_STAGES.length) return;
+  state.currentStageIdx = next;
+  saveState();
+  renderCampaignScreen();
+}
+
+function cycleSelectedHero(delta) {
+  const unlockedList = HERO_DB.filter(h => state.heroes[h.id].unlocked);
+  let idx = unlockedList.findIndex(h => h.id === state.selectedHeroId);
+  idx = (idx + delta + unlockedList.length) % unlockedList.length;
+  state.selectedHeroId = unlockedList[idx].id;
+  saveState();
+  renderCampaignScreen();
+}
+
+function renderCampaignScreen() {
+  const st = CAMPAIGN_STAGES[state.currentStageIdx];
+  const isHard = state.difficulty === 'hard';
+  const maxUnlocked = isHard ? Math.max(1, state.unlockedNormal - 1) : state.unlockedNormal;
+  const isUnlocked = st.id <= maxUnlocked;
+
+  document.getElementById('camp-progress-lbl').textContent = `${isHard ? 'HARD' : 'NORMAL'} • Stage ${st.id} / 20`;
+  document.getElementById('st-num').textContent = `STAGE ${String(st.id).padStart(2, '0')} ${isHard ? '• HARD' : ''}`;
+  document.getElementById('st-name').textContent = st.name;
+  document.getElementById('st-desc').textContent = st.desc;
+
+  const starCount = (isHard ? state.starsHard[st.id] : state.starsNormal[st.id]) || 0;
+  const starsHtml = [1, 2, 3].map(i => `<span class="star ${i <= starCount ? 'earned' : ''}">★</span>`).join('');
+  document.getElementById('st-stars').innerHTML = starsHtml;
+
+  const wavesEl = document.getElementById('st-waves');
+  wavesEl.innerHTML = st.waves.map((w, i) => `<span class="wave-pill">Duel ${i + 1}: ${w}</span>`).join('');
+
+  document.getElementById('btn-prev-stage').disabled = state.currentStageIdx === 0;
+  document.getElementById('btn-next-stage').disabled = state.currentStageIdx === CAMPAIGN_STAGES.length - 1;
+
+  // Selected Hero bar
+  const hDb = HERO_DB.find(h => h.id === state.selectedHeroId);
+  const hState = state.heroes[state.selectedHeroId];
+  const cStats = getHeroComputedStats(state.selectedHeroId);
+  document.getElementById('camp-hero-arch').textContent = hDb.archetype;
+  document.getElementById('camp-hero-name').textContent = hDb.name;
+  document.getElementById('camp-hero-pwr').textContent = `Lv.${hState.level} • HP ${cStats.hp} • SPD ${cStats.spd}`;
+
+  const startBtn = document.getElementById('btn-start-duel');
+  startBtn.disabled = !isUnlocked;
+  startBtn.textContent = isUnlocked ? `ENTER DUEL (${st.waves.length} WAVE${st.waves.length > 1 ? 'S' : ''})` : 'STAGE LOCKED';
+
+  drawStagePreviewCanvas();
+}
+
+function drawStagePreviewCanvas() {
+  const canvas = document.getElementById('stagePreviewCanvas');
+  const ctx = canvas.getContext('2d');
+  const st = CAMPAIGN_STAGES[state.currentStageIdx];
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Kente diagonal slash background
+  ctx.fillStyle = state.difficulty === 'hard' ? '#240b12' : '#181224';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(245,183,0,0.14)';
+  ctx.lineWidth = 2;
+  for (let i = -h; i < w; i += 28) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i + h, h);
+    ctx.stroke();
+  }
+
+  // Draw Hero on left, Boss wave monster on right
+  const heroDb = HERO_DB.find(x => x.id === state.selectedHeroId);
+  drawAdinkraSymbol(ctx, heroDb.adinkra, w * 0.5, h * 0.42, 85, 'rgba(245,183,0,0.12)', 5);
+
+  drawBleachHero(ctx, heroDb, w * 0.26, h * 0.68, 0.82, performance.now() * 0.001);
+  const bossWave = st.waves[st.waves.length - 1];
+  drawFolkloreMonster(ctx, bossWave, w * 0.75, h * 0.68, 0.82, performance.now() * 0.001);
+
+  // VS Ink Slash
+  ctx.save();
+  ctx.translate(w * 0.5, h * 0.44);
+  ctx.rotate(-0.2);
+  ctx.fillStyle = '#f5b700';
+  ctx.font = '800 28px Syne';
+  ctx.textAlign = 'center';
+  ctx.fillText('VS', 0, 0);
+  ctx.restore();
+}
+
+/* ---------------- HEROES SCREEN ---------------- */
+function cycleHeroView(delta) {
+  state.heroViewIndex = (state.heroViewIndex + delta + HERO_DB.length) % HERO_DB.length;
+  state.selectedSkillIdx = 0;
+  renderHeroScreen();
+}
+
+function setHeroTab(tab) {
+  state.heroTab = tab;
+  document.querySelectorAll('.htab').forEach(b => b.classList.remove('active'));
+  document.getElementById('htab-' + tab).classList.add('active');
+  renderHeroTabBody();
+}
+
+function renderHeroScreen() {
+  const hDb = HERO_DB[state.heroViewIndex];
+  const hSt = state.heroes[hDb.id];
+  const stats = getHeroComputedStats(hDb.id);
+
+  document.getElementById('h-name').textContent = hDb.name;
+  document.getElementById('h-title').textContent = `${hDb.adinkra} • ${hDb.archetype}`;
+  document.getElementById('h-lvl-badge').textContent = hSt.unlocked
+    ? `Lv. ${hSt.level} • ${hSt.shards} Shards • ${hSt.pts} Stat Pts`
+    : `LOCKED (${hSt.shards}/3 Shards to Unlock)`;
+
+  document.getElementById('h-stat-hp').textContent = stats.hp;
+  document.getElementById('h-stat-atk').textContent = stats.atk;
+  document.getElementById('h-stat-spd').textContent = `${stats.spd} (Base ${stats.baseSpd})`;
+  document.getElementById('h-stat-mag').textContent = stats.mag;
+
+  renderHeroTabBody();
+  drawHeroFullCanvas();
+}
+
+function renderHeroTabBody() {
+  const hDb = HERO_DB[state.heroViewIndex];
+  const hSt = state.heroes[hDb.id];
+  const body = document.getElementById('hero-tab-body');
+
+  if (state.heroTab === 'skills') {
+    const sk = hDb.skills[state.selectedSkillIdx] || hDb.skills[0];
+    const btns = hDb.skills.map((s, idx) => `
+      <button class="sk-icon-btn ${idx === state.selectedSkillIdx ? 'active' : ''}" onclick="selectHeroSkill(${idx})">
+        <span>${s.type === 'ult' ? 'ULT' : 'S' + (idx + 1)}</span>
+      </button>
+    `).join('');
+
+    body.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="skills-strip">${btns}</div>
+        ${hSt.unlocked && state.selectedHeroId !== hDb.id
+          ? `<button class="b-ctrl-btn on" onclick="setActiveHero('${hDb.id}')">SET ACTIVE</button>`
+          : (state.selectedHeroId === hDb.id ? `<span style="font-size:11px;color:var(--gold);font-weight:800;">★ ACTIVE DUELIST</span>` : '')}
+      </div>
+      <div style="font-size:13px;font-weight:800;color:var(--gold);">${sk.name} <span style="font-size:11px;color:var(--muted);">(${sk.type === 'ult' ? '100 Energy' : (sk.cd ? sk.cd + 't CD' : '0 CD')})</span></div>
+      <div style="font-size:12px;color:#ddd;line-height:1.35;margin-top:2px;">${sk.desc}</div>
+    `;
+  } else if (state.heroTab === 'growth') {
+    const xpCost = hSt.level * 80;
+    const goldCost = hSt.level * 100;
+    const spdMaxed = hSt.alloc.spd >= 5;
+    const canSpd = hSt.pts >= 2 && !spdMaxed;
+
+    body.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:12px;font-weight:700;">Lv.${hSt.level} • Unspent Pts: <b style="color:var(--gold)">${hSt.pts}</b></div>
+        <button class="b-ctrl-btn on" onclick="levelUpHero('${hDb.id}')" ${(!hSt.unlocked || state.xp < xpCost || state.gold < goldCost) ? 'disabled' : ''}>
+          LEVEL UP (🔥${xpCost} 🪙${goldCost})
+        </button>
+      </div>
+      <div class="growth-grid">
+        <button class="alloc-btn" onclick="allocStat('${hDb.id}','hp')" ${hSt.pts < 1 ? 'disabled' : ''}>
+          <span>HP (+${hSt.alloc.hp})</span><span class="alloc-plus">1 PT</span>
+        </button>
+        <button class="alloc-btn" onclick="allocStat('${hDb.id}','atk')" ${hSt.pts < 1 ? 'disabled' : ''}>
+          <span>ATK (+${hSt.alloc.atk})</span><span class="alloc-plus">1 PT</span>
+        </button>
+        <button class="alloc-btn" onclick="allocStat('${hDb.id}','mag')" ${hSt.pts < 1 ? 'disabled' : ''}>
+          <span>MAG (+${hSt.alloc.mag})</span><span class="alloc-plus">1 PT</span>
+        </button>
+        <button class="alloc-btn" onclick="allocStat('${hDb.id}','spd')" ${!canSpd ? 'disabled' : ''}>
+          <span>SPD (${hSt.alloc.spd}/5)</span><span class="alloc-plus">${spdMaxed ? 'MAX' : '2 PT'}</span>
+        </button>
+      </div>
+    `;
+  } else {
+    const archInfo = ARCHETYPES[hDb.archetype];
+    body.innerHTML = `
+      <div style="font-size:13px;font-weight:800;color:var(--gold);">${hDb.adinkra} — ${hDb.title}</div>
+      <div style="font-size:12px;color:#ddd;margin-top:3px;">${hDb.adinkraMeaning}</div>
+      <div style="font-size:11px;color:var(--cyan);margin-top:6px;"><b>${hDb.archetype} Archetype (Base SPD ${archInfo.baseSpd}):</b> ${archInfo.desc}</div>
+    `;
+  }
+}
+
+function selectHeroSkill(idx) {
+  state.selectedSkillIdx = idx;
+  renderHeroTabBody();
+}
+
+function setActiveHero(id) {
+  state.selectedHeroId = id;
+  saveState();
+  renderHeroTabBody();
+}
+
+function levelUpHero(id) {
+  const hSt = state.heroes[id];
+  const xpCost = hSt.level * 80;
+  const goldCost = hSt.level * 100;
+  if (!hSt.unlocked || state.xp < xpCost || state.gold < goldCost) return;
+  state.xp -= xpCost;
+  state.gold -= goldCost;
+  hSt.level += 1;
+  hSt.pts += 2;
+  saveState();
+  renderHeroScreen();
+}
+
+function allocStat(id, stat) {
+  const hSt = state.heroes[id];
+  if (stat === 'spd') {
+    if (hSt.pts < 2 || hSt.alloc.spd >= 5) return;
+    hSt.pts -= 2;
+    hSt.alloc.spd += 1;
+  } else {
+    if (hSt.pts < 1) return;
+    hSt.pts -= 1;
+    hSt.alloc[stat] += 1;
+  }
+  saveState();
+  renderHeroScreen();
+}
+
+function drawHeroFullCanvas() {
+  const canvas = document.getElementById('heroFullCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const hDb = HERO_DB[state.heroViewIndex];
+  const hSt = state.heroes[hDb.id];
+  const w = canvas.width, h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Giant Adinkra Backdrop
+  drawAdinkraSymbol(ctx, hDb.adinkra, w * 0.56, h * 0.34, 155, 'rgba(245,183,0,0.16)', 7);
+
+  // Diagonal Bleach-style speed lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 12; i++) {
+    ctx.beginPath();
+    ctx.moveTo(w * 0.1 + i * 35, 0);
+    ctx.lineTo(i * 35 - 120, h);
+    ctx.stroke();
+  }
+
+  ctx.save();
+  if (!hSt.unlocked) ctx.filter = 'grayscale(0.85) brightness(0.65)';
+  drawBleachHero(ctx, hDb, w * 0.56, h * 0.47, 1.38, performance.now() * 0.001);
+  ctx.restore();
+}
+
+/* ---------------- SUMMON SHRINE SCREEN ---------------- */
+let summonAnimAngle = 0;
+function renderSummonCanvas() {
+  const canvas = document.getElementById('summonCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  summonAnimAngle += 0.02;
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(summonAnimAngle);
+  ctx.strokeStyle = 'rgba(245,183,0,0.35)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-75, -75, 150, 150);
+  ctx.rotate(Math.PI / 4);
+  ctx.strokeRect(-75, -75, 150, 150);
+  ctx.restore();
+
+  drawAdinkraSymbol(ctx, 'Gye Nyame', w / 2, h / 2, 58, '#f5b700', 4.5);
+}
+
+function doSummon(count) {
+  const cost = count === 5 ? 450 : 100;
+  if (state.cowries < cost) {
+    showModal('NOT ENOUGH COWRIES', '', `You need 🐚 ${cost} Cowries. Win Campaign Duels to earn more!`);
+    return;
+  }
+  state.cowries -= cost;
+  let logs = [];
+
+  for (let i = 0; i < count; i++) {
+    const roll = Math.random();
+    if (roll < 0.38) {
+      // Hero or Shards
+      const pick = HERO_DB[Math.floor(Math.random() * HERO_DB.length)];
+      const hSt = state.heroes[pick.id];
+      if (!hSt.unlocked) {
+        hSt.unlocked = true;
+        logs.push(`★ NEW HERO: <b>${pick.name}</b> (${pick.archetype})!`);
+      } else {
+        hSt.shards += 1;
+        hSt.pts += 1;
+        logs.push(`❖ ${pick.name} Shard (+1 Stat Pt)`);
+      }
+    } else if (roll < 0.72) {
+      const xpGain = 120 + Math.floor(Math.random() * 90);
+      state.xp += xpGain;
+      logs.push(`🔥 +${xpGain} Sunsum XP`);
+    } else {
+      const goldGain = 160 + Math.floor(Math.random() * 120);
+      state.gold += goldGain;
+      logs.push(`🪙 +${goldGain} Sika Gold`);
+    }
+  }
+
+  saveState();
+  document.getElementById('summon-result').innerHTML = `<div style="font-size:12px;line-height:1.4;color:var(--gold);">${logs.join(' • ')}</div>`;
+  summonAnimAngle += 1.5;
+  renderSummonCanvas();
+}
+
+/* ============================================================================
+   TURN-METER BATTLE ENGINE & ULTIMATE CUTSCENE
+   ============================================================================ */
+
+let battle = null;
+
+function startStageBattle() {
+  const st = CAMPAIGN_STAGES[state.currentStageIdx];
+  const hDb = HERO_DB.find(h => h.id === state.selectedHeroId);
+  const cStats = getHeroComputedStats(hDb.id);
+  const isHard = state.difficulty === 'hard';
+
+  battle = {
+    active: true,
+    stage: st,
+    isHard,
+    waveIndex: 0,
+    speedMult: 1,
+    auto: false,
+    phase: 'TICK', // TICK | PLAYER_TURN | ENEMY_TURN | ANIM | ULT_CUTSCENE | ENDED
+    animTimer: 0,
+    floats: [],
+    ultData: null,
+    player: {
+      db: hDb,
+      name: hDb.name,
+      maxHp: cStats.hp,
+      hp: cStats.hp,
+      atk: cStats.atk,
+      mag: cStats.mag,
+      spd: cStats.spd,
+      shield: 0,
+      energy: 25,
+      tm: 0,
+      cds: [0, 0, 0, 0],
+      statuses: {}, // { STUN: 1, BURN: 2, ATK_UP: 2, DEF_DOWN: 2, SLOW: 2, EVADE: 2, SHIELD: 2 }
+      offsetX: 0,
+      hitFlash: 0
+    },
+    enemy: null
+  };
+
+  spawnWaveEnemy(0);
+  document.getElementById('battle-overlay').classList.add('active');
+  updateBattleHUD();
+  renderBattleSkillButtons();
+}
+
+function spawnWaveEnemy(waveIdx) {
+  const st = battle.stage;
+  const mKey = st.waves[waveIdx];
+  const mBase = MONSTER_TYPES[mKey];
+  const scaleFactor = (1 + (st.id - 1) * 0.13) * (battle.isHard ? 1.45 : 1.0);
+
+  const maxHp = Math.round(mBase.hp * scaleFactor);
+  const atk = Math.round(mBase.atk * scaleFactor);
+  const spd = mBase.spd + Math.floor(st.id * 0.7) + (battle.isHard ? 6 : 0);
+
+  battle.enemy = {
+    key: mKey,
+    base: mBase,
+    name: mBase.name,
+    maxHp,
+    hp: maxHp,
+    atk,
+    spd,
+    shield: 0,
+    energy: 0,
+    tm: 15,
+    turnCount: 0,
+    charging: false,
+    statuses: {},
+    offsetX: 0,
+    hitFlash: 0
+  };
+
+  document.getElementById('b-wave-ind').textContent = `DUEL ${waveIdx + 1}/${st.waves.length}`;
+}
+
+function getEffectiveSpd(unit) {
+  let s = unit.spd;
+  if (unit.statuses.SLOW > 0) s *= 0.72;
+  return Math.max(40, Math.round(s));
+}
+
+function tickStatusesOnTurnStart(unit, isPlayer) {
+  // Burn damage
+  if (unit.statuses.BURN > 0) {
+    const bDmg = Math.max(15, Math.round(unit.maxHp * 0.07));
+    applyDamage(unit, bDmg, false);
+    addBattleFloat(isPlayer ? 115 : 335, 190, `BURN -${bDmg}`, '#ff5722');
+  }
+  // Decrement durations
+  Object.keys(unit.statuses).forEach(k => {
+    if (k !== 'CHARGE') {
+      unit.statuses[k] -= 1;
+      if (unit.statuses[k] <= 0) {
+        delete unit.statuses[k];
+        if (k === 'SHIELD') unit.shield = 0;
+      }
+    }
+  });
+}
+
+function applyDamage(target, rawDmg, canEvade = true) {
+  if (canEvade && target.statuses.EVADE > 0) {
+    delete target.statuses.EVADE;
+    addBattleFloat(target === battle.player ? 115 : 335, 160, 'EVADED!', '#00c48c');
+    return 0;
+  }
+  let dmg = rawDmg;
+  if (target.statuses.DEF_DOWN > 0) dmg = Math.round(dmg * 1.35);
+  dmg = Math.max(1, Math.round(dmg));
+
+  if (target.shield > 0) {
+    if (target.shield >= dmg) {
+      target.shield -= dmg;
+      dmg = 0;
+    } else {
+      dmg -= target.shield;
+      target.shield = 0;
+      delete target.statuses.SHIELD;
+    }
+  }
+  target.hp = Math.max(0, target.hp - dmg);
+  target.hitFlash = 0.18;
+  return dmg;
+}
+
+function addStatus(unit, type, turns) {
+  unit.statuses[type] = Math.max(unit.statuses[type] || 0, turns);
+  // Stunning a charging monster breaks its charge!
+  if (type === 'STUN' && unit === battle.enemy && unit.charging) {
+    unit.charging = false;
+    delete unit.statuses.CHARGE;
+    addBattleFloat(330, 130, 'CHARGE BROKEN!', '#f5b700');
+  }
+}
+
+function addBattleFloat(x, y, text, color = '#fff') {
+  if (!battle) return;
+  battle.floats.push({ x, y, text, color, life: 1.1 });
+}
+
+function usePlayerSkill(skIdx) {
+  if (!battle || battle.phase !== 'PLAYER_TURN') return;
+  const p = battle.player;
+  const e = battle.enemy;
+  const sk = p.db.skills[skIdx];
+
+  if (sk.type === 'ult' && p.energy < 100) return;
+  if (sk.type !== 'ult' && p.cds[skIdx] > 0) return;
+
+  // Set cooldowns & energy
+  if (sk.type === 'ult') {
+    p.energy = 0;
+    startUltimateCutscene(sk);
+    return;
+  } else {
+    if (sk.cd > 0) p.cds[skIdx] = sk.cd;
+    p.energy = Math.min(100, p.energy + (sk.eff === 'EXTRA_ENERGY' ? 35 : 25));
+  }
+
+  executeSkillEffect(sk, false);
+  p.tm = 0;
+  battle.phase = 'ANIM';
+  battle.animTimer = 0.45;
+  p.offsetX = 48;
+  updateBattleHUD();
+  renderBattleSkillButtons();
+}
+
+function startUltimateCutscene(sk) {
+  battle.phase = 'ULT_CUTSCENE';
+  battle.ultData = {
+    skill: sk,
+    elapsed: 0,
+    duration: 2.05, // Includes calligraphy banner + 2 Bleach impact frames with hit-stop
+    executed: false
+  };
+  renderBattleSkillButtons();
+}
+
+function executeSkillEffect(sk, isUlt) {
+  const p = battle.player;
+  const e = battle.enemy;
+  const statBase = (p.db.archetype === 'Sage') ? Math.max(p.atk, p.mag) : p.atk;
+  const atkMult = p.statuses.ATK_UP > 0 ? 1.3 : 1.0;
+  let raw = statBase * sk.mult * atkMult;
+
+  if (sk.eff === 'ULT_GYAKARI' && (e.statuses.BURN || e.statuses.DEF_DOWN)) {
+    raw *= 1.4;
+  }
+
+  // Execute pre-hit buffs
+  if (sk.eff === 'EVADE_ATKUP') {
+    addStatus(p, 'EVADE', 2);
+    addStatus(p, 'ATK_UP', 2);
+  } else if (sk.eff === 'ATKUP_DEFDOWN') {
+    addStatus(p, 'ATK_UP', 2);
+    addStatus(e, 'DEF_DOWN', 2);
+  } else if (sk.eff === 'HEAL_SHIELD') {
+    const heal = Math.round(p.maxHp * 0.28);
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    p.shield = Math.round(p.maxHp * 0.22);
+    addStatus(p, 'SHIELD', 2);
+    addBattleFloat(115, 180, `+${heal} HP`, '#00c48c');
+  } else if (sk.eff === 'ATKUP_SHIELD') {
+    addStatus(p, 'ATK_UP', 2);
+    p.shield = Math.round(p.maxHp * 0.25);
+    addStatus(p, 'SHIELD', 2);
+  } else if (sk.eff === 'HEAL_ATK_SHIELD') {
+    const heal = Math.round(p.maxHp * 0.25);
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    p.shield = Math.round(p.maxHp * 0.2);
+    addStatus(p, 'SHIELD', 2);
+    addStatus(p, 'ATK_UP', 2);
+    addBattleFloat(115, 180, `+${heal} HP`, '#00c48c');
+  }
+
+  const dealt = applyDamage(e, raw, !isUlt);
+  if (dealt > 0) {
+    addBattleFloat(330, 175, `-${dealt}`, isUlt ? '#f5b700' : '#ffffff');
+  }
+
+  // Post-hit effects
+  switch (sk.eff) {
+    case 'SELF_MINI_SHIELD':
+      p.shield = Math.max(p.shield, Math.round(p.maxHp * 0.15));
+      addStatus(p, 'SHIELD', 1);
+      break;
+    case 'SHIELD_STUN':
+      p.shield = Math.round(p.maxHp * 0.30);
+      addStatus(p, 'SHIELD', 2);
+      if (Math.random() < 0.65 || e.charging) addStatus(e, 'STUN', 1);
+      break;
+    case 'DEBUFF_DEF_SLOW':
+      addStatus(e, 'DEF_DOWN', 2);
+      addStatus(e, 'SLOW', 2);
+      break;
+    case 'TM_PUSHBACK_12':
+      e.tm = Math.max(0, e.tm - 12);
+      break;
+    case 'TM_PUSHBACK_15':
+      e.tm = Math.max(0, e.tm - 15);
+      break;
+    case 'TM_PUSHBACK_40':
+      e.tm = Math.max(0, e.tm - 40);
+      addStatus(e, 'SLOW', 2);
+      break;
+    case 'BURN_STEAL_TM':
+      addStatus(e, 'BURN', 2);
+      addStatus(e, 'SLOW', 2);
+      e.tm = Math.max(0, e.tm - 30);
+      p.tm = Math.min(95, p.tm + 25);
+      break;
+    case 'BURN_1':
+      addStatus(e, 'BURN', 1);
+      break;
+    case 'BURN_2':
+      addStatus(e, 'BURN', 2);
+      break;
+    case 'STUN_1':
+      addStatus(e, 'STUN', 1);
+      break;
+    case 'LIFESTEAL_8':
+      p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.08));
+      break;
+    case 'EVADE_STUN':
+      addStatus(p, 'EVADE', 2);
+      addStatus(e, 'STUN', 1);
+      break;
+    case 'STUN_SLOW':
+      addStatus(e, 'STUN', 1);
+      addStatus(e, 'SLOW', 2);
+      break;
+    case 'DEFDOWN_1':
+      addStatus(e, 'DEF_DOWN', 2);
+      break;
+    case 'EVADE_TMBOOST':
+      addStatus(p, 'EVADE', 2);
+      p.tm = Math.min(95, p.tm + 35);
+      break;
+    case 'STUN_BURN':
+      addStatus(e, 'STUN', 1);
+      addStatus(e, 'BURN', 2);
+      break;
+    case 'ULT_DUFIE':
+      addStatus(e, 'STUN', 1);
+      p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.2));
+      break;
+    case 'ULT_BLAY':
+      addStatus(e, 'STUN', 1);
+      addStatus(e, 'DEF_DOWN', 2);
+      break;
+    case 'ULT_GYAKARI':
+      addStatus(e, 'BURN', 2);
+      addStatus(e, 'STUN', 1);
+      break;
+    case 'ULT_KOME':
+      p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.35));
+      addStatus(e, 'STUN', 1);
+      break;
+    case 'ULT_OBIRI':
+      e.tm = 0;
+      addStatus(e, 'BURN', 2);
+      addStatus(e, 'STUN', 1);
+      break;
+    case 'ULT_KUUKUA':
+      p.hp = Math.min(p.maxHp, p.hp + Math.round(dealt * 0.25));
+      addStatus(e, 'BURN', 2);
+      break;
+    case 'ULT_OWUREKU':
+      addStatus(e, 'STUN', 1);
+      e.tm = Math.max(0, e.tm - 50);
+      break;
+    case 'ULT_AFRAKOMA':
+      addStatus(e, 'DEF_DOWN', 2);
+      p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.3));
+      break;
+  }
+}
+
+function executeEnemyTurn() {
+  const p = battle.player;
+  const e = battle.enemy;
+  e.turnCount += 1;
+  e.offsetX = 48;
+
+  if (e.charging) {
+    // Unleash telegraphed big attack!
+    e.charging = false;
+    delete e.statuses.CHARGE;
+    const bigDmg = applyDamage(p, e.atk * 2.25, true);
+    addBattleFloat(115, 160, `${e.base.chargeName}! -${bigDmg}`, '#ff0055');
+    addStatus(p, 'DEF_DOWN', 2);
+  } else if (e.turnCount % 2 === 0) {
+    // Telegraph Charge!
+    e.charging = true;
+    e.statuses.CHARGE = 99;
+    addBattleFloat(330, 145, 'CHARGING ULTIMATE!', '#ff0055');
+  } else {
+    const dmg = applyDamage(p, e.atk * 1.05, true);
+    if (dmg > 0) addBattleFloat(115, 175, `-${dmg}`, '#ff8a8a');
+    if (Math.random() < 0.35) addStatus(p, 'BURN', 1);
+  }
+
+  e.tm = 0;
+  battle.phase = 'ANIM';
+  battle.animTimer = 0.45;
+  updateBattleHUD();
+}
+
+function chooseAutoSkill() {
+  const p = battle.player;
+  const e = battle.enemy;
+  if (p.energy >= 100) return usePlayerSkill(3);
+  if (e.charging && p.cds[1] === 0) return usePlayerSkill(1);
+  if (p.cds[2] === 0) return usePlayerSkill(2);
+  if (p.cds[1] === 0) return usePlayerSkill(1);
+  return usePlayerSkill(0);
+}
+
+function updateBattleLoop(dt) {
+  if (!battle || !battle.active) return;
+  const scaledDt = dt * battle.speedMult;
+  const p = battle.player;
+  const e = battle.enemy;
+
+  // Decay hit flashes & offsets
+  if (p.hitFlash > 0) p.hitFlash = Math.max(0, p.hitFlash - dt);
+  if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
+  p.offsetX *= 0.84;
+  e.offsetX *= 0.84;
+
+  // Floating texts
+  battle.floats.forEach(f => {
+    f.y -= 28 * dt;
+    f.life -= dt;
+  });
+  battle.floats = battle.floats.filter(f => f.life > 0);
+
+  // Ultimate Cutscene handling (with hit-stop impact frames)
+  if (battle.phase === 'ULT_CUTSCENE') {
+    const u = battle.ultData;
+    u.elapsed += dt; // Cutscene runs at dramatic real-time pace
+    if (u.elapsed >= 1.25 && !u.executed) {
+      u.executed = true;
+      executeSkillEffect(u.skill, true);
+      updateBattleHUD();
+    }
+    if (u.elapsed >= u.duration) {
+      p.tm = 0;
+      battle.phase = 'ANIM';
+      battle.animTimer = 0.25;
+      checkWaveOrBattleEnd();
+    }
+    return;
+  }
+
+  if (battle.phase === 'ANIM') {
+    battle.animTimer -= scaledDt;
+    if (battle.animTimer <= 0) {
+      if (!checkWaveOrBattleEnd()) {
+        battle.phase = 'TICK';
+      }
+    }
+    return;
+  }
+
+  if (battle.phase === 'TICK') {
+    const pSpd = getEffectiveSpd(p);
+    const eSpd = getEffectiveSpd(e);
+
+    p.tm += pSpd * 0.42 * scaledDt;
+    e.tm += eSpd * 0.42 * scaledDt;
+
+    updateTurnMeterUI();
+
+    if (p.tm >= 100 || e.tm >= 100) {
+      if (p.tm >= e.tm) {
+        // Player Turn Start
+        tickStatusesOnTurnStart(p, true);
+        if (checkWaveOrBattleEnd()) return;
+        for (let i = 0; i < 4; i++) {
+          if (p.cds[i] > 0) p.cds[i] -= 1;
+        }
+        if (p.statuses.STUN > 0) {
+          delete p.statuses.STUN;
+          p.tm = 0;
+          addBattleFloat(115, 150, 'STUNNED!', '#f5b700');
+          updateBattleHUD();
+          return;
+        }
+        battle.phase = 'PLAYER_TURN';
+        updateBattleHUD();
+        renderBattleSkillButtons();
+        if (battle.auto) {
+          setTimeout(() => { if (battle && battle.phase === 'PLAYER_TURN') chooseAutoSkill(); }, 220);
+        }
+      } else {
+        // Enemy Turn Start
+        tickStatusesOnTurnStart(e, false);
+        if (checkWaveOrBattleEnd()) return;
+        if (e.statuses.STUN > 0) {
+          delete e.statuses.STUN;
+          e.tm = 0;
+          addBattleFloat(330, 150, 'STUNNED!', '#f5b700');
+          updateBattleHUD();
+          return;
+        }
+        battle.phase = 'ENEMY_TURN';
+        executeEnemyTurn();
+      }
+    }
+  }
+}
+
+function checkWaveOrBattleEnd() {
+  const p = battle.player;
+  const e = battle.enemy;
+
+  if (e.hp <= 0) {
+    if (battle.waveIndex + 1 < battle.stage.waves.length) {
+      battle.waveIndex += 1;
+      spawnWaveEnemy(battle.waveIndex);
+      addBattleFloat(225, 120, `WAVE ${battle.waveIndex + 1} APPROACHING!`, '#f5b700');
+      updateBattleHUD();
+      battle.phase = 'TICK';
+      return true;
+    } else {
+      // Stage Victory!
+      battle.phase = 'ENDED';
+      battle.active = false;
+      const hpRatio = p.hp / p.maxHp;
+      const stars = hpRatio >= 0.7 ? 3 : (hpRatio >= 0.35 ? 2 : 1);
+      const stId = battle.stage.id;
+
+      if (battle.isHard) {
+        state.starsHard[stId] = Math.max(state.starsHard[stId] || 0, stars);
+        state.unlockedHard = Math.max(state.unlockedHard, stId + 1);
+      } else {
+        state.starsNormal[stId] = Math.max(state.starsNormal[stId] || 0, stars);
+        state.unlockedNormal = Math.max(state.unlockedNormal, Math.min(20, stId + 1));
+      }
+
+      const mult = battle.isHard ? 1.6 : 1.0;
+      const rCowries = Math.round((45 + stId * 8) * mult);
+      const rGold = Math.round((85 + stId * 18) * mult);
+      const rXp = Math.round((65 + stId * 15) * mult);
+
+      state.cowries += rCowries;
+      state.gold += rGold;
+      state.xp += rXp;
+      saveState();
+
+      const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      setTimeout(() => {
+        document.getElementById('battle-overlay').classList.remove('active');
+        renderCampaignScreen();
+        showModal('DUEL VICTORY!', starStr, `Stage ${stId} Cleared (${Math.round(hpRatio * 100)}% HP Remaining)<br><br>Rewards:<br>🐚 +${rCowries} Cowries • 🪙 +${rGold} Sika • 🔥 +${rXp} Sunsum XP`);
+      }, 450);
+      return true;
+    }
+  }
+
+  if (p.hp <= 0) {
+    battle.phase = 'ENDED';
+    battle.active = false;
+    state.xp += 25;
+    saveState();
+    setTimeout(() => {
+      document.getElementById('battle-overlay').classList.remove('active');
+      renderCampaignScreen();
+      showModal('DEFEATED', '☆☆☆', 'Your Sunsum faltered. Level up your Hero, allocate Speed/HP points, or stun enemies while they Charge!');
+    }, 450);
+    return true;
+  }
+  return false;
+}
+
+function updateTurnMeterUI() {
+  if (!battle) return;
+  const pPct = Math.min(92, Math.max(2, battle.player.tm * 0.9));
+  const ePct = Math.min(92, Math.max(2, battle.enemy.tm * 0.9));
+  document.getElementById('tm-player').style.left = pPct + '%';
+  document.getElementById('tm-enemy').style.left = ePct + '%';
+}
+
+function updateBattleHUD() {
+  if (!battle) return;
+  const p = battle.player;
+  const e = battle.enemy;
+
+  document.getElementById('bp-pname').textContent = p.name;
+  document.getElementById('bp-php').textContent = `${p.hp}/${p.maxHp}`;
+  document.getElementById('bp-php-bar').style.width = `${(p.hp / p.maxHp) * 100}%`;
+  document.getElementById('bp-pshield-bar').style.width = `${Math.min(100, (p.shield / p.maxHp) * 100)}%`;
+  document.getElementById('bp-pen-bar').style.width = `${p.energy}%`;
+
+  document.getElementById('bp-ename').textContent = e.name;
+  document.getElementById('bp-ehp').textContent = `${e.hp}/${e.maxHp}`;
+  document.getElementById('bp-ehp-bar').style.width = `${(e.hp / e.maxHp) * 100}%`;
+  document.getElementById('bp-eshield-bar').style.width = `${Math.min(100, (e.shield / e.maxHp) * 100)}%`;
+
+  document.getElementById('b-energy-lbl').textContent = `ENERGY: ${p.energy} / 100`;
+
+  const renderSt = (obj) => Object.keys(obj).map(k => `<span class="st-tag ${k}">${k.replace('_', ' ')}${obj[k] < 50 ? ' ' + obj[k] : ''}</span>`).join('');
+  document.getElementById('bp-pstatuses').innerHTML = renderSt(p.statuses);
+  document.getElementById('bp-estatuses').innerHTML = renderSt(e.statuses);
+
+  updateTurnMeterUI();
+}
+
+function renderBattleSkillButtons() {
+  if (!battle) return;
+  const p = battle.player;
+  const isTurn = battle.phase === 'PLAYER_TURN';
+  document.getElementById('b-turn-prompt').textContent = isTurn
+    ? (battle.enemy.charging ? '⚠ ENEMY CHARGING — STUN TO INTERRUPT!' : 'YOUR TURN — SELECT AN ART')
+    : 'WAITING FOR TURN METER...';
+
+  const container = document.getElementById('b-skills-container');
+  container.innerHTML = p.db.skills.map((sk, idx) => {
+    const cd = p.cds[idx];
+    const isUlt = sk.type === 'ult';
+    const disabled = !isTurn || (isUlt ? p.energy < 100 : cd > 0);
+    const meta = isUlt ? (p.energy >= 100 ? 'READY!' : `${p.energy}/100 EN`) : (cd > 0 ? `CD: ${cd}t` : (sk.cd ? `${sk.cd}t CD` : 'BASIC'));
+
+    return `
+      <button class="b-skill-btn ${isUlt ? 'ult' : ''}" onclick="usePlayerSkill(${idx})" ${disabled ? 'disabled' : ''}>
+        <div class="bsk-name">${sk.name}</div>
+        <div class="bsk-meta">${meta}</div>
+      </button>
+    `;
+  }).join('');
+}
+
+function toggleBattleSpeed() {
+  if (!battle) return;
+  battle.speedMult = battle.speedMult === 1 ? 2 : 1;
+  const btn = document.getElementById('btn-speed');
+  btn.textContent = battle.speedMult + 'x';
+  btn.classList.toggle('on', battle.speedMult === 2);
+}
+
+function toggleAutoBattle() {
+  if (!battle) return;
+  battle.auto = !battle.auto;
+  document.getElementById('btn-auto').classList.toggle('on', battle.auto);
+  if (battle.auto && battle.phase === 'PLAYER_TURN') {
+    chooseAutoSkill();
+  }
+}
+
+function retreatBattle() {
+  if (!battle) return;
+  battle.active = false;
+  document.getElementById('battle-overlay').classList.remove('active');
+}
+
+/* ============================================================================
+   BATTLE CANVAS RENDERER (WITH 2-FRAME BLEACH IMPACT CUTSCENE)
+   ============================================================================ */
+
+function renderBattleCanvas() {
+  const canvas = document.getElementById('battleCanvas');
+  if (!canvas || !battle || !battle.active) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const now = performance.now() * 0.001;
+  const p = battle.player;
+  const e = battle.enemy;
+
+  // Check if inside Ultimate Cutscene Impact Frames
+  if (battle.phase === 'ULT_CUTSCENE' && battle.ultData) {
+    const u = battle.ultData;
+    const t = u.elapsed;
+
+    // IMPACT FRAME 1 (0.95s - 1.12s): Pure Black BG, Stark White Silhouettes & Speed-lines
+    if (t >= 0.95 && t < 1.12) {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      for (let i = 0; i < 22; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, (i * 31) % h);
+        ctx.lineTo(w, ((i * 31) + 140) % h);
+        ctx.stroke();
+      }
+      drawBleachHero(ctx, p.db, w * 0.36, h * 0.64, 1.15, 0, { silhouette: '#ffffff', attackOffset: 35 });
+      drawFolkloreMonster(ctx, e.key, w * 0.72, h * 0.64, 1.05, 0, { silhouette: '#ffffff' });
+      // Giant diagonal slash
+      ctx.lineWidth = 14;
+      ctx.beginPath();
+      ctx.moveTo(20, h - 60);
+      ctx.lineTo(w - 20, 80);
+      ctx.stroke();
+      return;
+    }
+
+    // IMPACT FRAME 2 (1.12s - 1.30s): Inverted Stark White/Gold BG, Pitch Black Silhouettes
+    if (t >= 1.12 && t < 1.30) {
+      ctx.fillStyle = '#f5b700';
+      ctx.fillRect(0, 0, w, h);
+      drawAdinkraSymbol(ctx, p.db.adinkra, w * 0.5, h * 0.45, 190, '#000000', 10);
+      drawBleachHero(ctx, p.db, w * 0.42, h * 0.64, 1.2, 0, { silhouette: '#000000', attackOffset: 50 });
+      drawFolkloreMonster(ctx, e.key, w * 0.74, h * 0.64, 1.05, 0, { silhouette: '#000000', attackOffset: -20 });
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 18;
+      ctx.beginPath();
+      ctx.moveTo(0, 110);
+      ctx.lineTo(w, h - 90);
+      ctx.stroke();
+      return;
+    }
+  }
+
+  // Standard Stylized Battle Stage
+  ctx.clearRect(0, 0, w, h);
+
+  // Night Sky & Harmattan Glow
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, battle.isHard ? '#2b0912' : '#160f24');
+  grad.addColorStop(0.65, '#1e162b');
+  grad.addColorStop(1, '#09070c');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  // Sacred Adinkra Moon in Sky
+  drawAdinkraSymbol(ctx, p.db.adinkra, w * 0.5, h * 0.36, 115, 'rgba(245,183,0,0.09)', 5);
+
+  // Ground Plane with Kente Perspective Borders
+  ctx.fillStyle = '#120d18';
+  ctx.fillRect(0, h * 0.68, w, h * 0.32);
+  ctx.strokeStyle = '#f5b700';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.68);
+  ctx.lineTo(w, h * 0.68);
+  ctx.stroke();
+
+  // Draw Combatants
+  drawBleachHero(ctx, p.db, w * 0.25, h * 0.67, 0.96, now, {
+    hitFlash: p.hitFlash > 0,
+    attackOffset: p.offsetX
+  });
+
+  drawFolkloreMonster(ctx, e.key, w * 0.75, h * 0.67, 0.96, now, {
+    hitFlash: e.hitFlash > 0,
+    isCharging: e.charging,
+    attackOffset: e.offsetX
+  });
+
+  // Ultimate Cutscene Pre-Impact Calligraphy Banner (0.0s - 0.95s) & Post-Impact Afterglow
+  if (battle.phase === 'ULT_CUTSCENE' && battle.ultData) {
+    const u = battle.ultData;
+    ctx.save();
+    ctx.fillStyle = 'rgba(5,4,6,0.75)';
+    ctx.fillRect(0, h * 0.28, w, 130);
+
+    ctx.strokeStyle = '#f5b700';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.28);
+    ctx.lineTo(w, h * 0.28);
+    ctx.moveTo(0, h * 0.28 + 130);
+    ctx.lineTo(w, h * 0.28 + 130);
+    ctx.stroke();
+
+    drawAdinkraSymbol(ctx, p.db.adinkra, 75, h * 0.28 + 65, 44, '#f5b700', 4);
+
+    ctx.fillStyle = '#f5b700';
+    ctx.font = '800 13px Space Grotesk';
+    ctx.fillText(`ADINKRA AWAKENING • ${p.db.adinkra.toUpperCase()}`, 135, h * 0.28 + 48);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 24px Syne';
+    ctx.fillText(u.skill.name.toUpperCase(), 135, h * 0.28 + 82);
+    ctx.restore();
+  }
+
+  // Floating Combat Text
+  battle.floats.forEach(f => {
+    ctx.save();
+    ctx.font = '800 16px Syne';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.strokeText(f.text, f.x, f.y);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, f.x, f.y);
+    ctx.restore();
+  });
+}
+
+/* ============================================================================
+   MODAL & TOUCH SWIPE GESTURES
+   ============================================================================ */
+
+function showModal(title, stars, bodyHtml) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-stars').textContent = stars;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+}
+
+function attachSwipe(elId, onLeft, onRight) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  let startX = 0;
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length > 0) startX = e.touches[0].clientX;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (e.changedTouches.length > 0) {
+      const dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 45) {
+        if (dx < 0) onLeft();
+        else onRight();
+      }
+    }
+  }, { passive: true });
+}
+
+/* ============================================================================
+   MAIN ANIMATION LOOP & INITIALIZATION
+   ============================================================================ */
+
+let lastFrameTime = performance.now();
+
+function mainLoop(now) {
+  const dt = Math.min(0.1, (now - lastFrameTime) / 1000);
+  lastFrameTime = now;
+
+  if (battle && battle.active) {
+    updateBattleLoop(dt);
+    renderBattleCanvas();
+  } else {
+    const campActive = document.getElementById('screen-campaign').classList.contains('active');
+    const heroActive = document.getElementById('screen-heroes').classList.contains('active');
+    const sumActive  = document.getElementById('screen-summon').classList.contains('active');
+
+    if (campActive) drawStagePreviewCanvas();
+    if (heroActive) drawHeroFullCanvas();
+    if (sumActive)  renderSummonCanvas();
+  }
+
+  requestAnimationFrame(mainLoop);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  updateTopBar();
+  renderCampaignScreen();
+
+  // Attach touch swipe navigation for Campaign & Heroes screens
+  attachSwipe('camp-touch-area', () => changeStage(1), () => changeStage(-1));
+  attachSwipe('hero-touch-area', () => cycleHeroView(1), () => cycleHeroView(-1));
+
+  requestAnimationFrame(mainLoop);
+});
+</script>
+</body>
+</html>

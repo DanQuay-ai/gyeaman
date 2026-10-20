@@ -1,7 +1,7 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES } from './data.js';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH } from './data.js';
 import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
@@ -28,7 +28,7 @@ const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M
 // ---------------- save ----------------
 const KEY = 'gyeaman.squads.v2';
 const fresh = () => ({ v: 2, gold: 1500, cowries: 400, heroes: Object.fromEntries(STARTERS.map((id) => [id, newHero(id)])), squad: ['dufie'], stars: {}, pity: 0, lastFree: '', seenIntro: false });
-function newHero(id) { return { lvl: 1, xp: 0, stars: RARITY[HEROES[id].rarity].stars, shards: 0, sk: [1, 1, 1, 1] }; }
+function newHero(id) { return { lvl: 1, xp: 0, stars: RARITY[HEROES[id].rarity].stars, shards: 0, sk: [1, 1, 1, 1], pts: { hp: 0, atk: 0, spd: 0, mag: 0 } }; }
 let SAVE;
 try { SAVE = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { SAVE = null; }
 if (!SAVE || SAVE.v !== 2) SAVE = fresh();
@@ -64,7 +64,21 @@ function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
 }
-const ANIM = { dufie: { src: A + 'anim/dufie_idle.webp', n: 40 } }; // beta: Veo-generated idle loops
+// Veo-generated sprite clips (12 fps, keyed). fw/fh frame size, ax = body centre x, fy = feet y, bh = body height in frame px.
+const ANIM = {
+  dufie: {
+    idle: { src: A + 'anim/dufie_idle.webp', n: 96, cols: 12, fw: 240, fh: 360, ax: 120, fy: 325, bh: 273 },
+    atk: { src: A + 'anim/dufie_atk.webp', n: 48, cols: 8, fw: 400, fh: 360, ax: 200, fy: 325, bh: 273, from: 18, to: 33 },
+  },
+};
+// draw one clip frame with feet at (0,0) and body height bodyH
+function drawClip(g, clip, fi, bodyH) {
+  const im = img(clip.src); if (!im.ok) return false;
+  const k = bodyH / clip.bh, i = Math.max(0, Math.min(clip.n - 1, fi));
+  g.drawImage(im.el, (i % clip.cols) * clip.fw, Math.floor(i / clip.cols) * clip.fh, clip.fw, clip.fh, -clip.ax * k, -clip.fy * k, clip.fw * k, clip.fh * k);
+  return true;
+}
+const clipFrame = (clip, p) => clip.from + Math.floor(p * (clip.to - clip.from)); // beta: Veo-generated idle loops
 const poseSrc = (id, k) => `${A}${id}_${k}.webp`;
 const faceSrc = (id) => (HEROES[id] ? `${A}face_${id}.webp` : poseSrc(id, 0));
 function scaled(e, th) {
@@ -126,21 +140,24 @@ function inkSymbol(sym, color) {
 
 // ---------------- hero stats ----------------
 const SPD_STAR = 2; // speed per star above base
+const ptsOf = (id) => { const s = SAVE.heroes[id]; if (!s.pts) s.pts = { hp: 0, atk: 0, spd: 0, mag: 0 }; return s.pts; };
+const freePts = (id) => { const p = ptsOf(id); return SAVE.heroes[id].lvl - 1 - (p.hp + p.atk + p.mag + p.spd * GROWTH.spdCost); };
 function statsOf(id) {
-  const H = HEROES[id], s = SAVE.heroes[id], k = (1 + 0.1 * (s.lvl - 1)) * (1 + 0.15 * (s.stars - 1));
-  return { hp: Math.round(H.hp * k), atk: Math.round(H.atk * k), def: Math.round(H.def * k), spd: H.spd + SPD_STAR * (s.stars - RARITY[H.rarity].stars) };
+  const H = HEROES[id], s = SAVE.heroes[id], p = ptsOf(id), k = (1 + 0.06 * (s.lvl - 1)) * (1 + 0.15 * (s.stars - 1));
+  return { hp: Math.round(H.hp * k * (1 + GROWTH.hp * p.hp)), atk: Math.round(H.atk * k * (1 + GROWTH.atk * p.atk)), def: Math.round(H.def * k),
+    spd: CLASSES[H.cls].spd + SPD_STAR * (s.stars - RARITY[H.rarity].stars) + GROWTH.spd * p.spd, mag: Math.round(100 * (1 + GROWTH.mag * p.mag)) };
 }
-const power = (id) => { const st = statsOf(id), s = SAVE.heroes[id]; return Math.round(st.hp * 0.5 + st.atk * 6 + st.def * 4 + st.spd * 2 + (s.sk[0] + s.sk[1] + s.sk[2]) * 30); };
+const power = (id) => { const st = statsOf(id), s = SAVE.heroes[id]; return Math.round(st.hp * 0.5 + st.atk * 6 + st.def * 4 + st.spd * 2 + (st.mag - 100) * 4 + (s.sk[0] + s.sk[1] + s.sk[2]) * 30); };
 const skMult = (id, i) => 1 + 0.12 * (SAVE.heroes[id].sk[i] - 1);
 const canPromote = (id) => { const s = SAVE.heroes[id]; return s.stars < 5 && s.shards >= STAR_SHARDS[s.stars + 1]; };
-const anyUpgrade = () => Object.keys(SAVE.heroes).some((id) => canPromote(id) || SAVE.heroes[id].sk.some((l) => l < SKILL_MAX && SAVE.gold >= skillCost(l) * 3));
+const anyUpgrade = () => Object.keys(SAVE.heroes).some((id) => freePts(id) > 0) || Object.keys(SAVE.heroes).some((id) => canPromote(id) || SAVE.heroes[id].sk.some((l) => l < SKILL_MAX && SAVE.gold >= skillCost(l) * 3));
 
 // ---------------- shell ----------------
 let tab = 'map';
 function shell(active, content) {
   app.classList.remove('full');
   app.innerHTML = '';
-  const top = h(`<header class="topbar"><div class="logo"><img src="mark.svg" alt=""><span class="krw" aria-label="Gyeaman in Kɔradin">gyeaman</span></div>
+  const top = h(`<header class="topbar"><div class="logo"><img src="star.svg" alt="Gyeaman"></div>
     <span class="res" title="Gold dust">${COIN('gold')}<b class="num">${fmt(SAVE.gold)}</b></span><span class="res" title="Cowries">${COIN('cowrie')}<b class="num">${fmt(SAVE.cowries)}</b></span></header>`);
   const nav = h(`<nav class="nav">${[['map', 'Journey'], ['heroes', 'Heroes'], ['summon', 'Shrine']].map(([k, l]) => `<button class="tab ${k === active ? 'on' : ''}" data-k="${k}" type="button">${ICON[k]}<span>${l}</span></button>`).join('')}</nav>`);
   if (anyUpgrade()) $('[data-k=heroes]', nav).append(h('<i class="dot"></i>'));
@@ -232,15 +249,15 @@ function heroesScreen(id) {
     const ids = Object.keys(HEROES).sort((a, b) => (SAVE.heroes[b] ? 1 : 0) - (SAVE.heroes[a] ? 1 : 0) || 'R SR SSR'.indexOf(HEROES[b].rarity) - 'R SR SSR'.indexOf(HEROES[a].rarity));
     const s = h(`<div class="screen"><div class="head"><div><h2>Heroes</h2><span class="sub">${Object.keys(SAVE.heroes).length} of 8 recruited</span></div></div><div class="grid">${ids.map((x) => heroCard(x)).join('')}</div></div>`);
     shell('heroes', s);
-    s.querySelectorAll('.hc').forEach((c) => { if (SAVE.heroes[c.dataset.id] && canPromote(c.dataset.id)) c.append(h('<i class="dot"></i>')); c.onclick = () => { SFX.click(); heroesScreen(c.dataset.id); }; });
+    s.querySelectorAll('.hc').forEach((c) => { if (SAVE.heroes[c.dataset.id] && (canPromote(c.dataset.id) || freePts(c.dataset.id) > 0)) c.append(h('<i class="dot"></i>')); c.onclick = () => { SFX.click(); heroesScreen(c.dataset.id); }; });
     return;
   }
   const H = HEROES[heroSel], s0 = SAVE.heroes[heroSel], own = !!s0, R = RARITY[H.rarity], AD = ADINKRA[H.sym];
   const st = own ? statsOf(heroSel) : { hp: H.hp, atk: H.atk, def: H.def, spd: H.spd };
-  const s = h(`<div class="screen hero"><div class="head"><button class="back" type="button" aria-label="Back">${CHEV(180)}</button><div><h2>${H.name}</h2><span class="sub"><b style="color:${R.color}">${R.name}</b> · ${H.role} · ${H.en}</span></div></div>
+  const s = h(`<div class="screen hero"><div class="head"><button class="back" type="button" aria-label="Back">${CHEV(180)}</button><div><h2>${H.name}</h2><span class="sub"><b style="color:${R.color}">${R.name}</b> · ${CLASSES[H.cls].name} · ${H.en}</span></div></div>
     <div class="stage3"><canvas aria-label="${H.name}"></canvas><span class="krole" title="${H.role} in Kɔradin">${H.kr}</span>
       <div class="poses"><button data-p="0" type="button" class="on">Idle</button><button data-p="1" type="button">Attack</button><button data-p="2" type="button">Ultimate</button></div></div>
-    <div class="tabs"><button data-t="skills" type="button">Skills</button><button data-t="stats" type="button">Stats</button><button data-t="symbol" type="button">Symbol</button></div>
+    <div class="tabs"><button data-t="skills" type="button">Skills</button><button data-t="stats" type="button">Growth${own && freePts(heroSel) > 0 ? '<i class="dot"></i>' : ''}</button><button data-t="symbol" type="button">Symbol</button></div>
     <div class="pane"></div></div>`);
   shell('heroes', s);
   $('.back', s).onclick = () => { heroSel = null; heroesScreen(); };
@@ -248,10 +265,18 @@ function heroesScreen(id) {
   const show = (t) => {
     heroTab = t; s.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
     if (t === 'stats') {
+      const p = own ? ptsOf(heroSel) : { hp: 0, atk: 0, spd: 0, mag: 0 }, free = own ? freePts(heroSel) : 0, C = CLASSES[H.cls];
+      const stt = own ? statsOf(heroSel) : { ...st, spd: C.spd, mag: 100 };
+      const G = [['hp', 'Health', stt.hp, '+5% health'], ['atk', 'Attack', stt.atk, '+5% basic and skill damage'], ['mag', 'Magic', stt.mag + '%', '+5% skill, ultimate and healing power'], ['spd', 'Speed', stt.spd, `+${GROWTH.spd} speed · costs ${GROWTH.spdCost} · max ${GROWTH.spdCap}`]];
       pane.innerHTML = `${own ? `<div class="lvl"><b>Level ${s0.lvl}</b><span class="st5">${'★'.repeat(s0.stars)}<i>${'★'.repeat(5 - s0.stars)}</i></span></div><div class="bar"><i style="transform:scaleX(${s0.xp / xpNeed(s0.lvl)})"></i></div>` : '<p class="note">Not recruited yet. Call heroes at the Shrine.</p>'}
-        <div class="st4"><div><b>${st.hp}</b><span>Health</span></div><div><b>${st.atk}</b><span>Attack</span></div><div><b>${st.def}</b><span>Defence</span></div><div><b>${st.spd}</b><span>Speed</span></div></div>
-        ${own ? `<div class="row card"><div>${COIN('shard')} <b>Shards ${s0.shards} / ${s0.stars < 5 ? STAR_SHARDS[s0.stars + 1] : 'max'}</b><small>Duplicates give shards. Each star adds 15% to all stats and a little speed.</small></div><button class="btn sm" id="promo" type="button" ${canPromote(heroSel) ? '' : 'disabled'}>Promote</button></div>
-          <div class="row card"><div><b>Power ${power(heroSel)}</b><small>Speed decides how often ${H.name} acts.</small></div></div>` : ''}`;
+        <div class="row card cls"><div><span class="sub">Class</span><b>${C.name} · base speed ${C.spd}</b><small>${C.desc}</small></div></div>
+        ${own ? `<div class="gpts"><b>${free}</b> growth point${free === 1 ? '' : 's'} to spend <small>One per level. Free reset in beta.</small></div>` : ''}
+        <div class="growth">${G.map(([k, l, v, n]) => { const can = own && (k === 'spd' ? free >= GROWTH.spdCost && p.spd < GROWTH.spdCap : free >= 1);
+          return `<div class="gr"><div><span>${l}</span><b>${v}</b><small>${n}</small></div><em>${p[k] || 0}${k === 'spd' ? '/' + GROWTH.spdCap : ''}</em>${own ? `<button class="btn sm" type="button" data-g="${k}" ${can ? '' : 'disabled'} aria-label="Add a point to ${l}">+</button>` : ''}</div>`; }).join('')}</div>
+        ${own ? `<div class="row card"><div><b>Power ${power(heroSel)}</b><small>Shards ${s0.shards} / ${s0.stars < 5 ? STAR_SHARDS[s0.stars + 1] : 'max'} · each star adds 15% and a little speed.</small></div><button class="btn sm" id="promo" type="button" ${canPromote(heroSel) ? '' : 'disabled'}>Promote</button></div>
+          <button class="btn ghost sm" id="respec" type="button" ${p.hp + p.atk + p.mag + p.spd ? '' : 'disabled'}>Reset growth points</button>` : ''}`;
+      pane.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { ptsOf(heroSel)[b.dataset.g]++; SFX.heal(); store(); heroesScreen(); }));
+      const rs = $('#respec', pane); if (rs) rs.onclick = () => { s0.pts = { hp: 0, atk: 0, spd: 0, mag: 0 }; SFX.click(); store(); heroesScreen(); };
       const pr = $('#promo', pane); if (pr) pr.onclick = () => { s0.shards -= STAR_SHARDS[s0.stars + 1]; s0.stars++; SFX.win(); store(); toast(`${H.name} reached ${s0.stars} stars`); heroesScreen(); };
     } else if (t === 'symbol') {
       pane.innerHTML = `<div class="codex">${adinkraSvg(H.sym)}<div><span class="sub">Ultimate symbol</span><b>${AD.name}</b><p>${AD.meaning}</p></div></div>
@@ -282,7 +307,9 @@ function heroesScreen(id) {
       const Hh = (r.height - 54) * 0.92, k = Hh / e0.el.naturalHeight, ph = Math.min(r.height - 54, e.el.naturalHeight * k), pw = e.el.naturalWidth * (ph / e.el.naturalHeight);
       const sc = scaled(e, ph * dpr), x = r.width / 2, y = r.height - 48 + Math.sin(now / 500) * 1.5;
       if (pose === 2) { const t = Math.min(1, (now - poseT) / 600), ink = inkSymbol(H.sym, '#e3b448'), S = Math.min(r.width, r.height) * .8; g.save(); g.globalAlpha = .9 * t; g.beginPath(); g.rect(x - S / 2, y - ph * .5 - S / 2, S * t, S); g.clip(); g.drawImage(ink, x - S / 2, y - ph * .5 - S / 2, S, S); g.restore(); }
-      if (sc) { g.save(); if (H.flip[pose]) { g.translate(x, 0); g.scale(-1, 1); g.translate(-x, 0); } g.drawImage(sc, x - pw / 2, y - ph, pw, ph); g.restore(); }
+      const AN = ANIM[heroSel]; let dn = false;
+      if (AN && pose !== 2) { g.save(); g.translate(x, y); dn = pose === 0 ? drawClip(g, AN.idle, Math.floor(now / 1000 * 12) % AN.idle.n, Hh) : drawClip(g, AN.atk, Math.floor((now - poseT) / 1000 * 12) % AN.atk.n, Hh); g.restore(); }
+      if (sc && !dn) { g.save(); if (H.flip[pose]) { g.translate(x, 0); g.scale(-1, 1); g.translate(-x, 0); } g.drawImage(sc, x - pw / 2, y - ph, pw, ph); g.restore(); }
     }
     poseLoop = requestAnimationFrame(draw);
   };
@@ -355,7 +382,7 @@ const spdOf = (u) => u.spd * (u.st.slow ? .7 : 1);
 function pos(u) { const W = B.w; const dir = u.side ? -1 : 1; return [u.fx * W + dir * u.dash * u.reach + (u.enter || 0) * (u.side ? 1 : -1) * W * .5, B.gy0 + u.fy * (B.gy1 - B.gy0)]; }
 const wait = (ms) => new Promise((res) => { const b = B; if (!b || b.dead) return; b.waits.push({ t: b.t + ms / 1000, res }); });
 function fx(type, dur, o) { B.fx.push({ type, t0: B.t, dur: dur / 1000, ...o }); }
-function setPose(u, p, ms) { u.pose = p; u.poseT = ms / 1000; }
+function setPose(u, p, ms) { u.pose = p; u.poseT = ms / 1000; u.poseD = ms / 1000; }
 function float(u, t, c, size = 1) { const [x, y] = pos(u); B.floats.push({ x: x + rnd(-10, 10), y: y - u.h * .85, t, c, life: 1, size }); }
 function burst(x, y, cols, n, sp) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = sp * rnd(.4, 1.2); B.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: .15, life: 1, c: cols[i % cols.length], sz: rnd(2, 4) }); } }
 const foeOf = (u) => (u.side ? B.hero : B.foe);
@@ -554,9 +581,23 @@ async function ultIntro(u, sym, color) {
   const [x, y] = pos(u);
   B.dimTo = .62; B.cam.tz = B.rest.z * 1.18; B.cam.tx = x / B.w; B.cam.ty = (y - u.h * .5) / B.hh; setPose(u, 2, 1800);
   fx('ink', 1500, { s: Math.min(B.hh * .42, B.w * .36, u.h * 1.1), sym, c: color, follow: u });
-  cutIn(poseSrc(u.id, 2), u.side ? u.name : u.d.kit[3], u.side ? 'ULTIMATE' : `${u.name.toUpperCase()} · ${u.d.role.toUpperCase()}`, color, !!u.side, u.flip[2]);
   SFX.ult();
+  if (!u.side) { await cutscene(u, sym, color); return; }
+  cutIn(poseSrc(u.id, 2), u.name, 'ULTIMATE', color, true, u.flip[2]);
   await wait(900);
+}
+// fullscreen ultimate cutscene: dedicated art (or a Veo clip once generated), push-in, speed lines, X-slash, title
+const CUTS = { dufie: { img: A + 'cut_dufie.webp' } };
+function cutscene(u, sym, color) {
+  const C = CUTS[u.id] || { img: poseSrc(u.id, 2), pose: 1 };
+  const media = C.video ? `<video src="${C.video}" muted playsinline autoplay></video>` : `<img src="${C.img}" alt="" class="${C.pose ? 'pose' : ''} ${C.pose && u.flip[2] ? 'flip' : ''}">`;
+  const el = h(`<div class="ultcs" style="--rc:${color}"><div class="cs-bg"></div><div class="cs-art">${media}</div><div class="cs-lines"></div>
+    <div class="cs-sym">${adinkraSvg(sym)}</div><i class="cs-x a"></i><i class="cs-x b"></i><div class="cs-flash"></div>
+    <div class="cs-title"><span>${u.name.toUpperCase()} · ${u.d.role.toUpperCase()}</span><b>${u.d.kit[3]}</b></div></div>`);
+  document.body.append(el);
+  const dur = C.video ? 2600 : 1900;
+  return new Promise((res) => { let done = false; const end = () => { if (done) return; done = true; el.classList.add('out'); setTimeout(() => el.remove(), 220); res(); };
+    el.onclick = end; setTimeout(() => SFX.hit && SFX.hit(), 1150); setTimeout(end, dur / (B && B.speed > 1 ? 1.5 : 1)); });
 }
 async function impactFrames(targets, src) {
   B.cam.tx = targets.reduce((a, t) => a + pos(t)[0], 0) / targets.length / B.w; B.cam.ty = B.rest.y;
@@ -569,7 +610,7 @@ async function impactFrames(targets, src) {
 function endUlt() { B.dimTo = 0; B.cam.tz = B.rest.z; B.cam.tx = .5; B.cam.ty = B.rest.y; }
 
 async function doHero(u, i) {
-  const f = B.foe, sk = SAVE.heroes[u.id].sk, m = 1 + 0.12 * ((sk[Math.min(i, sk.length - 1)] || 1) - 1);
+  const f = B.foe, sk = SAVE.heroes[u.id].sk, m = (1 + 0.12 * ((sk[Math.min(i, sk.length - 1)] || 1) - 1)) * (i > 0 ? 1 + GROWTH.mag * ptsOf(u.id).mag : 1);
   if (i === 0) u.en = Math.min(100, u.en + 35);
   if (i === 1 || i === 2) { u.cd[i - 1] = u.d.cd[i - 1] + 1; u.en = Math.min(100, u.en + 20); }
   if (i === 3) u.en = 0;
@@ -647,7 +688,7 @@ function finish(win) {
       ${win ? `<div class="stars">${[0, 1, 2].map((i) => `<i class="${i < stars ? 'on' : ''}" style="animation-delay:${.15 + i * .18}s">★</i>`).join('')}</div>
         <div class="chips">${chips.map(([ic, n, l]) => `<div class="chip">${ic}<b>${n}</b><span>${l}</span></div>`).join('')}</div>`
         : `<p>Hye won hye: what does not burn comes back stronger. Break charged attacks with a stun, guard before big hits, level up or try Easy.</p>`}
-      <div class="rheroes"><div class="rh ${u.alive ? '' : 'ko'}"><img src="${faceSrc(u.id)}" alt=""><b>${up ? 'Lv ' + up + ' ▲' : 'Lv ' + SAVE.heroes[u.id].lvl}</b></div></div>
+      <div class="rheroes"><div class="rh ${u.alive ? '' : 'ko'}"><img src="${faceSrc(u.id)}" alt=""><b>${up ? 'Lv ' + up + ' ▲' : 'Lv ' + SAVE.heroes[u.id].lvl}</b></div>${up ? `<span class="gnote">+${freePts(u.id)} growth point${freePts(u.id) === 1 ? '' : 's'}: spend them in Heroes · Growth</span>` : ''}</div>
       <div class="row2"><button class="btn ghost" type="button">${win ? 'Replay' : 'Retry'}</button><button class="btn" type="button">${win && idx < STAGES.length - 1 ? 'Next stage' : 'Journey'}</button></div></div></div>`);
     const [retry, next] = v.querySelectorAll('.btn');
     retry.onclick = () => battle(idx, dId);
@@ -709,9 +750,10 @@ function loop(now) {
     const th = ph * dpr * C.z;
     const ring = u.side && u.charging && u.alive ? '#ff3b2a' : null;
     if (ring) { const sil = silhouette(e, th, ring); if (sil) { g.save(); g.globalAlpha *= .85; for (const [ox, oy] of [[-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, 2], [-2, 2], [2, -2]]) g.drawImage(sil, -pw / 2 + ox, -ph + oy, pw, ph); g.restore(); } }
-    const an = u.pose === 0 && ANIM[u.id] && img(ANIM[u.id].src);
-    if (an && an.ok) { const A2 = ANIM[u.id], fi = Math.floor(B.t * 12) % A2.n, fh = ph * 360 / 300; g.drawImage(an.el, fi * 360, 0, 360, 360, -fh / 2, -fh * 345 / 360, fh, fh); }
-    else { const sc = scaled(e, th); if (sc) g.drawImage(sc, -pw / 2, -ph, pw, ph); }
+    const AN = ANIM[u.id], bodyH = e0.el.naturalHeight * k; let drawn = false;
+    if (AN && u.alive && u.pose === 0) drawn = drawClip(g, AN.idle, Math.floor(B.t * 12) % AN.idle.n, bodyH);
+    else if (AN && AN.atk && u.pose === 1) drawn = drawClip(g, AN.atk, clipFrame(AN.atk, 1 - Math.max(0, u.poseT) / (u.poseD || 1)), bodyH);
+    if (!drawn) { const sc = scaled(e, th); if (sc) g.drawImage(sc, -pw / 2, -ph, pw, ph); }
     if (u.hurt > .45) { const sil = silhouette(e, th, '#ffffff'); if (sil) { g.globalAlpha = (u.hurt - .45) * 1.4; g.drawImage(sil, -pw / 2, -ph, pw, ph); } }
     g.restore();
     if (u.alive) drawOverlay(g, u, x, y);

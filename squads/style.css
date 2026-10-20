@@ -335,3 +335,50 @@ main { grid-area: main; min-height: 0; min-width: 0; position: relative; display
 html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .ab.k2:not(:disabled):not(.armed) { box-shadow: inset 0 0 0 1px var(--line); }
 .ab.k2 i { display: none; }
+
+/* keep the main call-to-action visible without scrolling */
+.stagescr #go, .screen .dock { position: sticky; bottom: 0; z-index: 5; }
+.screen .dock { margin: 0 calc(-1 * var(--pad)) -10px; padding: 10px var(--pad); background: linear-gradient(transparent, var(--night) 35%); }
+.stagescr #go { box-shadow: 0 -14px 18px -4px var(--night); }
+.logo img { width: 36px; height: 36px; }
+.grid { grid-auto-rows: max-content; }
+.grid > .hc { height: auto; flex-shrink: 0; }
+.pick .roster { flex: 1 1 0; }
+.growth { display: grid; gap: 8px; }
+.gr { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--panel); }
+.gr span { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: block; }
+.gr b { font: 22px var(--display); font-weight: 400; } .gr small { display: block; color: var(--muted); font-size: 12px; }
+.gr em { font: 18px var(--display); font-style: normal; color: var(--gold); min-width: 28px; text-align: right; }
+.gr .btn { min-width: 44px; font-size: 22px; padding: 4px 0; }
+.gpts { padding: 10px 12px; border-radius: 12px; background: linear-gradient(90deg, rgba(227,180,72,.18), transparent); }
+.gpts b { font: 24px var(--display); color: var(--gold); margin-right: 4px; } .gpts small { display: block; color: var(--muted); }
+.gnote { display: block; margin-top: 6px; color: var(--gold); font-weight: 700; font-size: 13px; }
+.tabs button { position: relative; } .tabs .dot { top: 6px; right: 10px; }
+
+/* ---------- fullscreen ultimate cutscene ---------- */
+.ultcs { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #050307; animation: csIn .18s ease-out; cursor: pointer; }
+.ultcs.out { animation: csOut .22s ease-in forwards; }
+.cs-bg { position: absolute; inset: 0; background: radial-gradient(60% 40% at 50% 30%, color-mix(in srgb, var(--rc) 35%, transparent), transparent 70%), linear-gradient(#0b0710, #000); }
+.cs-art { position: absolute; inset: 0; display: grid; place-items: center; }
+.cs-art img, .cs-art video { height: 100%; width: 100%; object-fit: cover; object-position: 50% 30%; animation: csPush 1.9s cubic-bezier(.2,.7,.2,1) forwards; }
+.cs-art img.pose { object-fit: contain; height: 82%; filter: drop-shadow(0 0 30px var(--rc)); }
+.cs-art img.flip { transform: scaleX(-1); }
+.cs-lines { position: absolute; inset: -20%; background: repeating-conic-gradient(from 0deg at 50% 40%, rgba(255,255,255,.0) 0deg 4deg, rgba(255,255,255,.22) 4deg 4.6deg); mix-blend-mode: screen; animation: csLines .12s steps(2) infinite; -webkit-mask: radial-gradient(circle at 50% 40%, transparent 28%, #000 62%); mask: radial-gradient(circle at 50% 40%, transparent 28%, #000 62%); }
+.cs-sym { position: absolute; left: 50%; top: 40%; width: min(70vw, 60vh); transform: translate(-50%, -50%); opacity: 0; color: var(--rc); fill: var(--rc); animation: csSym 1.9s ease-out forwards; mix-blend-mode: screen; }
+.cs-sym svg { width: 100%; height: auto; fill: currentColor; }
+.cs-x { position: absolute; left: -20%; top: 45%; width: 140%; height: 10px; background: linear-gradient(90deg, transparent, #fff 30%, #fff 70%, transparent); box-shadow: 0 0 24px #fff, 0 0 60px var(--rc); transform: scaleX(0); opacity: 0; }
+.cs-x.a { transform-origin: 0 50%; rotate: 32deg; animation: csSlash .28s 1.05s ease-out forwards; }
+.cs-x.b { transform-origin: 100% 50%; rotate: -32deg; animation: csSlash .28s 1.17s ease-out forwards; }
+.cs-flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: csFlash .5s 1.2s ease-out forwards; }
+.cs-title { position: absolute; left: 0; right: 0; bottom: max(9vh, calc(var(--sb) + 40px)); padding: 14px 20px; text-align: center; background: linear-gradient(90deg, transparent, rgba(0,0,0,.75) 20%, rgba(0,0,0,.75) 80%, transparent); animation: csTitle 1.9s ease-out forwards; }
+.cs-title span { display: block; font: 13px var(--body); font-weight: 800; letter-spacing: .3em; color: var(--rc); }
+.cs-title b { display: block; font: clamp(40px, 11vw, 84px)/1 var(--pop); letter-spacing: .04em; color: #fff; text-shadow: 3px 3px 0 #000, 0 0 24px var(--rc); }
+@keyframes csIn { from { opacity: 0; } }
+@keyframes csOut { to { opacity: 0; } }
+@keyframes csPush { from { transform: scale(1.02); } 55% { transform: scale(1.14); } 62% { transform: scale(1.2) translate(-1%, 1%); } 70% { transform: scale(1.2) translate(1%, -1%); } to { transform: scale(1.24); } }
+@keyframes csLines { to { transform: rotate(3deg); } }
+@keyframes csSym { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.7); } 25% { opacity: .55; } 55% { opacity: .35; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); } }
+@keyframes csSlash { 0% { transform: scaleX(0); opacity: 1; } 70% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+@keyframes csFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+@keyframes csTitle { 0% { transform: translateX(60%); opacity: 0; } 12% { transform: translateX(0); opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cs-lines, .cs-art img, .cs-art video { animation: none; } }
