@@ -2,11 +2,13 @@
 // Screens: map (pannable, stars per difficulty) · squad pick · battle (auto basics, timed skills, manual ultimates)
 // · heroes (levels, stars from shards, skill upgrades with gold) · summon (cowrie gacha, beta: no purchases).
 import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES } from './data.js';
-import { drawAdinkra } from './adinkra.js';
+import { drawAdinkra, adinkraSvg, ADINKRA } from './adinkra.js';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
 const app = document.getElementById('app');
+// painted currency icons (gold dust, cowries, XP, shards) are used by .coin elements through CSS variables
+for (const k of ['gold', 'cowrie', 'xp', 'shard']) document.documentElement.style.setProperty(`--i-${k}`, `url("${A}ui/${k}.webp")`);
 const $ = (s, r = document) => r.querySelector(s);
 const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -16,11 +18,10 @@ const fmt = (n) => (n >= 10000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round
 
 // ---------------- icons ----------------
 const sv = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-const ICON = {
-  map: sv('<path d="M9 4L3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/>'),
-  heroes: sv('<circle cx="9" cy="7" r="3"/><path d="M3 20c.4-4 2.7-6.5 6-6.5s5.6 2.5 6 6.5"/><circle cx="17" cy="8" r="2.4"/><path d="M16 13.6c2.6.3 4.4 2.5 4.8 6.4"/>'),
-  summon: sv('<circle cx="12" cy="12" r="8"/><path d="M12 4v4M12 16v4M4 12h4M16 12h4"/><circle cx="12" cy="12" r="2.5"/>'),
-};
+// nav uses the Adinkra set: twisting path = the journey, Gyawu Atiko = valour (heroes), Nyame Dua = the altar (shrine)
+const ICON = { map: adinkraSvg('nkyimkyim'), heroes: adinkraSvg('gyawuAtiko'), summon: adinkraSvg('nyameDua') };
+const CHEV = (r) => `<svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(${r}deg)"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const COIN = (k, cls = '') => `<i class="coin ${k} ${cls}"></i>`;
 
 // ---------------- save ----------------
 const KEY = 'gyeaman.squads.v2';
@@ -80,6 +81,21 @@ function silhouette(e, th, color) {
 // preload everything we will draw in battle
 for (const id of [...Object.keys(HEROES), ...Object.keys(MONS)]) for (let k = 0; k < 3; k++) img(poseSrc(id, k));
 for (const r of Object.values(REGIONS)) img(`${A}bg_${r.bg}.webp`);
+// Effect animations: frames rendered from Firefly video clips on black, drawn additively ('lighter') so black = transparent.
+// base = where the effect touches the ground, as a fraction of frame height.
+const FXS = {
+  shield: { n: 14, w: 244, h: 178, base: .94, loop: [8, 13] },
+  heal: { n: 16, w: 208, h: 226, base: .86 },
+  fire: { n: 10, w: 348, h: 232, base: .9 },
+  hex: { n: 10, w: 348, h: 232, base: .9 },
+};
+for (const k in FXS) FXS[k].img = img(`${A}fx/${k}.webp`);
+function sprite(g, k, frame, cx, by, hh, alpha = 1) {
+  const S = FXS[k]; if (!S || !S.img.ok) return false;
+  const f = clamp(Math.floor(frame), 0, S.n - 1), ww = hh * S.w / S.h;
+  g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = alpha;
+  g.drawImage(S.img.el, f * S.w, 0, S.w, S.h, cx - ww / 2, by - hh * S.base, ww, hh); g.restore(); return true;
+}
 
 // ---------------- hero stats ----------------
 function statsOf(id) {
@@ -96,25 +112,27 @@ let tab = 'map';
 function shell(active, content) {
   app.classList.remove('full');
   app.innerHTML = '';
-  const top = h(`<header class="topbar"><div class="logo"><img src="icon.svg" alt=""><b>GYEAMAN <span>SQUADS</span></b></div>
-    <span class="pill num"><i class="coin gold"></i>${fmt(SAVE.gold)}</span><span class="pill num"><i class="coin cowrie"></i>${fmt(SAVE.cowries)}</span></header>`);
-  const nav = h(`<nav class="nav">${[['map', 'Map'], ['heroes', 'Heroes'], ['summon', 'Summon']].map(([k, l]) => `<button class="tab ${k === active ? 'on' : ''}" data-k="${k}" type="button">${ICON[k]}${l}</button>`).join('')}</nav>`);
+  const top = h(`<header class="topbar"><a class="logo" href="../" title="Back to Gyeaman"><img src="mark.svg" alt=""><span class="wm"><b>GYEAMAN</b><i>Gyeaman</i></span><em>Squads</em></a>
+    <span class="res num" title="Gold dust">${COIN('gold')}<b>${fmt(SAVE.gold)}</b></span><span class="res num" title="Cowries">${COIN('cowrie')}<b>${fmt(SAVE.cowries)}</b></span></header>`);
+  const nav = h(`<nav class="nav">${[['map', 'Journey'], ['heroes', 'Heroes'], ['summon', 'Shrine']].map(([k, l]) => `<button class="tab ${k === active ? 'on' : ''}" data-k="${k}" type="button">${ICON[k]}<span>${l}</span></button>`).join('')}</nav>`);
   if (anyUpgrade()) $('[data-k=heroes]', nav).append(h('<i class="dot"></i>'));
   if (SAVE.lastFree !== today()) $('[data-k=summon]', nav).append(h('<i class="dot"></i>'));
   nav.querySelectorAll('.tab').forEach((b) => (b.onclick = () => { unlock(); SFX.click(); tab = b.dataset.k; route(); }));
   const main = h('<main></main>'); main.append(content);
   app.append(top, main, nav);
 }
-function route() { stopBattle(); ({ map: mapScreen, heroes: () => heroesScreen(), summon: summonScreen })[tab](); }
+function route() { stopBattle(); if (mapKeys) { removeEventListener('keydown', mapKeys); mapKeys = null; } ({ map: mapScreen, heroes: () => heroesScreen(), summon: summonScreen })[tab](); }
 function toast(msg) { app.querySelectorAll('.toast').forEach((t) => t.remove()); const t = h(`<div class="toast">${msg}</div>`); app.append(t); setTimeout(() => t.remove(), 2200); }
 
 // ---------------- map ----------------
-let sel = null, diff = 'normal', mapPan = null;
+let sel = null, diff = 'normal', mapKeys = null;
 function mapScreen() {
   const open = openStage();
   if (sel === null || sel > open) sel = open;
   const s = h(`<div class="mapscr"><div class="chapters"><span class="chap on">Ch. 1 · Akan</span>${LOCKED_CHAPTERS.map((c, i) => `<span class="chap">🔒 Ch. ${i + 2} · ${c}</span>`).join('')}</div>
-    <div class="mapview"><div class="mapinner"><img src="${ROOT}map.webp" alt="World map"><svg viewBox="0 0 100 100" preserveAspectRatio="none"></svg></div></div>
+    <div class="mapview"><div class="mapinner"><img src="${ROOT}map.webp" alt="World map"><svg viewBox="0 0 100 100" preserveAspectRatio="none"></svg></div>
+      <button class="marrow l" type="button" aria-label="Pan left">${CHEV(180)}</button><button class="marrow r" type="button" aria-label="Pan right">${CHEV(0)}</button>
+      <button class="marrow u" type="button" aria-label="Pan up">${CHEV(-90)}</button><button class="marrow d" type="button" aria-label="Pan down">${CHEV(90)}</button></div>
     <div class="stagepanel"></div></div>`);
   shell('map', s);
   const view = $('.mapview', s), inner = $('.mapinner', s), svg = $('svg', s);
@@ -128,26 +146,29 @@ function mapScreen() {
     const state = cleared(i) ? 'done' : i === open ? 'open' : '';
     const n = h(`<button class="node ${state} ${t.boss ? 'boss' : ''} ${i === sel ? 'sel' : ''}" type="button" style="left:${t.x * 100}%;top:${t.y * 100}%" ${i > open ? 'disabled' : ''} aria-label="Stage ${i + 1}, ${t.name}">
       ${t.boss ? `<img src="${poseSrc(t.waves.at(-1).find((m) => MONS[m].boss), 0)}" alt="">` : ''}<span class="n">${i + 1}</span>${best ? `<span class="st">${'★'.repeat(best)}${'☆'.repeat(3 - best)}</span>` : ''}</button>`);
-    n.onclick = (e) => { if (mapPan && mapPan.moved) return; sel = i; SFX.click(); inner.querySelectorAll('.node').forEach((x) => x.classList.remove('sel')); n.classList.add('sel'); panel(); };
+    n.onclick = () => { sel = i; SFX.click(); inner.querySelectorAll('.node').forEach((x) => x.classList.remove('sel')); n.classList.add('sel'); centre(i, true); panel(); };
     inner.append(n);
   });
-  // pannable map: the map image is drawn larger than the view, drag to move, centred on the selected stage
+  // the map is drawn larger than the view; arrows (or arrow keys) pan it, selecting a stage centres it
   const size = () => {
     const r = view.getBoundingClientRect(); const H = Math.max(r.height * 1.5, r.width * 4 / 3 * 1.1), W = H * 0.75;
     inner.style.width = W + 'px'; inner.style.height = H + 'px'; return { r, W, H };
   };
   let { r, W, H } = size();
   const P = { x: 0, y: 0 };
-  const apply = () => { P.x = clamp(P.x, Math.min(0, r.width - W), 0); P.y = clamp(P.y, Math.min(0, r.height - H), 0); inner.style.transform = `translate(${P.x}px, ${P.y}px)`; };
-  const centre = (i) => { const t = STAGES[i]; P.x = r.width / 2 - t.x * W; P.y = r.height / 2 - t.y * H; apply(); };
-  centre(sel);
-  mapPan = { moved: false };
-  let start = null;
-  view.onpointerdown = (e) => { start = { x: e.clientX, y: e.clientY, px: P.x, py: P.y }; mapPan.moved = false; };
-  view.onpointermove = (e) => { if (!start) return; const dx = e.clientX - start.x, dy = e.clientY - start.y; if (Math.abs(dx) + Math.abs(dy) > 6) { mapPan.moved = true; view.setPointerCapture?.(e.pointerId); } P.x = start.px + dx; P.y = start.py + dy; apply(); };
-  view.onpointerup = view.onpointercancel = () => { start = null; setTimeout(() => { mapPan.moved = false; }, 0); };
-  view.onwheel = (e) => { e.preventDefault(); P.x -= e.deltaX; P.y -= e.deltaY; apply(); };
-  new ResizeObserver(() => { ({ r, W, H } = size()); apply(); }).observe(view);
+  const arrows = { l: $('.marrow.l', s), r: $('.marrow.r', s), u: $('.marrow.u', s), d: $('.marrow.d', s) };
+  const apply = (anim) => {
+    P.x = clamp(P.x, Math.min(0, r.width - W), 0); P.y = clamp(P.y, Math.min(0, r.height - H), 0);
+    inner.style.transition = anim ? 'transform .45s cubic-bezier(.2,.8,.2,1)' : 'none'; inner.style.transform = `translate(${P.x}px, ${P.y}px)`;
+    arrows.l.hidden = P.x >= -1; arrows.r.hidden = P.x <= r.width - W + 1; arrows.u.hidden = P.y >= -1; arrows.d.hidden = P.y <= r.height - H + 1;
+  };
+  function centre(i, anim) { const t = STAGES[i]; P.x = r.width / 2 - t.x * W; P.y = r.height / 2 - t.y * H; apply(anim); }
+  const pan = (dx, dy) => { unlock(); SFX.click(); P.x -= dx * r.width * .65; P.y -= dy * r.height * .65; apply(true); };
+  arrows.l.onclick = () => pan(-1, 0); arrows.r.onclick = () => pan(1, 0); arrows.u.onclick = () => pan(0, -1); arrows.d.onclick = () => pan(0, 1);
+  mapKeys = (e) => { const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (k && view.isConnected) { e.preventDefault(); pan(...k); } };
+  addEventListener('keydown', mapKeys);
+  centre(sel, false);
+  new ResizeObserver(() => { if (!view.isConnected) return; ({ r, W, H } = size()); centre(sel, false); }).observe(view);
   const pane = $('.stagepanel', s);
   const panel = () => {
     const t = STAGES[sel], foes = [...new Set(t.waves.flat())], d = DIFF.find((x) => x.id === diff);
@@ -157,8 +178,9 @@ function mapScreen() {
     pane.innerHTML = `<div class="scard"><div class="eyebrow">Stage ${sel + 1} · ${REGIONS[t.region].name} · level ${t.lvl} · ${t.waves.length} wave${t.waves.length > 1 ? 's' : ''}</div><h3>${t.name}</h3>
       <div class="foes">${foes.map((k) => `<div class="f ${MONS[k].boss ? 'boss' : ''}" title="${MONS[k].name}"><img src="${poseSrc(k, 0)}" alt="${MONS[k].name}"></div>`).join('')}</div>
       <div class="diffs">${DIFF.map((x) => `<button class="diff ${x.id === diff ? 'on' : ''}" type="button" data-d="${x.id}" style="--dc:${x.color}" ${x.id === 'hard' && !hardOpen ? 'disabled title="Clear Normal first"' : ''}><b>${x.name}</b><span>${'★'.repeat(starsOf(sel, x.id))}${'☆'.repeat(3 - starsOf(sel, x.id))}</span></button>`).join('')}</div>
-      <div class="reward"><span><i class="coin gold"></i>${gold}</span>${first ? `<span><i class="coin cowrie"></i>${t.boss ? 100 : diff === 'hard' ? 60 : 30} first clear</span>` : ''}<span>XP ${30 + t.lvl * 15}</span></div></div>
-      <button class="btn wide" type="button" id="go">Choose squad</button>`;
+      <div class="reward"><span>${COIN('gold')}${gold}</span>${first ? `<span>${COIN('cowrie')}${t.boss ? 100 : diff === 'hard' ? 60 : 30} first clear</span>` : ''}<span>${COIN('xp')}${30 + t.lvl * 15} XP</span></div>
+      ${powerRow(squadPower(), enemyPower(t, d))}</div>
+      <button class="btn wide" type="button" id="go">Prepare squad</button>`;
     pane.querySelectorAll('.diff').forEach((b) => (b.onclick = () => { diff = b.dataset.d; SFX.click(); panel(); }));
     $('#go', pane).onclick = () => { unlock(); SFX.click(); squadScreen(); };
   };
@@ -171,18 +193,33 @@ function heroCard(id, extra = '') {
   return `<button class="hc ${own ? '' : 'locked'} ${extra}" type="button" data-id="${id}" style="--rc:${RARITY[H.rarity].color}"><img src="${faceSrc(id)}" alt="">
     ${own ? `<span class="lv">Lv ${s.lvl}</span><span class="stars">${'★'.repeat(s.stars)}</span>` : ''}<span class="lab"><b>${H.name}</b><span>${own ? H.role : 'Summon to recruit'}</span></span></button>`;
 }
+const squadPower = () => SAVE.squad.filter((x) => SAVE.heroes[x]).reduce((a, id) => a + power(id), 0);
+function enemyPower(t, d) {
+  const k = (1 + (t.lvl - 1) * MON_LVL) * d.mult * t.pow;
+  return Math.round(Math.max(...t.waves.map((w) => w.reduce((a, id) => { const M = MONS[id]; return a + (M.hp * .5 + M.atk * 6 + M.def * 4) * k; }, 0))));
+}
+function powerRow(mine, foe) {
+  const r = mine / foe, c = r >= 1.15 ? 'var(--good)' : r >= .9 ? 'var(--orange)' : 'var(--blood)', w = r >= 1.15 ? 'Favoured' : r >= .9 ? 'Even fight' : 'Dangerous';
+  return `<div class="vs"><div><span>Your squad</span><b class="num">${fmt(mine)}</b></div><em style="color:${c}">${w}</em><div><span>Enemy</span><b class="num">${fmt(foe)}</b></div></div>`;
+}
 function squadScreen() {
-  const ids = Object.keys(HEROES).filter((id) => SAVE.heroes[id]).sort((a, b) => power(b) - power(a));
-  const s = h(`<div class="screen"><div class="head"><button class="btn ghost sm" type="button">‹ Map</button><h2>Squad</h2><span class="pill">${DIFF.find((x) => x.id === diff).name}</span></div>
-    <div class="grid"></div><div class="squadbar"><div class="power"><span>POWER</span><b class="num"></b></div><button class="btn" type="button" id="fight">Fight</button></div></div>`);
+  const t = STAGES[sel], D = DIFF.find((x) => x.id === diff);
+  const s = h(`<div class="screen"><div class="head"><button class="btn ghost sm" type="button">${CHEV(180)} Journey</button><h2>Prepare squad</h2><span class="pill" style="color:${D.color}">${D.name}</span></div>
+    <div class="formation"></div><div class="vsbox"></div><div class="eyebrow">Roster · tap to add or remove</div><div class="grid roster"></div>
+    <div class="squadbar"><button class="btn wide big" type="button" id="fight">Fight · Stage ${sel + 1}</button></div></div>`);
   shell('map', s);
   $('.head .btn', s).onclick = mapScreen;
-  const grid = $('.grid', s);
+  const grid = $('.roster', s), form = $('.formation', s);
+  const toggle = (id) => { const i = SAVE.squad.indexOf(id); if (i >= 0) SAVE.squad.splice(i, 1); else if (SAVE.squad.length < 5) SAVE.squad.push(id); else return toast('A squad holds 5 heroes'); SFX.click(); store(); draw(); };
   const draw = () => {
     SAVE.squad = SAVE.squad.filter((x) => SAVE.heroes[x]);
-    grid.innerHTML = ids.map((id) => { const i = SAVE.squad.indexOf(id); return heroCard(id, i >= 0 ? 'on' : '').replace('data-id', `data-n="${i + 1}" data-id`); }).join('');
-    grid.querySelectorAll('.hc').forEach((c) => (c.onclick = () => { const id = c.dataset.id, i = SAVE.squad.indexOf(id); if (i >= 0) SAVE.squad.splice(i, 1); else if (SAVE.squad.length < 5) SAVE.squad.push(id); else toast('Squads hold 5 heroes'); SFX.click(); store(); draw(); }));
-    $('.power b', s).textContent = SAVE.squad.reduce((a, id) => a + power(id), 0);
+    const ids = Object.keys(HEROES).filter((id) => SAVE.heroes[id]).sort((a, b) => power(b) - power(a));
+    // formation: front line first (as they stand in battle, right to left)
+    const sq = [...SAVE.squad].sort((a, b) => HEROES[a].row - HEROES[b].row);
+    form.innerHTML = Array.from({ length: 5 }, (_, i) => sq[i] ? heroCard(sq[i], 'on mini').replace('data-id', 'data-sq="1" data-id') : '<div class="hc empty"><span>+</span></div>').reverse().join('');
+    grid.innerHTML = ids.map((id) => heroCard(id, SAVE.squad.includes(id) ? 'picked' : '')).join('');
+    s.querySelectorAll('.hc[data-id]').forEach((c) => (c.onclick = () => toggle(c.dataset.id)));
+    $('.vsbox', s).innerHTML = powerRow(squadPower(), enemyPower(t, D));
     $('#fight', s).disabled = !SAVE.squad.length;
   };
   $('#fight', s).onclick = () => { unlock(); battle(sel, diff); };
@@ -201,15 +238,16 @@ function heroesScreen(id) {
     s.querySelectorAll('.hc').forEach((c) => { if (SAVE.heroes[c.dataset.id] && (canPromote(c.dataset.id))) c.append(h('<i class="dot"></i>')); c.onclick = () => { SFX.click(); heroesScreen(c.dataset.id); }; });
     return;
   }
-  const H = HEROES[heroSel], s0 = SAVE.heroes[heroSel], own = !!s0, R = RARITY[H.rarity];
+  const H = HEROES[heroSel], s0 = SAVE.heroes[heroSel], own = !!s0, R = RARITY[H.rarity], AD = ADINKRA[H.sym];
   const st = own ? statsOf(heroSel) : { hp: H.hp, atk: H.atk, def: H.def };
   const s = h(`<div class="screen"><div class="head"><button class="btn ghost sm" type="button">‹ Heroes</button><h2></h2></div><div class="detail">
     <div class="stage3"><canvas aria-label="${H.name}"></canvas><div class="poses"><button class="btn ghost sm" data-p="0" type="button">Idle</button><button class="btn ghost sm" data-p="1" type="button">Attack</button><button class="btn ghost sm" data-p="2" type="button">Ultimate</button></div></div>
     <div class="info"><div><span class="eyebrow" style="color:${R.color}">${R.name}</span><h2>${H.name}</h2><div class="rolel">${H.role} · ${H.en}</div></div>
       ${own ? `<div class="eyebrow">Level ${s0.lvl} · ${'★'.repeat(s0.stars)}${'☆'.repeat(5 - s0.stars)}</div><div class="bar"><i style="transform:scaleX(${s0.xp / xpNeed(s0.lvl)})"></i></div>` : '<div class="eyebrow" style="color:var(--orange)">Not recruited · summon at the shrine</div>'}
       <div class="st4"><div><b>${st.hp}</b><span>HP</span></div><div><b>${st.atk}</b><span>ATK</span></div><div><b>${st.def}</b><span>DEF</span></div><div><b>${own ? power(heroSel) : '?'}</b><span>POWER</span></div></div>
-      ${own ? `<div class="skill"><div><strong>Shards ${s0.shards}/${s0.stars < 5 ? STAR_SHARDS[s0.stars + 1] : 'max'}</strong><small>Duplicate summons give shards. Each star adds 15% to all stats.</small></div><button class="btn sm" id="promo" type="button" ${canPromote(heroSel) ? '' : 'disabled'}>Promote</button></div>` : ''}
-      <div class="skills" style="display:grid;gap:6px"></div></div></div></div>`);
+      ${own ? `<div class="skill"><div><strong>${COIN('shard')} Shards ${s0.shards}/${s0.stars < 5 ? STAR_SHARDS[s0.stars + 1] : 'max'}</strong><small>Duplicate summons give shards. Each star adds 15% to all stats.</small></div><button class="btn sm" id="promo" type="button" ${canPromote(heroSel) ? '' : 'disabled'}>Promote</button></div>` : ''}
+      <div class="skills" style="display:grid;gap:6px"></div>
+      <div class="codex">${adinkraSvg(H.sym)}<div><span class="eyebrow">Ultimate symbol</span><b>${AD.name}</b><small>${AD.meaning}</small></div></div></div></div></div>`);
   shell('heroes', s);
   $('.head .btn', s).onclick = () => { heroSel = null; heroesScreen(); };
   const sk = $('.skills', s);
@@ -234,7 +272,7 @@ function heroesScreen(id) {
     if (e.ok && e0.ok) {
       const Hh = (r.height - 50) * 0.95, k = Hh / e0.el.naturalHeight, ph = e.el.naturalHeight * k, pw = e.el.naturalWidth * k;
       const sc = scaled(e, ph * dpr), x = r.width / 2, y = r.height - 44 + Math.sin(now / 500) * 2;
-      if (pose === 2) { const t = (now - fxT) / 1000; g.save(); g.translate(x, y - ph * .55); g.globalAlpha = Math.max(0, 1 - t / 2); g.strokeStyle = '#e3b448'; g.shadowColor = '#e3b448'; g.shadowBlur = 20; drawAdinkra(g, H.sym, Math.min(r.width, r.height) * (.6 + t * .2)); g.restore(); }
+      if (pose === 2) { const t = (now - fxT) / 1000; g.save(); g.translate(x, y - ph * .55); g.globalAlpha = Math.max(0, 1 - t / 2); g.fillStyle = '#e3b448'; g.shadowColor = '#e3b448'; g.shadowBlur = 20; drawAdinkra(g, H.sym, Math.min(r.width, r.height) * (.5 + t * .15)); g.restore(); }
       if (sc) { g.save(); if (H.flip[pose]) { g.translate(x, 0); g.scale(-1, 1); g.translate(-x, 0); } g.drawImage(sc, x - pw / 2, y - ph, pw, ph); g.restore(); }
     }
     poseLoop = requestAnimationFrame(draw);
@@ -251,7 +289,7 @@ function summonScreen() {
     <div class="pullrow">${free ? '<button class="btn" type="button" data-n="0">Free daily call</button>' : ''}<button class="btn ${free ? 'ghost' : ''}" type="button" data-n="1"><i class="coin cowrie"></i>${PULL_COST} · Call 1</button><button class="btn ghost" type="button" data-n="10"><i class="coin cowrie"></i>${PULL10_COST} · Call 10</button></div>
     <p class="rates">Legendary 4% · Epic 18% · Rare 38% · gold 40% · Legendary guaranteed within ${PITY} calls (${PITY - SAVE.pity} left) · Beta: cowries are earned in play, nothing is sold.</p></div></div>`);
   shell('summon', s);
-  const c = $('canvas', s), g = c.getContext('2d'); g.translate(150, 150); g.strokeStyle = '#e3b448'; g.shadowColor = '#e3b448'; g.shadowBlur = 16; drawAdinkra(g, 'dwennimmen', 230);
+  const c = $('canvas', s), g = c.getContext('2d'); g.translate(150, 150); g.fillStyle = '#e3b448'; g.shadowColor = '#e3b448'; g.shadowBlur = 16; drawAdinkra(g, 'nyameDua', 200);
   s.querySelectorAll('.pullrow .btn').forEach((b) => (b.onclick = () => {
     unlock(); const n = +b.dataset.n;
     if (n === 0) { SAVE.lastFree = today(); return doPulls(1); }
@@ -292,16 +330,18 @@ function doPulls(n) {
 
 // ---------------- battle ----------------
 let B = null;
+const MON_LVL = 0.22;
 function stopBattle() { if (B) { cancelAnimationFrame(B.raf); B = null; } if (poseLoop) { cancelAnimationFrame(poseLoop); poseLoop = null; } }
-// slots (x, ground y, depth scale): front line first, alternating lanes so nobody hides behind anybody
-const SLOTS = [[.35, .9, 1], [.26, .74, .88], [.22, .97, 1], [.14, .8, .9], [.09, .66, .82]];
+// slots (x, depth on the floor 0 = far .. 1 = near, scale): front line first, alternating lanes so nobody hides behind anybody.
+// Feet are placed inside the background's painted floor band (REGIONS[].ground) so nobody stands in the trees or the sky.
+const SLOTS = [[.36, .6, 1], [.27, .12, .9], [.23, .98, 1.04], [.15, .4, .94], [.09, .02, .88]];
 function mkHero(id, i) {
   const H = HEROES[id], st = statsOf(id);
   return { side: 0, id, d: H, name: H.name, hp: st.hp, max: st.hp, atk: st.atk, def: st.def, spd: H.spd, range: H.range, row: H.row, dive: H.dive,
     sk: SAVE.heroes[id].sk, cd: rnd(.3, 1), skCd: [0, 6, 7, 8, 7, 7, 6, 7, 6][i] || 7, skT: rnd(3, 5), en: 0, shield: 0, taunt: 0, stun: 0, buff: 0, pose: 0, poseT: 0, dash: 0, reach: 0, hurt: 0, h: 100, w: 60, alive: true, size: H.size, flip: H.flip };
 }
 function mkMon(id, lvl, mult) {
-  const M = MONS[id], k = (1 + (lvl - 1) * 0.22) * mult;
+  const M = MONS[id], k = (1 + (lvl - 1) * MON_LVL) * mult;
   return { side: 1, id, d: M, name: M.name, hp: Math.round(M.hp * k), max: Math.round(M.hp * k), atk: M.atk * k, def: M.def * k, spd: M.spd, range: M.range, row: M.range ? 1 : 0,
     cd: rnd(.6, 1.4), en: M.boss ? 25 : 0, shield: 0, taunt: 0, stun: 0, buff: 0, pose: 0, poseT: 0, dash: 0, reach: 0, hurt: 0, h: 100, w: 60, alive: true, size: M.size, flip: M.flip, boss: M.boss, enter: 1 };
 }
@@ -313,21 +353,21 @@ function battle(stageIdx, diffId) {
   stopBattle();
   const t = STAGES[stageIdx], D = DIFF.find((x) => x.id === diffId);
   app.innerHTML = ''; app.classList.add('full');
-  const s = h(`<main><div class="battle"><div class="btop"><button class="btn ghost sm" type="button" id="leave">Leave</button><div class="t"><b>${t.name}</b><span id="wave"></span></div>
-    <button class="btn ghost sm" type="button" id="auto">Auto: off</button><button class="btn ghost sm" type="button" id="spd">×1</button></div>
+  const s = h(`<main><div class="battle"><div class="btop"><button class="btn ghost sm" type="button" id="leave">${CHEV(180)}</button><div class="t"><b>${t.name}</b><span id="wave"></span></div>
+    <button class="tog" type="button" id="auto" aria-pressed="false">AUTO</button><button class="tog" type="button" id="spd" aria-pressed="false">×2</button></div>
     <div class="field"><canvas aria-label="Battlefield"></canvas><div class="hint" id="hint">Tap an enemy to focus it · tap a glowing card for its ultimate</div></div><div class="cards"></div></div></main>`);
   app.append(s);
   const heroes = SAVE.squad.map((id, i) => mkHero(id, Object.keys(HEROES).indexOf(id) + 1));
   place(heroes, 0);
-  B = { t, stageIdx, D, wave: 0, heroes, foes: [], fx: [], parts: [], floats: [], auto: false, speed: 1, shake: 0, flash: 0, over: false, pause: 0, focus: null, cv: $('canvas', s), s, last: performance.now(), bg: img(`${A}bg_${REGIONS[t.region].bg}.webp`) };
+  B = { gy0: 0, gy1: 1, ground: REGIONS[t.region].ground, t, stageIdx, D, wave: 0, heroes, foes: [], fx: [], parts: [], floats: [], auto: false, speed: 1, shake: 0, flash: 0, over: false, pause: 0, focus: null, cv: $('canvas', s), s, last: performance.now(), bg: img(`${A}bg_${REGIONS[t.region].bg}.webp`) };
   $('#leave', s).onclick = () => { stopBattle(); mapScreen(); };
-  $('#auto', s).onclick = (e) => { B.auto = !B.auto; e.target.textContent = 'Auto: ' + (B.auto ? 'on' : 'off'); };
-  $('#spd', s).onclick = (e) => { B.speed = B.speed === 1 ? 2 : 1; e.target.textContent = '×' + B.speed; };
+  $('#auto', s).onclick = (e) => { B.auto = !B.auto; e.currentTarget.setAttribute('aria-pressed', B.auto); SFX.click(); };
+  $('#spd', s).onclick = (e) => { B.speed = B.speed === 1 ? 2 : 1; e.currentTarget.setAttribute('aria-pressed', B.speed === 2); SFX.click(); };
   setTimeout(() => { const hn = $('#hint', s); if (hn) hn.remove(); }, 5000);
   const cards = $('.cards', s);
   for (let i = 0; i < 5; i++) {
     const u = heroes[i];
-    const c = h(`<button class="uc ${u ? '' : 'empty'}" type="button" ${u ? '' : 'disabled'}>${u ? `<img src="${faceSrc(u.id)}" alt="${u.name}"><div class="bars"><i style="--c:var(--good)"></i><i style="--c:var(--gold)"></i></div>` : ''}</button>`);
+    const c = h(`<button class="uc ${u ? '' : 'empty'}" type="button" ${u ? '' : 'disabled'}>${u ? `<img src="${faceSrc(u.id)}" alt="${u.name}"><span class="nm">${u.name}</span><div class="bars"><i style="--c:var(--good)"></i><i style="--c:var(--gold)"></i></div>` : ''}</button>`);
     if (u) { u.card = c; c.onclick = () => castUlt(u); }
     cards.append(c);
   }
@@ -341,12 +381,12 @@ function battle(stageIdx, diffId) {
 }
 function nextWave() {
   const ids = B.t.waves[B.wave];
-  B.foes = ids.map((id) => mkMon(id, B.t.lvl, B.D.mult)); place(B.foes, 1); B.focus = null;
+  B.foes = ids.map((id) => mkMon(id, B.t.lvl, B.D.mult * B.t.pow)); place(B.foes, 1); B.focus = null; B.wave > 0 && SFX.drum();
   $('#wave', B.s).textContent = `${B.D.name} · wave ${B.wave + 1}/${B.t.waves.length}`;
-  const boss = B.foes.find((f) => f.boss); if (boss) cutIn(poseSrc(boss.id, 2), boss.name, 'BOSS', '#d23b31');
+  const boss = B.foes.find((f) => f.boss); if (boss) cutIn(poseSrc(boss.id, 2), boss.name, 'BOSS', '#d23b31', true, boss.flip[2]);
 }
 const alive = (l) => l.filter((u) => u.alive);
-function pos(u) { const W = B.w, H = B.hh; const dir = u.side ? -1 : 1; return [u.fx * W + dir * u.dash * u.reach + (u.enter || 0) * (u.side ? 1 : -1) * W * .4, u.fy * H]; }
+function pos(u) { const W = B.w; const dir = u.side ? -1 : 1; return [u.fx * W + dir * u.dash * u.reach + (u.enter || 0) * (u.side ? 1 : -1) * W * .4, B.gy0 + u.fy * (B.gy1 - B.gy0)]; }
 function targetFor(u, kind) {
   const foes = alive(u.side ? B.heroes : B.foes); if (!foes.length) return null;
   const taunt = foes.find((f) => f.taunt > 0); if (taunt) return taunt;
@@ -375,7 +415,7 @@ function hit(src, dst, mult, color = '#fff', o = {}) {
   }
   return d;
 }
-function heal(u, n) { if (!u.alive) return; const v = Math.round(n); u.hp = Math.min(u.max, u.hp + v); const [x, y] = pos(u); B.floats.push({ x, y: y - u.h * .85, t: '+' + v, c: '#7ee08a', life: 1, size: 1 }); for (let i = 0; i < 10; i++) B.parts.push({ x: x + rnd(-u.w * .3, u.w * .3), y: y - rnd(0, u.h * .8), vx: 0, vy: -rnd(.6, 1.6), g: -.01, life: 1, c: i % 2 ? '#7ee08a' : '#e9ffd0', sz: rnd(2, 4), glow: 1 }); }
+function heal(u, n) { if (!u.alive) return; const v = Math.round(n); u.hp = Math.min(u.max, u.hp + v); const [x, y] = pos(u); B.floats.push({ x, y: y - u.h * .85, t: '+' + v, c: '#7ee08a', life: 1, size: 1 }); fx('spr', 1150, { k: 'heal', unit: u, hs: 1.3 }); for (let i = 0; i < 4; i++) B.parts.push({ x: x + rnd(-u.w * .3, u.w * .3), y: y - rnd(0, u.h * .8), vx: 0, vy: -rnd(.6, 1.6), g: -.01, life: 1, c: i % 2 ? '#7ee08a' : '#e9ffd0', sz: rnd(2, 4), glow: 1 }); }
 function burst(x, y, cols, n, sp) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = sp * rnd(.4, 1.2); B.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: .15, life: 1, c: cols[i % cols.length], sz: rnd(2, 5) }); } }
 function fx(type, dur, o) { B.fx.push({ type, t0: performance.now(), dur, ...o }); }
 const later = (ms, fn) => setTimeout(() => { if (B && !B.over) fn(); }, ms / (B ? B.speed : 1));
@@ -407,7 +447,7 @@ function skill(u) {
     case 'gyakari': later(150, () => { hit(u, tg, 0.9 * m, '#6fb6ff'); tg.stun = 1.5; }); break;
     case 'obiri': for (let i = 0; i < 3; i++) later(i * 120, () => { const l = alive(B.foes); if (!l.length) return; const t2 = pick(l); const [x0, y0] = pos(u), [x1, y1] = pos(t2); fx('shot', 280, { x0, y0: y0 - u.h * .6, x1, y1: y1 - t2.h * .5, kind: 'arrow' }); later(280, () => hit(u, t2, .8 * m, '#e6edf5')); }); break;
     case 'kuukua': { const two = foes.sort((a, b) => Math.abs(a.fx - u.fx) - Math.abs(b.fx - u.fx)).slice(0, 2); const [x0, y0] = pos(u); for (const f of two) { const [x, y] = pos(f); fx('beam', 360, { x0, y0: y0 - u.h * .55, x1: x, y1: y - f.h * .5, c: '#e6edf5' }); hit(u, f, 1.3 * m, '#e6edf5'); } break; }
-    case 'kome': { const w = team.reduce((a, b) => (b.hp / b.max < a.hp / a.max ? b : a)); const [x, y] = pos(w); fx('sym', 900, { x, y: y - w.h * .55, s: w.h * .7, sym: 'sankofa', c: '#7ee08a' }); heal(w, w.max * .25 * m); SFX.heal(); break; }
+    case 'kome': { const w = team.reduce((a, b) => (b.hp / b.max < a.hp / a.max ? b : a)); const [x, y] = pos(w); fx('sym', 900, { x, y: y - w.h * .55, s: w.h * .6, sym: 'nyameDua', c: '#7ee08a' }); heal(w, w.max * .25 * m); SFX.heal(); break; }
     case 'afrakoma': for (const f of foes.sort((a, b) => Math.abs(a.fx - u.fx) - Math.abs(b.fx - u.fx)).slice(0, 2)) { const [x, y] = pos(f); fx('slash', 300, { x, y: y - f.h * .5, r: f.h * .5, c: '#ff8a3c', dir: 1, big: 1 }); hit(u, f, 1.1 * m, '#ff8a3c'); } break;
     case 'dufie': { const t2 = targetFor(u, 'weak'); u.reach = Math.max(0, Math.abs(pos(t2)[0] - pos(u)[0]) - t2.w * .3); u.dash = 1; later(160, () => { const [x, y] = pos(t2); fx('x', 300, { x, y: y - t2.h * .5, r: t2.h * .45, c: '#c58bff' }); hit(u, t2, 1.4 * m, '#c58bff', { crit: true }); }); break; }
   }
@@ -415,14 +455,14 @@ function skill(u) {
 function castUlt(u) {
   if (!B || B.over || !u.alive || u.en < 100 || B.pause > 0) return;
   unlock(); u.en = 0; B.pause = .95; B.flash = .45; B.shake = 8; setPose(u, 2, 1500);
-  cutIn(poseSrc(u.id, 2), u.d.kit[2], `${u.name.toUpperCase()} · ${u.d.role.toUpperCase()}`, RARITY[u.d.rarity].color);
+  cutIn(poseSrc(u.id, 2), u.d.kit[2], `${u.name.toUpperCase()} · ${u.d.role.toUpperCase()}`, RARITY[u.d.rarity].color, false, u.flip[2]);
   SFX.ult();
   later(750, () => ult(u));
 }
 function ult(u) {
   const foes = alive(B.foes), team = alive(B.heroes); if (!foes.length) return;
   const m = skMult(u.id, 2), front = foes.sort((a, b) => Math.abs(a.fx - u.fx) - Math.abs(b.fx - u.fx));
-  const stamp = (x, y, s, c = '#e3b448') => fx('sym', 1100, { x, y, s, sym: u.d.sym, c });
+  const stamp = (x, y, s, c = '#e3b448') => fx('sym', 1100, { x, y: Math.max(y, B.gy0 - B.hh * .45), s: Math.min(s, B.w * .4, B.hh * .5), sym: u.d.sym, c });
   B.shake = 12;
   const W = B.w, H = B.hh;
   switch (u.id) {
@@ -431,7 +471,7 @@ function ult(u) {
     case 'gyakari': stamp(pos(u)[0], H * .45, H * .7, '#6fb6ff'); for (const f of foes) f.taunt = 0; u.taunt = 5; for (const t of team) t.shield += Math.round(u.max * .2 * m); fx('ring', 700, { list: team, c: '#6fb6ff' }); break;
     case 'obiri': { const tg = foes.reduce((a, b) => (b.hp < a.hp ? b : a)); const [x0, y0] = pos(u), [x, y] = pos(tg); stamp(x, y - tg.h * .5, tg.h * .9, '#ffd23c'); fx('beam', 500, { x0, y0: y0 - u.h * .6, x1: x, y1: y - tg.h * .5, c: '#ffd23c' }); hit(u, tg, 4.4 * m, '#ffd23c', { noEn: 1, crit: .5 }); break; }
     case 'kuukua': stamp(W * .66, H * .3, H * .5, '#e6edf5'); for (const f of foes) { const [x, y] = pos(f); fx('rain', 600, { x, y: y - f.h, h: f.h }); later(300, () => hit(u, f, 1.5 * m, '#e6edf5', { noEn: 1 })); } break;
-    case 'kome': stamp(W * .25, H * .5, H * .7, '#7ee08a'); for (const t of team) heal(t, t.max * .3 * m); for (const f of foes) { const [x, y] = pos(f); fx('boom', 650, { x, y: y - f.h * .45, r: f.h * .6 }); hit(u, f, 1.1 * m, '#ffb43c', { noEn: 1 }); } SFX.heal(); break;
+    case 'kome': stamp(W * .25, H * .5, H * .7, '#7ee08a'); for (const t of team) heal(t, t.max * .3 * m); for (const f of foes) { const [x, y] = pos(f); fx('boom', 900, { x, y: y - f.h * .45, r: f.h * .6, unit: f }); hit(u, f, 1.1 * m, '#ffb43c', { noEn: 1 }); } SFX.heal(); break;
     case 'afrakoma': { stamp(W * .62, H * .45, H * .6, '#ff8a3c'); let tot = 0; for (const f of foes) { const [x, y] = pos(f); fx('slash', 420, { x, y: y - f.h * .5, r: f.h * .55, c: '#ff8a3c', dir: 1, big: 1 }); tot += hit(u, f, 1.6 * m, '#ff8a3c', { noEn: 1 }); } heal(u, tot * .5); break; }
     case 'dufie': stamp(W * .6, H * .5, H * .7, '#c58bff'); for (let i = 0; i < 6; i++) later(i * 110, () => { const l = alive(B.foes); if (!l.length) return; const tg = pick(l); const [x, y] = pos(tg); fx('x', 240, { x, y: y - tg.h * .5, r: tg.h * .4, c: '#c58bff' }); hit(u, tg, 1.05 * m, '#c58bff', { noEn: 1 }); }); break;
   }
@@ -439,17 +479,17 @@ function ult(u) {
 function monUlt(m) {
   m.en = 0; const l = alive(B.heroes); if (!l.length) return;
   setPose(m, 2, 1200);
-  if (m.boss) cutIn(poseSrc(m.id, 2), m.name, 'ULTIMATE', '#d23b31');
+  if (m.boss) { cutIn(poseSrc(m.id, 2), m.name, 'ULTIMATE', '#d23b31', true, m.flip[2]); const [x, y] = pos(m); fx('sym', 1100, { x, y: y - m.h * .6, s: m.h * .7, sym: 'kuntanKantan', c: '#ff3b2a' }); }
   B.shake = 10;
   later(m.boss ? 750 : 200, () => {
     const kind = m.d.ult;
     if (kind === 'heal') { for (const f of alive(B.foes)) heal(f, f.max * .2); fx('ring', 700, { list: alive(B.foes), c: '#bfe8ff' }); return; }
-    if (kind === 'aoe') { for (const t of alive(B.heroes)) { const [x, y] = pos(t); fx('boom', 650, { x, y: y - t.h * .45, r: t.h * .6, hex: 1 }); hit(m, t, 1.3, '#c58bff', { noEn: 1 }); } return; }
+    if (kind === 'aoe') { for (const t of alive(B.heroes)) { const [x, y] = pos(t); fx('boom', 900, { x, y: y - t.h * .45, r: t.h * .6, hex: 1, unit: t }); hit(m, t, 1.3, '#c58bff', { noEn: 1 }); } return; }
     const tg = targetFor(m); if (tg) { const [x, y] = pos(tg); fx('x', 450, { x, y: y - tg.h * .5, r: tg.h * .7, c: '#ff3b2a' }); hit(m, tg, 2.6, '#ff3b2a', { noEn: 1 }); }
   });
 }
-function cutIn(src, big, small, color) {
-  const c = h(`<div class="cutin" style="--rc:${color}"><div class="band"></div><img src="${src}" alt=""><div class="t"><b>${big}</b><span>${small}</span></div></div>`);
+function cutIn(src, big, small, color, foe = false, flip = 0) {
+  const c = h(`<div class="cutin ${foe ? 'foe' : ''}" style="--rc:${color}"><div class="band"></div><img src="${src}" alt="" class="${flip ? 'flip' : ''}"><div class="t"><b>${big}</b><span>${small}</span></div></div>`);
   app.append(c); setTimeout(() => c.remove(), 1050);
 }
 
@@ -472,27 +512,32 @@ function finish(win) {
   B.over = true;
   const left = alive(B.heroes).length, total = B.heroes.length, t = B.t, idx = B.stageIdx, dId = B.D.id;
   const stars = win ? (left === total ? 3 : left >= Math.ceil(total / 2) ? 2 : 1) : 0;
-  const msgs = [];
+  const chips = [], ups = {};
   if (win) {
     const first = !starsOf(idx, dId), prev = starsOf(idx, dId);
     SAVE.stars[starKey(idx, dId)] = Math.max(prev, stars);
-    const gold = Math.round((60 + t.lvl * 40) * B.D.gold) + (B.bonusGold || 0); SAVE.gold += gold; msgs.push(`<i class="coin gold"></i> +${gold} gold`);
-    if (first) { const cw = t.boss ? 100 : dId === 'hard' ? 60 : 30; SAVE.cowries += cw; msgs.push(`<i class="coin cowrie"></i> +${cw} cowries (first clear)`); }
-    if (stars === 3 && prev < 3) { SAVE.cowries += 20; msgs.push(`<i class="coin cowrie"></i> +20 cowries (3 stars)`); }
-    const xp = 30 + t.lvl * 15;
-    for (const u of B.heroes) { const s = SAVE.heroes[u.id]; s.xp += xp; while (s.xp >= xpNeed(s.lvl)) { s.xp -= xpNeed(s.lvl); s.lvl++; msgs.push(`${u.name} reached level ${s.lvl}`); } }
-    msgs.splice(msgs.length ? 1 : 0, 0, `+${xp} XP to each hero`);
+    const gold = Math.round((60 + t.lvl * 40) * B.D.gold) + (B.bonusGold || 0); SAVE.gold += gold; chips.push([COIN('gold', 'big'), '+' + gold, 'Gold dust']);
+    let cw = 0; if (first) cw += t.boss ? 100 : dId === 'hard' ? 60 : 30; if (stars === 3 && prev < 3) cw += 20;
+    if (cw) { SAVE.cowries += cw; chips.push([COIN('cowrie', 'big'), '+' + cw, first ? 'First clear' : '3 stars']); }
+    const xp = 30 + t.lvl * 15; chips.push([COIN('xp', 'big'), '+' + xp, 'XP each']);
+    for (const u of B.heroes) { const s = SAVE.heroes[u.id]; s.xp += xp; while (s.xp >= xpNeed(s.lvl)) { s.xp -= xpNeed(s.lvl); s.lvl++; ups[u.id] = s.lvl; } }
     SFX.win();
   } else SFX.lose();
   store();
   setTimeout(() => {
     if (!B) return;
-    const v = h(`<div class="veil"><div class="result"><div class="eyebrow">Stage ${idx + 1} · ${t.name} · ${B.D.name}</div><h2>${win ? 'Victory' : 'Defeat'}</h2>
-      ${win ? `<div class="stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>` : ''}<p>${win ? msgs.join('<br>') : 'Level up your hunters, upgrade skills, or try Easy. Put a tank like Gyakari in front.'}</p>
-      <div class="row"><button class="btn ghost" type="button">Retry</button><button class="btn" type="button">${win && idx < STAGES.length - 1 ? 'Next stage' : 'Map'}</button></div></div></div>`);
-    const [retry, next] = v.querySelectorAll('.btn');
+    const heroesRow = B.heroes.map((u) => `<div class="rh ${u.alive ? '' : 'ko'}"><img src="${faceSrc(u.id)}" alt=""><b>${ups[u.id] ? 'LV ' + ups[u.id] + ' ▲' : 'Lv ' + SAVE.heroes[u.id].lvl}</b></div>`).join('');
+    const v = h(`<div class="veil"><div class="result ${win ? 'win' : 'lose'}"><div class="eyebrow">Stage ${idx + 1} · ${t.name} · ${B.D.name}</div>
+      <div class="rtitle">${adinkraSvg(win ? 'fawohodie' : 'hyeWonhye')}<h2>${win ? 'Victory' : 'Defeat'}</h2></div>
+      ${win ? `<div class="stars">${[0, 1, 2].map((i) => `<i class="${i < stars ? 'on' : ''}" style="animation-delay:${.15 + i * .18}s">★</i>`).join('')}</div>
+        <div class="chips">${chips.map(([ic, n, l]) => `<div class="chip">${ic}<b>${n}</b><span>${l}</span></div>`).join('')}</div>`
+        : `<p>Hye won hye: what does not burn comes back stronger. Level up, upgrade skills at the Heroes tab, call new heroes at the Shrine, or try Easy.</p>`}
+      <div class="rheroes">${heroesRow}</div>
+      <div class="row"><button class="btn ghost" type="button">${win ? 'Replay' : 'Retry'}</button>${win ? '' : '<button class="btn ghost" type="button" data-go="heroes">Heroes</button>'}<button class="btn" type="button">${win && idx < STAGES.length - 1 ? 'Next stage' : 'Journey'}</button></div></div></div>`);
+    const btns = v.querySelectorAll('.btn'), retry = btns[0], next = btns[btns.length - 1];
     retry.onclick = () => battle(idx, dId);
     next.onclick = () => { stopBattle(); if (win && idx < STAGES.length - 1) sel = idx + 1; tab = 'map'; mapScreen(); };
+    const hb = v.querySelector('[data-go]'); if (hb) hb.onclick = () => { tab = 'heroes'; heroSel = null; route(); };
     app.append(v);
   }, 1000);
 }
@@ -506,14 +551,16 @@ function loop(now) {
   if (!B.over) step(dt);
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingQuality = 'high';
   // background: cover, anchored to the bottom so the ground plane stays under the fighters
-  if (B.bg.ok) { const im = B.bg.el, k = Math.max(r.width / im.naturalWidth, r.height / im.naturalHeight); const w = im.naturalWidth * k, hh = im.naturalHeight * k; g.drawImage(im, (r.width - w) / 2, r.height - hh, w, hh); }
+  let bgTop = 0, bgH = r.height;
+  if (B.bg.ok) { const im = B.bg.el, k = Math.max(r.width / im.naturalWidth, r.height / im.naturalHeight); const w = im.naturalWidth * k; bgH = im.naturalHeight * k; bgTop = r.height - bgH; g.drawImage(im, (r.width - w) / 2, bgTop, w, bgH); }
   else { g.fillStyle = '#1a1216'; g.fillRect(0, 0, r.width, r.height); }
+  B.gy0 = bgTop + B.ground[0] * bgH; B.gy1 = Math.min(r.height - 6, bgTop + B.ground[1] * bgH);
   const vg = g.createLinearGradient(0, 0, 0, r.height); vg.addColorStop(0, 'rgba(10,6,10,.35)'); vg.addColorStop(.6, 'rgba(10,6,10,0)'); vg.addColorStop(1, 'rgba(10,6,10,.35)'); g.fillStyle = vg; g.fillRect(0, 0, r.width, r.height);
   const sh = B.shake; B.shake = Math.max(0, sh - 30 * dt);
   g.save(); g.translate(rnd(-1, 1) * sh, rnd(-1, 1) * sh);
   // units sorted by depth
   const units = [...B.heroes, ...B.foes].filter((u) => u.alive || u.dieT > 0).sort((a, b) => a.fy - b.fy);
-  const portrait = r.height > r.width * .9, baseH = portrait ? Math.min(r.height * .3, r.width * .3) : Math.min(r.height * .38, r.width * .19);
+  const portrait = r.height > r.width * .9, baseH = portrait ? Math.min(r.height * .32, r.width * .34) : Math.min(r.height * .38, r.width * .19);
   for (const u of units) {
     u.h = baseH * u.size * u.depth;
     if (u.enter) u.enter = Math.max(0, u.enter - dt * 2);
@@ -529,7 +576,8 @@ function loop(now) {
     g.save();
     if (!u.alive) { u.dieT = Math.max(0, u.dieT - dt * 1.4); g.globalAlpha = u.dieT; }
     // ground shadow
-    g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(x, y, u.w * .42, u.h * .045, 0, 0, 6.28); g.fill();
+    const shg = g.createRadialGradient(x, y, 1, x, y, u.w * .5); shg.addColorStop(0, 'rgba(0,0,0,.6)'); shg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = shg; g.save(); g.translate(x, y); g.scale(1, .14); g.beginPath(); g.arc(0, 0, u.w * .5, 0, 6.28); g.restore(); g.fill();
     if (u.taunt > 0) { g.strokeStyle = 'rgba(111,182,255,.8)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y, u.w * .55, u.h * .07, 0, 0, 6.28); g.stroke(); }
     g.translate(x, y + bob); if (flip) g.scale(-1, 1); if (u.hurt > .5) g.translate(rnd(-3, 3), 0);
     const th = ph * dpr;
@@ -541,7 +589,11 @@ function loop(now) {
     g.restore();
     // overlays (unflipped)
     if (u.alive) {
-      if (u.shield > 0) { g.strokeStyle = 'rgba(111,182,255,.55)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - u.h * .5, u.w * .6, u.h * .58, 0, 0, 6.28); g.stroke(); }
+      if (u.shield > 0) {
+        u.shT = (u.shT || 0) + dt; const S = FXS.shield, fps = 14, f0 = u.shT * fps;
+        const fr = f0 < S.loop[0] ? f0 : S.loop[0] + Math.abs(((f0 - S.loop[0]) % ((S.loop[1] - S.loop[0]) * 2)) - (S.loop[1] - S.loop[0]));
+        if (!sprite(g, 'shield', fr, x, y + u.h * .03, u.h * .98, f0 < S.loop[0] ? .85 : .5)) { g.strokeStyle = 'rgba(111,182,255,.55)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - u.h * .5, u.w * .6, u.h * .58, 0, 0, 6.28); g.stroke(); }
+      } else u.shT = 0;
       if (u.stun > 0) { g.fillStyle = '#ffd23c'; for (let i = 0; i < 3; i++) { const a = now / 200 + i * 2.1; g.beginPath(); g.arc(x + Math.cos(a) * u.w * .25, y - u.h * 1.02 + Math.sin(a) * 4, 3, 0, 6.28); g.fill(); } }
       if (u.buff > 0) { g.fillStyle = '#ffb070'; g.font = `${Math.round(12)}px Bangers, Impact, sans-serif`; g.textAlign = 'center'; g.fillText('▲ATK', x, y - u.h - 18); }
       if (u.side) {
@@ -584,16 +636,24 @@ function drawFx(g, f, now) {
       break;
     }
     case 'beam': { g.globalAlpha = 1 - p; g.shadowColor = f.c; g.shadowBlur = 22; g.strokeStyle = f.c; g.lineWidth = 12 * (1 - p) + 2; g.beginPath(); g.moveTo(f.x0, f.y0); g.lineTo(f.x1, f.y1); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.stroke(); break; }
-    case 'boom': { const rr = f.r * (.3 + p * .9), rg = g.createRadialGradient(f.x, f.y, 1, f.x, f.y, rr); rg.addColorStop(0, f.hex ? `rgba(240,225,255,${1 - p})` : `rgba(255,248,208,${1 - p})`); rg.addColorStop(.45, f.hex ? `rgba(160,90,240,${.85 * (1 - p)})` : `rgba(255,150,40,${.85 * (1 - p)})`); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(f.x, f.y, rr, 0, 6.28); g.fill(); break; }
+    case 'spr': {
+      const S = FXS[f.k]; let x = f.x, y = f.y; if (f.unit) { [x, y] = pos(f.unit); }
+      const hh = f.unit ? f.unit.h * f.hs : f.hh, a = p > .8 ? (1 - p) / .2 : 1;
+      if (sprite(g, f.k, p * S.n, x, y, hh, a * (f.a || 1))) break;
+      break;
+    }
+    case 'boom': {
+      if (f.unit && sprite(g, f.hex ? 'hex' : 'fire', p * FXS.fire.n, pos(f.unit)[0], pos(f.unit)[1], f.unit.h * 1.15, p > .7 ? (1 - p) / .3 : 1)) break; const rr = f.r * (.3 + p * .9), rg = g.createRadialGradient(f.x, f.y, 1, f.x, f.y, rr); rg.addColorStop(0, f.hex ? `rgba(240,225,255,${1 - p})` : `rgba(255,248,208,${1 - p})`); rg.addColorStop(.45, f.hex ? `rgba(160,90,240,${.85 * (1 - p)})` : `rgba(255,150,40,${.85 * (1 - p)})`); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(f.x, f.y, rr, 0, 6.28); g.fill(); break; }
     case 'ring': { g.globalAlpha = 1 - p; g.strokeStyle = f.c; g.shadowColor = f.c; g.shadowBlur = 14; g.lineWidth = 4; for (const u of f.list) { if (!u.alive) continue; const [x, y] = pos(u); g.beginPath(); g.ellipse(x, y, u.w * .4 * (1 + p), u.h * .06 * (1 + p), 0, 0, 6.28); g.stroke(); } break; }
     case 'rain': { g.strokeStyle = '#e6edf5'; g.lineWidth = 3; g.globalAlpha = 1 - p * .6; for (let i = 0; i < 3; i++) { const yy = f.y - f.h * .6 + (p * 1.6 - i * .2) * f.h; g.beginPath(); g.moveTo(f.x + (i - 1) * 10, yy - 22); g.lineTo(f.x + (i - 1) * 10, yy); g.stroke(); } break; }
     case 'sym': {
       // Adinkra stamp: scales in, glows, fades; ring burst underneath
       const e = p < .25 ? p / .25 : 1, a = p < .7 ? 1 : 1 - (p - .7) / .3;
       g.translate(f.x, f.y); g.globalAlpha = a * .9;
-      g.strokeStyle = f.c; g.shadowColor = f.c; g.shadowBlur = 24;
-      g.beginPath(); g.arc(0, 0, f.s * (.45 + p * .25), 0, 6.28); g.lineWidth = 3; g.stroke();
-      g.scale(.7 + e * .3, .7 + e * .3); drawAdinkra(g, f.sym, f.s);
+      g.strokeStyle = f.c; g.fillStyle = f.c; g.shadowColor = f.c; g.shadowBlur = 26;
+      g.beginPath(); g.arc(0, 0, f.s * (.5 + p * .3), 0, 6.28); g.lineWidth = 3; g.stroke();
+      g.globalAlpha = a * .35; g.beginPath(); g.arc(0, 0, f.s * (.62 + p * .5), 0, 6.28); g.lineWidth = 8 * (1 - p); g.stroke(); g.globalAlpha = a * .92;
+      g.scale(.7 + e * .3, .7 + e * .3); drawAdinkra(g, f.sym, f.s * .82);
       break;
     }
   }
@@ -602,4 +662,4 @@ function drawFx(g, f, now) {
 
 // ---------------- boot ----------------
 route();
-window.__sq = { get B() { return B; }, get SAVE() { return SAVE; }, battle, route };
+window.__sq = { get B() { return B; }, get SAVE() { return SAVE; }, battle, route, ratio: (i, d) => squadPower() / enemyPower(STAGES[i], DIFF.find((x) => x.id === d)) };

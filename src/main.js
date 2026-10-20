@@ -101,7 +101,7 @@ function go(k) { ({ map: mapScreen, hunter: hunterScreen, gear: gearScreen, shri
 function title() {
   const s = h(`<section class="scr"><div class="title-bg" style="background-image:url(assets/map.webp)"></div><div class="title-shade"></div>
     <div class="lineup"></div>
-    <div class="logo"><h1>GYEAMAN</h1><p>MONSTER CLEARER OF THE AKAN FORESTS</p></div>
+    <div class="logo"><img src="squads/mark.svg" alt="" style="width:96px;height:96px;display:block;margin:0 auto 6px;filter:drop-shadow(0 0 18px rgba(227,180,72,.45))"><h1>GYEAMAN</h1><p>MONSTER CLEARER OF THE AKAN FORESTS</p></div>
     <div class="title-menu"></div></section>`);
   const trio = P ? [HEROES[(HEROES.findIndex((x) => x.id === P.hero) + 7) % 8].id, P.hero, HEROES[(HEROES.findIndex((x) => x.id === P.hero) + 1) % 8].id] : ['akosua', 'kwame', 'ama'];
   trio.forEach((id) => $(s, '.lineup').append(heroArt(id)));
