@@ -27,12 +27,13 @@ const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M
 
 // ---------------- save ----------------
 const KEY = 'gyeaman.squads.v2';
-const fresh = () => ({ v: 2, gold: 1500, cowries: 400, heroes: Object.fromEntries(STARTERS.map((id) => [id, newHero(id)])), squad: [...STARTERS], stars: {}, pity: 0, lastFree: '', seenIntro: false });
+const fresh = () => ({ v: 2, gold: 1500, cowries: 400, heroes: Object.fromEntries(STARTERS.map((id) => [id, newHero(id)])), squad: ['dufie'], stars: {}, pity: 0, lastFree: '', seenIntro: false });
 function newHero(id) { return { lvl: 1, xp: 0, stars: RARITY[HEROES[id].rarity].stars, shards: 0, sk: [1, 1, 1, 1] }; }
 let SAVE;
 try { SAVE = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { SAVE = null; }
 if (!SAVE || SAVE.v !== 2) SAVE = fresh();
 for (const s of Object.values(SAVE.heroes)) while (s.sk.length < 4) s.sk.push(1); // duels have 4 moves
+for (const id of STARTERS) if (!SAVE.heroes[id]) SAVE.heroes[id] = newHero(id); // new free heroes reach existing saves
 const store = () => { try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch (e) { /* storage blocked */ } };
 const today = () => new Date().toISOString().slice(0, 10);
 const starKey = (i, d) => `${i}:${d}`;
@@ -63,6 +64,7 @@ function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
 }
+const ANIM = { dufie: { src: A + 'anim/dufie_idle.webp', n: 40 } }; // beta: Veo-generated idle loops
 const poseSrc = (id, k) => `${A}${id}_${k}.webp`;
 const faceSrc = (id) => (HEROES[id] ? `${A}face_${id}.webp` : poseSrc(id, 0));
 function scaled(e, th) {
@@ -138,7 +140,7 @@ let tab = 'map';
 function shell(active, content) {
   app.classList.remove('full');
   app.innerHTML = '';
-  const top = h(`<header class="topbar"><a class="logo" href="../" title="Gyeaman"><img src="mark.svg" alt=""><span class="krw" aria-label="Gyeaman in Kɔradin">gyeaman</span></a>
+  const top = h(`<header class="topbar"><div class="logo"><img src="mark.svg" alt=""><span class="krw" aria-label="Gyeaman in Kɔradin">gyeaman</span></div>
     <span class="res" title="Gold dust">${COIN('gold')}<b class="num">${fmt(SAVE.gold)}</b></span><span class="res" title="Cowries">${COIN('cowrie')}<b class="num">${fmt(SAVE.cowries)}</b></span></header>`);
   const nav = h(`<nav class="nav">${[['map', 'Journey'], ['heroes', 'Heroes'], ['summon', 'Shrine']].map(([k, l]) => `<button class="tab ${k === active ? 'on' : ''}" data-k="${k}" type="button">${ICON[k]}<span>${l}</span></button>`).join('')}</nav>`);
   if (anyUpgrade()) $('[data-k=heroes]', nav).append(h('<i class="dot"></i>'));
@@ -707,7 +709,9 @@ function loop(now) {
     const th = ph * dpr * C.z;
     const ring = u.side && u.charging && u.alive ? '#ff3b2a' : null;
     if (ring) { const sil = silhouette(e, th, ring); if (sil) { g.save(); g.globalAlpha *= .85; for (const [ox, oy] of [[-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, 2], [-2, 2], [2, -2]]) g.drawImage(sil, -pw / 2 + ox, -ph + oy, pw, ph); g.restore(); } }
-    const sc = scaled(e, th); if (sc) g.drawImage(sc, -pw / 2, -ph, pw, ph);
+    const an = u.pose === 0 && ANIM[u.id] && img(ANIM[u.id].src);
+    if (an && an.ok) { const A2 = ANIM[u.id], fi = Math.floor(B.t * 12) % A2.n, fh = ph * 360 / 300; g.drawImage(an.el, fi * 360, 0, 360, 360, -fh / 2, -fh * 345 / 360, fh, fh); }
+    else { const sc = scaled(e, th); if (sc) g.drawImage(sc, -pw / 2, -ph, pw, ph); }
     if (u.hurt > .45) { const sil = silhouette(e, th, '#ffffff'); if (sil) { g.globalAlpha = (u.hurt - .45) * 1.4; g.drawImage(sil, -pw / 2, -ph, pw, ph); } }
     g.restore();
     if (u.alive) drawOverlay(g, u, x, y);

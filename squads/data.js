@@ -28,7 +28,7 @@ export const HEROES = {
   dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', kr: 'anadwo sekan', en: 'Night blade', rarity: 'SSR',   size: 0.98, hp: 800, atk: 74, def: 18, spd: 128, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Night Cut', 'Shadow Step', 'Vanish', 'Nkyinkyim'], notes: ['Quick cut.', 'A certain critical strike, then Dufie moves 50% up the turn order.', 'Dodges the next attack completely.', 'The twisting path: six cuts in a row.'], sym: 'nkyimkyim' },
 };
-export const STARTERS = ['blay', 'gyakari', 'kome'];
+export const STARTERS = ['blay', 'gyakari', 'kome', 'dufie']; // beta: Dufie (animated) is free
 export const SKILL_MAX = 10;
 export const skillCost = (lvl) => Math.round(120 * Math.pow(lvl, 1.6));
 export const xpNeed = (l) => 60 + l * 45;
