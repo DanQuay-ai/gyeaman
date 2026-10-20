@@ -90,7 +90,7 @@ export const STAGES = [
 // Stage strength multipliers, tuned with the headless turn-based sim. A player who clears each stage once
 // (levels from that XP, a few skill upgrades, 1-2 summoned heroes) wins normal stages when using skills;
 // Auto (basics + ultimates only) can lose from stage 1, and bosses need skills, stuns and heals.
-export const STAGE_POW = [1.85, 1.26, 1.1, 1.13, 1.06, 0.93, 1.08, 0.93, 1.09, 1.07, 0.95, 0.75, 0.89, 0.88, 0.73, 0.58, 0.64, 0.69, 0.67, 0.52];
+export const STAGE_POW = [2.15, 1.26, 1.1, 1.13, 1.06, 0.93, 1.08, 0.84, 0.98, 0.96, 0.85, 0.75, 0.89, 0.88, 0.73, 0.58, 0.64, 0.69, 0.67, 0.52];
 STAGES.forEach((t, i) => { t.pow = STAGE_POW[i]; });
 
 export const LOCKED_CHAPTERS = ['Yoruba', 'Edo', 'Igbo', 'Haitian', 'Japan'];

@@ -825,8 +825,8 @@ function loop(now) {
 function drawOverlay(g, u, x, y) {
   // shield: brief full dome when cast or hit, a faint shell otherwise; stretched to cover the whole fighter
   if (u.st.shield) {
-    const S = FXS.shield, f = u.shFlash > 0 ? (1 - u.shFlash) * 9 : S.loop[0] + (Math.floor(B.t * 8) % (S.loop[1] - S.loop[0] + 1));
-    if (!sprite(g, 'shield', f, x, y + u.h * .02, u.h * 1.16, u.shFlash > 0 ? .75 : .22, Math.max(u.w * 1.25, u.h * .78))) { g.strokeStyle = 'rgba(111,182,255,.5)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - u.h * .5, u.w * .6, u.h * .58, 0, 0, 6.28); g.stroke(); }
+    const S = FXS.shield, f = u.shFlash > 0 ? 2.5 + (1 - u.shFlash) * 6 : S.loop[0] + (Math.floor(B.t * 8) % (S.loop[1] - S.loop[0] + 1));
+    if (!sprite(g, 'shield', f, x, y + u.h * .02, u.h * 1.16, u.shFlash > 0 ? .55 * Math.min(1, u.shFlash * 2) + .22 : .22, Math.max(u.w * 1.25, u.h * .78))) { g.strokeStyle = 'rgba(111,182,255,.5)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - u.h * .5, u.w * .6, u.h * .58, 0, 0, 6.28); g.stroke(); }
   }
   const bw = Math.max(40, Math.min(90, u.w * .75)), by = y - u.h * 1.02 - 10;
   g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x - bw / 2 - 1, by - 1, bw + 2, 7);
