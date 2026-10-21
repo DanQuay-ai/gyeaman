@@ -1,7 +1,8 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH } from './data.js';
+import { KF } from './kf.js';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js';
 import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
@@ -28,11 +29,12 @@ const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M
 // ---------------- save ----------------
 const KEY = 'gyeaman.squads.v2';
 const fresh = () => ({ v: 2, gold: 1500, cowries: 400, heroes: Object.fromEntries(STARTERS.map((id) => [id, newHero(id)])), squad: ['dufie'], stars: {}, pity: 0, lastFree: '', seenIntro: false });
-function newHero(id) { return { lvl: 1, xp: 0, stars: RARITY[HEROES[id].rarity].stars, shards: 0, sk: [1, 1, 1, 1], pts: { hp: 0, atk: 0, spd: 0, mag: 0 } }; }
+function newHero(id) { return { lvl: 1, xp: 0, stars: RARITY[HEROES[id].rarity].stars, shards: 0, sk: [1, 1, 1, 1], pts: { hp: 0, atk: 0, spd: 0, mag: 0 }, eq: HEROES[id].pool.slice(0, 2), sl: {} }; }
 let SAVE;
 try { SAVE = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { SAVE = null; }
 if (!SAVE || SAVE.v !== 2) SAVE = fresh();
 for (const s of Object.values(SAVE.heroes)) while (s.sk.length < 4) s.sk.push(1); // duels have 4 moves
+for (const [id, s] of Object.entries(SAVE.heroes)) if (!s.eq) { const P = HEROES[id].pool; s.eq = P.slice(0, 2); s.sl = { [P[0]]: s.sk[1], [P[1]]: s.sk[2] }; } // spell loadouts
 for (const id of STARTERS) if (!SAVE.heroes[id]) SAVE.heroes[id] = newHero(id); // new free heroes reach existing saves
 const store = () => { try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch (e) { /* storage blocked */ } };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -67,13 +69,74 @@ function img(src) {
 // Veo-generated sprite clips, 12 fps, keyed with an ink outline. Sheets hold `per` frames in `cols` columns (kept under ~4 MP for mobile GPUs).
 // ax/fy = body centre x and feet y inside a frame, bh = body height in frame px (matched to the static pose 0).
 const clip = (name, m, play) => ({ ...m, sheets: m.sheets.map((f) => A + 'anim/' + f), play: play || [...Array(m.n).keys()] });
-const ANIM = {
+const CHOREO = {}; // per-hero hand-animated moves (keyframe timelines)
+const ANIM = {}; // Veo clip sheets (none active: keyframe poses replaced them)
+for (const id in ANIM) for (const c of Object.values(ANIM[id])) c.sheets.forEach((u) => img(u));
+// ---------- keyframe choreography (Firefly pose sheets + code movement, smears, speed lines, afterimages) ----------
+const kfImg = (id, p) => img(A + 'kf/' + KF[id].p[p][0]);
+for (const id in KF) for (const p in KF[id].p) kfImg(id, p);
+// draw keyframe p for hero id with its floor point at (0,0), body scaled so the idle pose is bodyH tall
+function drawKF(g, id, p, bodyH, alpha = 1) {
+  const D = KF[id].p[p]; if (!D) return false; const im = kfImg(id, p); if (!im.ok) return false;
+  const k = bodyH / KF[id].ref; g.save(); if (alpha < 1) g.globalAlpha *= alpha; g.drawImage(im.el, -D[3] * k, -D[4] * k, D[1] * k, D[2] * k); g.restore(); return true;
+}
+// a move = list of steps { p: pose, ms, x: fraction of the distance to the enemy, y: lift in body heights, lines, ghost, ev }
+const SEQ = {
   dufie: {
-    idle: clip('idle', { n: 22, fw: 465, fh: 540, per: 12, cols: 4, ax: 232, fy: 507, bh: 450, sheets: ['dufie_idle_0.webp', 'dufie_idle_1.webp'] }),
-    atk: clip('atk', { n: 35, fw: 825, fh: 540, per: 8, cols: 4, ax: 404, fy: 507, bh: 450, sheets: ['dufie_atk_0.webp', 'dufie_atk_1.webp', 'dufie_atk_2.webp', 'dufie_atk_3.webp', 'dufie_atk_4.webp'] }, [...Array(20).keys()]),
+    recover: [{ p: 'recover_0', ms: 70, x: 1, y: 0 }, { p: 'recover_1', ms: 110, x: .62, y: .32, ghost: 1 }, { p: 'recover_2', ms: 120, x: .25, y: .42, ghost: 1 }, { p: 'recover_3', ms: 150, x: 0, y: 0, ev: 'land' }],
+    basic: [{ p: 'basic_0', ms: 130, x: 0 }, { p: 'basic_1', ms: 170, x: 1, lines: 1, ghost: 1, ev: 'cut1' }, { p: 'basic_2', ms: 190, x: 1, ev: 'cut2' }, { p: 'basic_3', ms: 170, x: 1.04 }],
+    dufie1: [{ p: 'step_0', ms: 190, x: 0, ev: 'smoke' }, { p: 'step_1', ms: 110, x: 1, lines: 1, ghost: 1 }, { p: 'step_2', ms: 260, x: 1, ev: 'stab' }, { p: 'step_3', ms: 150, x: .75, y: .38 }],
+    dufie2: [{ p: 'vanish_0', ms: 170, x: 0 }, { p: 'vanish_1', ms: 220, x: 0, ev: 'smoke' }, { p: 'vanish_2', ms: 300, x: 0, ev: 'fade' }, { p: 'vanish_3', ms: 260, x: 0, ev: 'reform' }],
+    dufKick: [{ p: 'kick_0', ms: 140, x: .55, y: .12, ghost: 1 }, { p: 'kick_1', ms: 190, x: 1, y: .22, lines: 1, ev: 'kick1' }, { p: 'kick_2', ms: 200, x: 1, y: .3, ev: 'kick2' }, { p: 'kick_3', ms: 170, x: 1, y: 0, ev: 'land' }],
+    dufStars: [{ p: 'throw_0', ms: 200, x: 0 }, { p: 'throw_1', ms: 230, x: 0, ev: 'throw3' }, { p: 'throw_2', ms: 230, x: 0, ev: 'throw2' }, { p: 'throw_3', ms: 220, x: 0 }],
+    ult: [{ p: 'ult_0', ms: 220, x: .45, y: .55, ghost: 1 }, { p: 'ult_1', ms: 140, x: .95, y: .2, lines: 1, ghost: 1 }, { p: 'ult_2', ms: 120, x: 1, y: 0, ev: 'xslash' }, { p: 'ult_3', ms: 520, x: 1.55, y: 0, lines: 1, ev: 'finish' }],
   },
 };
-for (const id in ANIM) { for (const c of Object.values(ANIM[id])) c.sheets.forEach((u) => img(u)); ['s1', 's2'].forEach((k) => img(`${A}${id}_${k}.webp`)); }
+const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .42 - u.w * .3);
+// play a step list on a battle unit; onEv(name, step) fires at each step start
+async function runKF(u, f, seq, onEv) {
+  const R = f ? reachTo(u, f) : 0;
+  for (const st of seq) {
+    const x1 = (st.x ?? 0) * R, y1 = (st.y ?? 0) * u.h, cur = kfOff(u);
+    u.kf = st.p; u.kfA = { x0: cur[0], x1, y0: cur[1], y1, t0: B.t, d: st.ms / 1000 * .7 };
+    if (st.lines) { const [hx, hy] = pos(u); fx('lines', 260, { x0: hx + cur[0], x1: hx + x1, y: hy - u.h * .5, h: u.h * .7 }); }
+    if (st.ghost) B.ghosts.push({ u, p: st.p, x: pos(u)[0] + cur[0], y: pos(u)[1] - cur[1], t0: B.t });
+    if (st.ev && onEv) await onEv(st.ev, st);
+    await wait(st.ms);
+  }
+}
+function kfOff(u) { const a = u.kfA; if (!a) return [0, 0]; const t = Math.min(1, (B.t - a.t0) / (a.d || .001)), e = 1 - (1 - t) ** 3; return [a.x0 + (a.x1 - a.x0) * e, a.y0 + (a.y1 - a.y0) * e]; }
+const kfEnd = (u) => { u.kf = null; u.kfA = null; u.kfAlpha = 1; };
+const VIO = '#c58bff';
+async function dufieRecover(u, f) { await runKF(u, f, SEQ.dufie.recover, async (ev) => { if (ev === 'land') { const [x, y] = pos(u); burst(x, y, ['#d8c9b0', '#fff'], 10, 3); } }); kfEnd(u); }
+CHOREO.dufie = {
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.dufie.basic, async (ev) => { const [x, y] = pos(f);
+      if (ev === 'cut1') { fx('arc', 300, { x, y: y - f.h * .5, r: f.h * .55, c: VIO, dir: 1 }); d = hit(u, f, m * .6, o); hitStop(60); }
+      if (ev === 'cut2' && f.alive) { fx('arc', 300, { x, y: y - f.h * .45, r: f.h * .5, c: '#ffffff', dir: -1, flipY: 1 }); hit(u, f, m * .4, o); hitStop(50); } });
+    await dufieRecover(u, f); return d; },
+  dufie1: async (u, f, m) => { await runKF(u, f, SEQ.dufie.dufie1, async (ev) => { const [x, y] = pos(f), [hx, hy] = pos(u);
+      if (ev === 'smoke') fx('smoke', 700, { x: hx, y: hy, r: u.h * .35, c: VIO, n: 9 });
+      if (ev === 'stab') { fx('star', 420, { x, y: y - f.h * .5, r: f.h * .7, c: VIO }); hitStop(130); hit(u, f, 1.4 * m, { color: VIO, crit: true }); } });
+    await dufieRecover(u, f); pushTM(u, .5); float(u, 'TURN +50%', '#7ee08a', .8); },
+  dufie2: async (u, f, m) => { await runKF(u, null, SEQ.dufie.dufie2, async (ev) => { const [hx, hy] = pos(u);
+      if (ev === 'smoke') fx('smoke', 1100, { x: hx, y: hy, r: u.h * .55, c: VIO, n: 16, rise: 1 });
+      if (ev === 'fade') u.kfAlpha = .55; if (ev === 'reform') u.kfAlpha = 1; });
+    kfEnd(u); u.st.evade = 1; float(u, 'EVADE NEXT HIT', VIO, .9); },
+  dufKick: async (u, f, m) => { const S = SPELLS.dufKick; await runKF(u, f, SEQ.dufie.dufKick, async (ev) => { const [x, y] = pos(f);
+      if (ev === 'kick1') { fx('arc', 300, { x, y: y - f.h * .62, r: f.h * .5, c: '#ffffff', dir: 1, tilt: -.3 }); hit(u, f, S.mult * .55 * m, { color: '#fff' }); hitStop(60); }
+      if (ev === 'kick2' && f.alive) { fx('arc', 320, { x, y: y - f.h * .55, r: f.h * .55, c: VIO, dir: 1, tilt: 1.3 }); hit(u, f, S.mult * .45 * m, { color: VIO }); hitStop(110); B.shake = 10; addSt(f, 'stun', 1); }
+      if (ev === 'land') { const [hx, hy] = pos(u); burst(hx + kfOff(u)[0], hy, ['#d8c9b0', '#fff'], 12, 3.5); } });
+    await dufieRecover(u, f); },
+  dufStars: async (u, f, m) => { const S = SPELLS.dufStars; const toss = async (n) => { for (let k = 0; k < n && f.alive; k++) { const [x0, y0] = pos(u), [x1, y1] = pos(f); fx('shot', 200, { x0: x0 + u.w * .3, y0: y0 - u.h * (.55 + .12 * (k - 1)), x1, y1: y1 - f.h * (.3 + .4 * Math.random()), kind: 'dagger' }); SFX.shoot(); await wait(55); }
+        await wait(140); for (let k = 0; k < n && f.alive; k++) hit(u, f, S.mult * m, { color: '#e6edf5' }); };
+    await runKF(u, null, SEQ.dufie.dufStars, async (ev) => { if (ev === 'throw3') toss(3); if (ev === 'throw2') toss(2); });
+    await wait(200); kfEnd(u); if (f.alive) { addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } },
+  ult: async (u, f, m, T) => { await runKF(u, f, SEQ.dufie.ult, async (ev) => { const [x, y] = pos(f);
+      if (ev === 'xslash') { await impactFrames(T, u); for (let k = 0; k < 6 && f.alive; k++) { fx('arc', 240, { x: x + rnd(-8, 8), y: y - f.h * (.35 + .3 * Math.random()), r: f.h * rnd(.45, .7), c: k % 2 ? '#ffffff' : VIO, dir: k % 2 ? -1 : 1, tilt: rnd(-.7, .7) }); hit(u, f, .62 * m, { color: VIO }); await wait(70); } }
+      if (ev === 'finish') { fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: VIO }); fx('smoke', 900, { x, y, r: f.h * .5, c: VIO, n: 12 }); } });
+    const R = reachTo(u, f); u.kfA = { x0: R * 1.55, x1: R * 1.55, y0: 0, y1: 0, t0: B.t, d: .01 };
+    await runKF(u, f, [{ p: 'step_1', ms: 160, x: .3, lines: 1, ghost: 1 }, ...SEQ.dufie.recover.slice(2)], null); kfEnd(u); },
+};
 // draw one clip frame with feet at (0,0) and body height bodyH
 function drawClip(g, c, fi, bodyH) {
   fi = Math.max(0, Math.min(c.n - 1, fi | 0));
@@ -152,6 +215,9 @@ function statsOf(id) {
 }
 const power = (id) => { const st = statsOf(id), s = SAVE.heroes[id]; return Math.round(st.hp * 0.5 + st.atk * 6 + st.def * 4 + st.spd * 2 + (st.mag - 100) * 4 + (s.sk[0] + s.sk[1] + s.sk[2]) * 30); };
 const skMult = (id, i) => 1 + 0.12 * (SAVE.heroes[id].sk[i] - 1);
+const spLvl = (id, sid) => (SAVE.heroes[id].sl || {})[sid] || 1;
+// name / note / level of the move in slot i (0 basic, 1-2 equipped spells, 3 ultimate) for a hero id
+const moveOf = (id, i, eq) => { const H = HEROES[id]; if (i === 0 || i === 3) return { name: H.kit[i], note: H.notes[i], cd: 0 }; const sid = (eq || SAVE.heroes[id]?.eq || H.pool)[i - 1]; return { ...SPELLS[sid], sid }; };
 const canPromote = (id) => { const s = SAVE.heroes[id]; return s.stars < 5 && s.shards >= STAR_SHARDS[s.stars + 1]; };
 const anyUpgrade = () => Object.keys(SAVE.heroes).some((id) => freePts(id) > 0) || Object.keys(SAVE.heroes).some((id) => canPromote(id) || SAVE.heroes[id].sk.some((l) => l < SKILL_MAX && SAVE.gold >= skillCost(l) * 3));
 
@@ -323,19 +389,27 @@ function heroesScreen(id) {
       body.innerHTML = `<div class="codex">${adinkraSvg(H.sym)}<div><span class="sub">Ultimate symbol</span><b>${AD.name}</b><p>${AD.meaning}</p></div></div>
         <div class="codex kr"><span class="krbig">${H.kr}</span><div><span class="sub">Role in Kɔradin</span><b>${H.role}</b><p>${H.en}</p></div></div>`;
     } else {
-      body.innerHTML = '<div class="sktabs"></div><div class="skdetail"></div>';
-      const tabsEl = $('.sktabs', body), det = $('.skdetail', body);
-      const tags = ['Basic', 'Skill 1', 'Skill 2', 'Ultimate'];
-      const pick = (i) => {
-        tabsEl.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', i === j));
-        const lvl = own ? s0.sk[i] : 1, cost = skillCost(lvl), meta = i === 1 || i === 2 ? `Cooldown ${H.cd[i - 1]} turns` : i === 3 ? '100 energy' : 'No cooldown';
-        det.innerHTML = `<div class="skh"><b>${H.kit[i]}</b><span>${tags[i]} · ${meta}</span></div><p>${H.notes[i]}${own && lvl > 1 ? ` <em>+${Math.round((skMult(heroSel, i) - 1) * 100)}% power</em>` : ''}</p>
-          ${own ? `<div class="skup"><span>Level <b>${lvl}</b> / ${SKILL_MAX}</span><button class="btn sm" type="button" ${lvl >= SKILL_MAX || SAVE.gold < cost ? 'disabled' : ''}>${lvl >= SKILL_MAX ? 'Max' : `Upgrade ${COIN('gold')}${fmt(cost)}`}</button></div>` : ''}`;
-        const b = $('.skup button', det); if (b) b.onclick = () => { SAVE.gold -= cost; s0.sk[i]++; SFX.heal(); store(); pick(i); };
+      body.innerHTML = '<div class="sktabs"></div><div class="skdetail"></div><div class="pool"><span class="sub">Spell pool · equip any two</span><div class="pgrid"></div></div>';
+      const tabsEl = $('.sktabs', body), det = $('.skdetail', body), pg = $('.pgrid', body);
+      const eq = own ? s0.eq : H.pool.slice(0, 2), tags = ['Basic', 'Spell 1', 'Spell 2', 'Ultimate'];
+      const lvOf = (key) => !own ? 1 : key === 'basic' ? s0.sk[0] : key === 'ult' ? s0.sk[3] : spLvl(heroSel, key);
+      const show1 = (key, tag) => {
+        const M = key === 'basic' ? moveOf(heroSel, 0) : key === 'ult' ? moveOf(heroSel, 3) : SPELLS[key], lvl = lvOf(key), cost = skillCost(lvl);
+        const meta = key === 'basic' ? 'No cooldown' : key === 'ult' ? '100 energy' : `Cooldown ${M.cd} turns`;
+        const slot = eq.indexOf(key);
+        det.innerHTML = `<div class="skh">${spellIcon(heroSel, 0, eq, key)}<div><b>${M.name}</b><span>${tag} · ${meta}</span></div></div><p>${M.note}${lvl > 1 ? ` <em>+${Math.round(12 * (lvl - 1))}% power</em>` : ''}</p>
+          ${own ? `<div class="skup"><span>Level <b>${lvl}</b> / ${SKILL_MAX}</span><button class="btn sm up" type="button" ${lvl >= SKILL_MAX || SAVE.gold < cost ? 'disabled' : ''}>${lvl >= SKILL_MAX ? 'Max' : `Upgrade ${COIN('gold')}${fmt(cost)}`}</button></div>` : ''}
+          ${own && SPELLS[key] ? (slot >= 0 ? `<p class="eqd">Equipped in spell slot ${slot + 1}</p>` : `<div class="eqrow"><button class="btn sm ghost" data-s="0" type="button">Equip in slot 1</button><button class="btn sm ghost" data-s="1" type="button">Equip in slot 2</button></div>`) : ''}`;
+        const up = $('.up', det); if (up) up.onclick = () => { SAVE.gold -= cost; if (key === 'basic') s0.sk[0]++; else if (key === 'ult') s0.sk[3]++; else s0.sl[key] = lvl + 1; SFX.heal(); store(); show1(key, tag); };
+        det.querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { s0.eq[+b.dataset.s] = key; SFX.heal(); store(); open('skills'); }));
       };
-      tabsEl.innerHTML = tags.map((tg, i) => `<button type="button"><span>${tg}</span><b>${H.kit[i]}</b>${own ? `<em>${s0.sk[i]}</em>` : ''}</button>`).join('');
-      tabsEl.querySelectorAll('button').forEach((b, i) => (b.onclick = () => { SFX.click(); pick(i); }));
-      pick(0);
+      const keys = ['basic', eq[0], eq[1], 'ult'];
+      tabsEl.innerHTML = keys.map((k, i) => `<button type="button">${spellIcon(heroSel, i, eq)}<span>${tags[i]}</span><b>${moveOf(heroSel, i, eq).name}</b>${own ? `<em>${lvOf(k)}</em>` : ''}</button>`).join('');
+      const sel = (i) => { tabsEl.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', i === j)); pg.querySelectorAll('button').forEach((b) => b.classList.remove('on')); show1(keys[i], tags[i]); };
+      tabsEl.querySelectorAll('button').forEach((b, i) => (b.onclick = () => { SFX.click(); sel(i); }));
+      pg.innerHTML = H.pool.map((k) => `<button type="button" data-k="${k}" class="${eq.includes(k) ? 'eq' : ''}">${spellIcon(heroSel, 0, eq, k)}<b>${SPELLS[k].name}</b><span>${eq.includes(k) ? 'Equipped' : `CD ${SPELLS[k].cd}`}</span></button>`).join('');
+      pg.querySelectorAll('button').forEach((b) => (b.onclick = () => { SFX.click(); tabsEl.querySelectorAll('button').forEach((x) => x.classList.remove('on')); pg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); show1(b.dataset.k, 'Spell'); }));
+      sel(0);
     }
   };
   const reopen = () => { if (heroTab) { const t = heroTab; const scr = $('.hdet'); if (scr) $(`.hrail [data-t=${t}]`, scr).click(); } };
@@ -345,7 +419,10 @@ function heroesScreen(id) {
   const cv = $('.hart', s); let pose = 0, poseT = 0, clipName = null;
   const MOVES = [['atk', 1], [null, 's1'], [null, 's2'], [null, 2]];
   let mi = -1;
-  $('.play', s).onclick = () => { mi = (mi + 1) % MOVES.length; const [c, p] = MOVES[mi]; const AN = ANIM[heroSel]; clipName = AN && AN[c] ? c : null; pose = clipName ? 0 : (typeof p === 'string' && !AN ? 1 : p); poseT = performance.now(); if (p === 2) SFX.ult(); else SFX.hit(); };
+  let kseq = null, kT = 0;
+  const KMOVES = KF[heroSel] ? ['basic', 'dufie1', 'dufKick', 'dufStars', 'dufie2', 'ult'].filter((k) => SEQ[heroSel][k]) : [];
+  $('.play', s).onclick = () => { if (KMOVES.length) { mi = (mi + 1) % KMOVES.length; const k = KMOVES[mi], S0 = SEQ[heroSel][k]; kseq = ['basic', 'dufie1', 'dufKick', 'ult'].includes(k) ? [...S0, ...SEQ[heroSel].recover] : S0; kT = performance.now(); SFX.hit(); const nm = k === 'basic' ? H.kit[0] : k === 'ult' ? H.kit[3] : SPELLS[k].name; toast(nm); return; }
+    mi = (mi + 1) % MOVES.length; const [c, p] = MOVES[mi]; const AN = ANIM[heroSel]; clipName = AN && AN[c] ? c : null; pose = clipName ? 0 : (typeof p === 'string' && !AN ? 1 : p); poseT = performance.now(); if (p === 2) SFX.ult(); else SFX.hit(); };
   let sx = null; cv.onpointerdown = (e) => { sx = e.clientX; }; cv.onpointerup = (e) => { if (sx !== null && Math.abs(e.clientX - sx) > 50) go(e.clientX < sx ? 1 : -1); sx = null; };
   const draw = (now) => {
     if (!cv.isConnected) return;
@@ -356,6 +433,13 @@ function heroesScreen(id) {
     const floorY = sheetOpen ? r.height * .44 : r.height * .86, bodyH = Math.min(sheetOpen ? r.height * .34 : r.height * .56, r.width * 1.1);
     const x = r.width * (sheetOpen ? .5 : .56), y = floorY;
     const AN = ANIM[heroSel];
+    if (KF[heroSel]) { // keyframe hero: play the chosen move, else breathe between two idle poses
+      let p = (now / 1000) % 2.4 > 1.7 ? 'idle_1' : 'idle_0', ox = 0, oy = 0;
+      if (kseq) { let t = now - kT, i = 0, prev = { x: 0, y: 0 }; while (i < kseq.length && t > kseq[i].ms * 1.6) { t -= kseq[i].ms * 1.6; prev = kseq[i]; i++; }
+        if (i >= kseq.length) kseq = null; else { const st = kseq[i], e = 1 - (1 - Math.min(1, t / (st.ms * 1.6 * .7))) ** 3, Rr = r.width * .3; p = st.p; ox = ((prev.x ?? 0) + ((st.x ?? 0) - (prev.x ?? 0)) * e) * Rr; oy = ((prev.y ?? 0) + ((st.y ?? 0) - (prev.y ?? 0)) * e) * bodyH; } }
+      g.save(); g.translate(x - (kseq ? r.width * .14 : 0) + ox, y - oy); drawKF(g, heroSel, p, bodyH); g.restore();
+      poseLoop = requestAnimationFrame(draw); return;
+    }
     if (clipName && AN) { const c = AN[clipName], f = Math.floor((now - poseT) / 1000 * 12); if (f >= c.play.length) clipName = null; else { g.save(); g.translate(x, y); drawClip(g, c, c.play[f], bodyH); g.restore(); } }
     if (!clipName) {
       const e0 = img(poseSrc(heroSel, 0)), e = img(poseSrc(heroSel, pose));
@@ -424,10 +508,10 @@ function doPulls(n) {
 let B = null;
 function stopBattle() { if (B) { cancelAnimationFrame(B.raf); B.dead = true; B = null; } if (poseLoop) { cancelAnimationFrame(poseLoop); poseLoop = null; } }
 const ST_LABEL = { stun: ['STUN', '#ffd23c'], burn: ['BURN', '#ff8a3c'], shield: ['SHIELD', '#6fb6ff'], atkUp: ['ATK▲', '#ffb070'], defDown: ['DEF▼', '#ff5a4a'], slow: ['SLOW', '#c58bff'], guard: ['GUARD', '#9fd0ff'], evade: ['VANISH', '#c58bff'], aim: ['AIM', '#ffd23c'] };
-function unitBase(o) { return { st: {}, tm: 0, en: 0, pose: 0, poseT: 0, dash: 0, reach: 0, hurt: 0, h: 100, w: 60, alive: true, cd: [0, 0], shFlash: 0, shieldAmt: 0, ...o }; }
+function unitBase(o) { return { kfAlpha: 1, st: {}, tm: 0, en: 0, pose: 0, poseT: 0, dash: 0, reach: 0, hurt: 0, h: 100, w: 60, alive: true, cd: [0, 0], shFlash: 0, shieldAmt: 0, ...o }; }
 function mkHero(id) {
   const H = HEROES[id], st = statsOf(id);
-  return unitBase({ side: 0, id, d: H, name: H.name, hp: st.hp, max: st.hp, atk: st.atk, def: st.def, spd: st.spd, size: H.size, flip: H.flip, en: 25, fx: .3, fy: .7, depth: 1 });
+  return unitBase({ side: 0, id, d: H, spells: SAVE.heroes[id].eq.slice(), name: H.name, hp: st.hp, max: st.hp, atk: st.atk, def: st.def, spd: st.spd, size: H.size, flip: H.flip, en: 25, fx: .3, fy: .7, depth: 1 });
 }
 function mkMon(id, lvl, mult) {
   const M = MONS[id], k = (1 + (lvl - 1) * MON_LVL) * mult;
@@ -580,8 +664,8 @@ function renderAct(u) {
   if (!u) { if (B.cur) box.dataset.msg = `${B.cur.name} acts`; box.classList.remove('mine'); hint.textContent = ''; btns.innerHTML = ''; return; }
   box.classList.add('mine');
   const lab = (i) => i === 0 ? 'Basic' : i === 3 ? `${Math.floor(u.en)}%` : u.cd[i - 1] > 0 ? `${u.cd[i - 1]} turn${u.cd[i - 1] > 1 ? 's' : ''}` : 'Ready';
-  btns.innerHTML = [0, 1, 2, 3].map((i) => `<button class="ab k${i} ${B.armed === i ? 'armed' : ''}" type="button" data-i="${i}" ${canUse(u, i) ? '' : 'disabled'}><b>${u.d.kit[i]}</b><span>${lab(i)}</span>${i === 3 ? `<i style="transform:scaleX(${u.en / 100})"></i>` : ''}</button>`).join('');
-  hint.innerHTML = `<b>${u.d.kit[B.armed]}</b> ${u.d.notes[B.armed]} <em>Tap again to use.</em>`;
+  btns.innerHTML = [0, 1, 2, 3].map((i) => { const M = moveOf(u.id, i, u.spells); return `<button class="ab k${i} ${B.armed === i ? 'armed' : ''}" type="button" data-i="${i}" ${canUse(u, i) ? '' : 'disabled'}>${spellIcon(u.id, i, u.spells)}<div><b>${M.name}</b><span>${lab(i)}</span></div>${i === 3 ? `<i style="transform:scaleX(${u.en / 100})"></i>` : ''}</button>`; }).join('');
+  const AM = moveOf(u.id, B.armed, u.spells); hint.innerHTML = `<b>${AM.name}</b> ${AM.note} <em>Tap again to use.</em>`;
   btns.querySelectorAll('.ab').forEach((bt) => (bt.onclick = () => {
     const i = +bt.dataset.i; if (!canUse(u, i)) return; SFX.click();
     if (B.armed === i) return commit(i);
@@ -611,6 +695,7 @@ async function monUlt(m, kind, tg) {
 }
 async function basicStrike(u, tg, mult, o = {}) {
   if (!tg || !tg.alive) return 0;
+  if (!u.side && CHOREO[u.id] && CHOREO[u.id].basic) return CHOREO[u.id].basic(u, tg, mult, o);
   const AC = ANIM[u.id] && ANIM[u.id].atk;
   if (AC && !u.side) return animStrike(u, tg, mult, o, AC);
   setPose(u, 1, 420);
@@ -646,7 +731,7 @@ async function animStrike(u, tg, mult, o, AC) {
   await wait(dur * .3); u.dashTo = 0; await wait(dur * .12);
   return d1;
 }
-async function skillBeat(u, i) { float(u, u.d.kit[i], '#f08a24', .9); setPose(u, 1, 500); await wait(200); }
+async function skillBeat(u, i) { float(u, moveOf(u.id, i, u.spells).name, '#f08a24', .9); setPose(u, 1, 500); await wait(200); }
 async function ultIntro(u, sym, color) {
   const [x, y] = pos(u);
   B.dimTo = .62; B.cam.tz = B.rest.z * 1.18; B.cam.tx = x / B.w; B.cam.ty = (y - u.h * .5) / B.hh; setPose(u, 2, 1800);
@@ -657,7 +742,7 @@ async function ultIntro(u, sym, color) {
   await wait(900);
 }
 // fullscreen ultimate cutscene: dedicated art (or a Veo clip once generated), push-in, speed lines, X-slash, title
-const CUTS = { dufie: { img: A + 'cut_dufie.webp', video: A + 'anim/dufie_ult.mp4', rate: 1.35 } };
+const CUTS = { dufie: { img: A + 'cut_dufie.webp', video: A + 'anim/dufie_ult.mp4', rate: 1.3, len: 3400 } };
 function cutscene(u, sym, color) {
   const C = CUTS[u.id] || { img: poseSrc(u.id, 2), pose: 1 };
   const media = C.video ? `<video poster="${C.img}" muted playsinline autoplay preload="auto"><source src="${C.video.replace('.mp4', '.webm')}" type="video/webm"><source src="${C.video}" type="video/mp4"></video>` : `<img src="${C.img}" alt="" class="${C.pose ? 'pose' : ''} ${C.pose && u.flip[2] ? 'flip' : ''}">`;
@@ -666,9 +751,9 @@ function cutscene(u, sym, color) {
     <div class="cs-title"><span>${u.name.toUpperCase()} · ${u.d.role.toUpperCase()}</span><b>${u.d.kit[3]}</b></div></div>`);
   document.body.append(el);
   const vid = el.querySelector('video'); if (vid) { vid.playbackRate = C.rate || 1; el.classList.add('vid'); vid.play().catch(() => {}); }
-  const dur = C.video ? 6000 / (C.rate || 1) - 150 : 1900;
+  const dur = C.video ? (C.len || 6000) / (C.rate || 1) - 100 : 1900;
   return new Promise((res) => { let done = false; const end = () => { if (done) return; done = true; el.classList.add('out'); setTimeout(() => el.remove(), 220); res(); };
-    el.onclick = end; if (vid) vid.onended = end; setTimeout(() => SFX.hit && SFX.hit(), C.video ? 2400 / (C.rate || 1) : 1150); setTimeout(end, dur / (B && B.speed > 1 ? 1.5 : 1)); });
+    el.onclick = end; if (vid) vid.onended = end; setTimeout(() => SFX.hit && SFX.hit(), C.video ? 1600 / (C.rate || 1) : 1150); setTimeout(end, dur / (B && B.speed > 1 ? 1.5 : 1)); });
 }
 async function impactFrames(targets, src) {
   B.cam.tx = targets.reduce((a, t) => a + pos(t)[0], 0) / targets.length / B.w; B.cam.ty = B.rest.y;
@@ -680,18 +765,52 @@ async function impactFrames(targets, src) {
 }
 function endUlt() { B.dimTo = 0; B.cam.tz = B.rest.z; B.cam.tx = .5; B.cam.ty = B.rest.y; }
 
+// spell icons: generated art when a hero has had an art pass, else a glyph on the class colour
+const ICONS = { dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'] };
+const KIND_GLYPH = { melee: 'warrior', ranged: 'hunter', buff: 'growth', shield: 'guardian', heal: 'sage' };
+function spellIcon(id, i, eq, sidIn) {
+  const H = HEROES[id], key = sidIn || (i === 0 ? 'basic' : i === 3 ? 'ult' : (eq || SAVE.heroes[id]?.eq || H.pool)[i - 1]);
+  if ((ICONS[id] || []).includes(key)) return `<span class="sic"><img src="${A}icons/${id}_${key}.webp" alt=""></span>`;
+  const S = SPELLS[key], g = key === 'basic' ? H.cls : key === 'ult' ? 'stars' : S && S.legacy ? 'skills' : KIND_GLYPH[S && S.kind] || 'skills';
+  return `<span class="sic glyph" style="--rc:${RARITY[H.rarity].color}">${icon(g)}</span>`;
+}
+// data-driven spells (see SPELLS in data.js)
+async function castSpell(u, f, S, m) {
+  const c = S.c || (u.id === 'dufie' ? '#c58bff' : u.id === 'kome' ? '#ffb43c' : '#e6edf5'), hits = S.hits || 1;
+  if (S.t === 'melee' || S.t === 'ranged') {
+    for (let k = 0; k < hits && f.alive; k++) {
+      if (S.t === 'ranged') { const [x0, y0] = pos(u), [x1, y1] = pos(f); setPose(u, 1, 300); fx('shot', 220, { x0: x0 + u.w * .3, y0: y0 - u.h * .6, x1, y1: y1 - f.h * (.35 + .3 * Math.random()), kind: S.proj }); SFX.shoot(); await wait(200); hit(u, f, S.mult * m, { color: c, crit: S.crit }); }
+      else { await basicStrike(u, f, S.mult * m, { color: c, crit: S.crit }); }
+      if (hits > 1) await wait(90);
+    }
+    hitStop(80);
+    if (f.alive) for (const [k, n] of S.foe || []) { addSt(f, k, n); if (k === 'defDown') float(f, 'DEF▼', '#ff5a4a', .8); if (k === 'slow') float(f, 'SLOW', '#6fb6ff', .8); }
+    if (S.tmFoe) { pushTM(f, -S.tmFoe); float(f, `TURN −${Math.round(S.tmFoe * 100)}%`, '#c58bff', .8); }
+  }
+  if (S.cleanse) { delete u.st.stun; delete u.st.burn; }
+  if (S.heal) heal(u, u.max * S.heal * m);
+  if (S.shield) { addSt(u, 'shield', S.turns || 2); u.shieldAmt = Math.round(u.max * S.shield * m); fx('spr', 600, { k: 'shield', unit: u, hs: .9, a: .45 }); }
+  if (S.guard) { u.st.guard = 1; float(u, 'GUARD', '#9fd0ff', .8); }
+  if (S.atkUp) { addSt(u, 'atkUp', (S.turns || 2) + 1); u.atkUpK = S.atkUp; float(u, 'ATK▲', '#ffb070', .8); }
+  for (const [k, n] of S.self || []) addSt(u, k, n);
+  if (S.tmSelf) { pushTM(u, S.tmSelf); float(u, `TURN +${Math.round(S.tmSelf * 100)}%`, '#7ee08a', .8); }
+  if (S.t === 'self') await wait(420);
+}
 async function doHero(u, i) {
-  const f = B.foe, sk = SAVE.heroes[u.id].sk, m = (1 + 0.12 * ((sk[Math.min(i, sk.length - 1)] || 1) - 1)) * (i > 0 ? 1 + GROWTH.mag * ptsOf(u.id).mag : 1);
+  const f = B.foe, sk = SAVE.heroes[u.id].sk, sid = i === 1 || i === 2 ? u.spells[i - 1] : null, S = sid && SPELLS[sid];
+  const lv = S ? spLvl(u.id, sid) : (sk[i] || 1), m = (1 + 0.12 * (lv - 1)) * (i > 0 ? 1 + GROWTH.mag * ptsOf(u.id).mag : 1);
   if (i === 0) u.en = Math.min(100, u.en + 35);
-  if (i === 1 || i === 2) { u.cd[i - 1] = u.d.cd[i - 1] + 1; u.en = Math.min(100, u.en + 20); }
+  if (S) { u.cd[i - 1] = S.cd + 1; u.en = Math.min(100, u.en + 20); }
   if (i === 3) u.en = 0;
   if (i === 0) {
     const d = await basicStrike(u, f, 1 * m, { color: u.id === 'kome' ? '#ffb43c' : u.id === 'dufie' ? '#c58bff' : '#fff' });
     return;
   }
   if (i === 1 || i === 2) {
+    if (CHOREO[u.id] && CHOREO[u.id][sid]) { await CHOREO[u.id][sid](u, f, m); await wait(200); return; }
     await skillBeat(u, i);
-    const k = u.id + i;
+    if (!S.legacy) { await castSpell(u, f, S, m); await wait(220); return; }
+    const k = S.legacy;
     switch (k) {
       case 'blay1': await basicStrike(u, f, .8 * m); hitStop(90); if (f.alive) { hit(u, f, .8 * m); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } break;
       case 'blay2': u.st.guard = 1; fx('spr', 600, { k: 'shield', unit: u, hs: .9, a: .45 }); await wait(400); break;
@@ -725,7 +844,7 @@ async function doHero(u, i) {
     case 'kuukua': { await impactFrames(T, u); fx('rain', 600, { unit: f }); hit(u, f, (f.st.slow || f.st.defDown ? 3.6 : 1.8) * m, { color: '#e6edf5', big: 1 }); break; }
     case 'kome': { heal(u, u.max * .2 * m); await impactFrames(T, u); fx('boom', 800, { unit: f }); hit(u, f, (f.st.burn ? 3.4 : 1.7) * m, { color: '#ffb43c', big: 1 }); SFX.heal(); break; }
     case 'afrakoma': { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#ff8a3c', dir: 1, big: 1 }); const d = hit(u, f, 3.0 * m, { color: '#ff8a3c', big: 1 }); heal(u, d * .5, true); break; }
-    case 'dufie': { await impactFrames(T, u); const [x, y] = pos(f); for (let k = 0; k < 6 && f.alive; k++) { fx('arc', 260, { x: x + rnd(-8, 8), y: y - f.h * (.35 + .3 * Math.random()), r: f.h * rnd(.45, .7), c: k % 2 ? '#ffffff' : '#c58bff', dir: k % 2 ? -1 : 1, tilt: rnd(-.6, .6) }); hit(u, f, .62 * m, { color: '#c58bff' }); await wait(110); } fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: '#c58bff' }); fx('smoke', 900, { x, y, r: f.h * .5, c: '#c58bff', n: 12 }); break; }
+    case 'dufie': if (CHOREO.dufie.ult) { await CHOREO.dufie.ult(u, f, m, T); break; } { await impactFrames(T, u); const [x, y] = pos(f); for (let k = 0; k < 6 && f.alive; k++) { fx('arc', 260, { x: x + rnd(-8, 8), y: y - f.h * (.35 + .3 * Math.random()), r: f.h * rnd(.45, .7), c: k % 2 ? '#ffffff' : '#c58bff', dir: k % 2 ? -1 : 1, tilt: rnd(-.6, .6) }); hit(u, f, .62 * m, { color: '#c58bff' }); await wait(110); } fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: '#c58bff' }); fx('smoke', 900, { x, y, r: f.h * .5, c: '#c58bff', n: 12 }); break; }
   }
   await wait(600); endUlt(); await wait(220);
 }
@@ -801,6 +920,8 @@ function loop(now) {
   B.fx = B.fx.filter((f) => f.type !== 'ink' || drawFx(g, f)); // ink symbols sit behind the fighters
   const units = [...B.heroes, ...B.foes].filter((u) => u.alive || u.dieT > 0).sort((a, b) => a.fy - b.fy);
   const portrait = r.height > r.width * .9, baseH = portrait ? Math.min(r.height * .36, r.width * .42) : Math.min(r.height * .5, r.width * .24);
+  B.ghosts = (B.ghosts || []).filter((q) => B.t - q.t0 < .28);
+  for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / .28, k0 = img(poseSrc(q.u.id, 0)); if (!k0.ok) continue; g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * .35; g.filter = 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; drawKF(g, q.u.id, q.p, q.u.h); g.restore(); }
   for (const u of units) {
     u.h = baseH * u.size * u.depth;
     if (u.enter) u.enter = Math.max(0, u.enter - dt * 2.2);
@@ -824,10 +945,14 @@ function loop(now) {
     const ring = u.side && u.charging && u.alive ? '#ff3b2a' : null;
     if (ring) { const sil = silhouette(e, th, ring); if (sil) { g.save(); g.globalAlpha *= .85; for (const [ox, oy] of [[-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, 2], [-2, 2], [2, -2]]) g.drawImage(sil, -pw / 2 + ox, -ph + oy, pw, ph); g.restore(); } }
     const AN = ANIM[u.id], bodyH = e0.el.naturalHeight * k; let drawn = false;
+    if (KF[u.id]) { // keyframe heroes: move pose, else idle breathing / hurt / defeated
+      const [ox, oy] = kfOff(u), p = u.kf || (!u.alive ? 'idle_3' : u.hurt > .35 ? 'idle_2' : (B.t + (u.slot || 0)) % 2.4 > 1.7 ? 'idle_1' : 'idle_0');
+      g.save(); g.translate((flip ? -1 : 1) * ox, -oy - bob); if (!u.kf) g.scale(1, 1 + Math.sin(B.t * 3) * .008); drawn = drawKF(g, u.id, p, bodyH, u.kfAlpha); g.restore();
+    }
     if (AN && u.alive && u.pose === 0) { const P = AN.idle.play; drawn = drawClip(g, AN.idle, P[Math.floor(B.t * 12) % P.length], bodyH); }
     else if (AN && u.clip && AN[u.clip]) { const c = AN[u.clip], P = c.play, pr = 1 - Math.max(0, u.poseT) / (u.poseD || 1); drawn = drawClip(g, c, P[Math.min(P.length - 1, Math.floor(pr * P.length))], bodyH); }
     if (!drawn) { const sc = scaled(e, th); if (sc) g.drawImage(sc, -pw / 2, -ph, pw, ph); }
-    if (u.hurt > .45) { const sil = silhouette(e, th, '#ffffff'); if (sil) { g.globalAlpha = (u.hurt - .45) * 1.4; g.drawImage(sil, -pw / 2, -ph, pw, ph); } }
+    if (u.hurt > .45 && !KF[u.id]) { const sil = silhouette(e, th, '#ffffff'); if (sil) { g.globalAlpha = (u.hurt - .45) * 1.4; g.drawImage(sil, -pw / 2, -ph, pw, ph); } }
     g.restore();
     if (u.alive) drawOverlay(g, u, x, y);
   }
@@ -891,7 +1016,8 @@ function drawFx(g, f) {
     case 'shot': {
       const x = f.x0 + (f.x1 - f.x0) * p, arc = f.kind === 'arrow' || f.kind === 'axe' ? Math.sin(p * Math.PI) * 26 : 0, y = f.y0 + (f.y1 - f.y0) * p - arc, a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0);
       g.translate(x, y);
-      if (f.kind === 'arrow' || f.kind === 'spear') { g.rotate(a); g.strokeStyle = '#6b4424'; g.lineWidth = f.kind === 'spear' ? 4 : 2.5; g.beginPath(); g.moveTo(-26, 0); g.lineTo(6, 0); g.stroke(); g.fillStyle = '#e6edf5'; g.beginPath(); g.moveTo(14, 0); g.lineTo(2, -4); g.lineTo(2, 4); g.fill(); }
+      if (f.kind === 'dagger') { g.rotate(a + p * 18); g.fillStyle = '#e6edf5'; g.strokeStyle = '#1a1020'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(13, 0); g.lineTo(-4, -3); g.lineTo(-4, 3); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#e3b448'; g.fillRect(-9, -2, 5, 4); }
+      else if (f.kind === 'arrow' || f.kind === 'spear') { g.rotate(a); g.strokeStyle = '#6b4424'; g.lineWidth = f.kind === 'spear' ? 4 : 2.5; g.beginPath(); g.moveTo(-26, 0); g.lineTo(6, 0); g.stroke(); g.fillStyle = '#e6edf5'; g.beginPath(); g.moveTo(14, 0); g.lineTo(2, -4); g.lineTo(2, 4); g.fill(); }
       else if (f.kind === 'axe') { g.rotate(p * 14); g.strokeStyle = '#6b4424'; g.lineWidth = 3; g.beginPath(); g.moveTo(-10, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#cfd6e0'; g.beginPath(); g.moveTo(6, -2); g.quadraticCurveTo(16, -10, 14, 6); g.lineTo(6, 3); g.fill(); }
       else if (f.kind === 'thorn') { g.rotate(a); g.fillStyle = '#d8c25a'; g.strokeStyle = '#3a2a10'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(14, 0); g.lineTo(-10, -4); g.lineTo(-6, 0); g.lineTo(-10, 4); g.closePath(); g.fill(); g.stroke(); }
       else { const col = f.kind === 'fire' ? ['#fff8d0', '#ffb43c', 'rgba(255,90,30,0)'] : ['#f6ecff', '#c58bff', 'rgba(110,50,200,0)']; const rg = g.createRadialGradient(0, 0, 1, 0, 0, 11); rg.addColorStop(0, col[0]); rg.addColorStop(.45, col[1]); rg.addColorStop(1, col[2]); g.fillStyle = rg; g.beginPath(); g.arc(0, 0, 11, 0, 6.28); g.fill(); }
@@ -905,6 +1031,8 @@ function drawFx(g, f) {
       g.globalAlpha = fade * .55; g.fillStyle = f.c; crescent(R0 * 1.06, th * 1.5); g.fill();
       g.globalAlpha = fade; g.fillStyle = '#ffffff'; crescent(R0, th * .55); g.fill();
       g.globalCompositeOperation = 'source-over'; break; }
+    case 'lines': { const fade = 1 - p; g.strokeStyle = '#ffffff'; g.lineCap = 'butt'; const L = f.x1 - f.x0; if (!f.ls) f.ls = Array.from({ length: 9 }, () => [Math.random(), rnd(.3, 1), rnd(1, 3)]);
+      for (const [yy, len, w] of f.ls) { g.globalAlpha = fade * .8; g.lineWidth = w; const xe = f.x0 + L * (.2 + .8 * Math.min(1, p * 3)), xs = xe - L * len * (1 - p * .6); g.beginPath(); g.moveTo(xs, f.y - f.h / 2 + yy * f.h); g.lineTo(xe, f.y - f.h / 2 + yy * f.h); g.stroke(); } break; }
     case 'streak': { const e = Math.min(1, p / .4), fade = 1 - p; g.globalCompositeOperation = 'lighter';
       const x0 = f.x0, x1 = f.x0 + (f.x1 - f.x0) * e;
       for (let i = 0; i < 5; i++) { g.globalAlpha = fade * (.5 - i * .08); g.fillStyle = i % 2 ? '#ffffff' : f.c; const yy = f.y + (i - 2) * f.h * .14, hh = f.h * (.1 - i * .012); g.fillRect(Math.min(x0, x1), yy - hh / 2, Math.abs(x1 - x0), hh); }

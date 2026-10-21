@@ -108,3 +108,35 @@ export const LOCKED_CHAPTERS = ['Yoruba', 'Edo', 'Igbo', 'Haitian', 'Japan'];
 // Gacha (beta: currency is earned in play only, nothing is sold)
 export const PULL_COST = 100, PULL10_COST = 900, PITY = 40;
 export const PULL_RATES = [['SSR', 0.04], ['SR', 0.18], ['R', 0.38], ['gold', 0.4]];
+
+// ---------- spells: every hero owns a pool and equips two (basic and ultimate are fixed) ----------
+// Legacy spells keep their hand-written battle code (key = hero id + slot). New ones are data-driven:
+// t melee|ranged|self · mult per hit · hits · crit · foe/self [[status, turns]] · tmSelf/tmFoe turn meter · heal/shield fraction of max HP · atkUp multiplier · proj projectile kind
+const L = (hero, i, cd) => ({ hero, legacy: hero + i, name: HEROES[hero].kit[i], note: HEROES[hero].notes[i], cd });
+export const SPELLS = {
+  blay1: L('blay', 1, 2), blay2: L('blay', 2, 3),
+  blayRush: { hero: 'blay', name: 'Asafo Rush', note: 'A charging cut, then Blay moves 30% up the turn order.', cd: 3, t: 'melee', mult: 1.4, tmSelf: .3, kind: 'melee' },
+  blayRally: { hero: 'blay', name: 'Rally', note: 'Clears stun and burn; hits 25% harder for 2 turns.', cd: 4, t: 'self', atkUp: 1.25, turns: 2, cleanse: 1, kind: 'buff' },
+  owureku1: L('owureku', 1, 3), owureku2: L('owureku', 2, 3),
+  owuRend: { hero: 'owureku', name: 'Rending Chop', note: 'A splitting chop: defence down for 2 turns.', cd: 2, t: 'melee', mult: 1.2, foe: [['defDown', 2]], kind: 'melee' },
+  owuHide: { hero: 'owureku', name: 'Iron Hide', note: 'A shield worth 25% of his health for 2 turns.', cd: 4, t: 'self', shield: .25, turns: 2, kind: 'shield' },
+  gyakari1: L('gyakari', 1, 3), gyakari2: L('gyakari', 2, 3),
+  gyaSweep: { hero: 'gyakari', name: 'Spear Sweep', note: 'Sweeps the legs: slowed for 2 turns and 25% turn meter lost.', cd: 3, t: 'melee', mult: .9, foe: [['slow', 2]], tmFoe: .25, kind: 'melee' },
+  gyaFirm: { hero: 'gyakari', name: 'Stand Firm', note: 'Heals 15% and guards: the next hit is halved.', cd: 4, t: 'self', heal: .15, guard: 1, kind: 'heal' },
+  obiri1: L('obiri', 1, 2), obiri2: L('obiri', 2, 3),
+  obiVolley: { hero: 'obiri', name: 'Volley', note: 'Three quick arrows.', cd: 2, t: 'ranged', mult: .45, hits: 3, proj: 'arrow', kind: 'ranged' },
+  obiKnee: { hero: 'obiri', name: 'Knee Shot', note: 'A crippling shot: 1-turn stun that cancels a charged attack.', cd: 4, t: 'ranged', mult: .9, foe: [['stun', 1]], proj: 'arrow', kind: 'ranged' },
+  kuukua1: L('kuukua', 1, 2), kuukua2: L('kuukua', 2, 3),
+  kuuThrow: { hero: 'kuukua', name: 'Spear Throw', note: 'Hurls her spear: a certain critical hit.', cd: 3, t: 'ranged', mult: 1.3, crit: 1, proj: 'spear', kind: 'ranged' },
+  kuuWall: { hero: 'kuukua', name: 'Lance Wall', note: 'Guards the next hit and hits 20% harder for 2 turns.', cd: 4, t: 'self', guard: 1, atkUp: 1.2, turns: 2, kind: 'buff' },
+  kome1: L('kome', 1, 3), kome2: L('kome', 2, 2),
+  komeVeil: { hero: 'kome', name: 'Spirit Veil', note: 'A shield worth 20% of her health; clears stun and burn.', cd: 3, t: 'self', shield: .2, turns: 2, cleanse: 1, kind: 'shield' },
+  komeHex: { hero: 'kome', name: 'Hex Bolt', note: 'A cursed bolt: defence down for 2 turns.', cd: 2, t: 'ranged', mult: .9, foe: [['defDown', 2]], proj: 'hex', kind: 'ranged' },
+  afrakoma1: L('afrakoma', 1, 2), afrakoma2: L('afrakoma', 2, 3),
+  afrWhirl: { hero: 'afrakoma', name: 'Whirlwind', note: 'Three spinning axe cuts.', cd: 3, t: 'melee', mult: .5, hits: 3, kind: 'melee' },
+  afrOath: { hero: 'afrakoma', name: 'Blood Oath', note: 'Heals 20% and hits 20% harder for 2 turns.', cd: 4, t: 'self', heal: .2, atkUp: 1.2, turns: 2, kind: 'heal' },
+  dufie1: L('dufie', 1, 2), dufie2: L('dufie', 2, 3),
+  dufKick: { hero: 'dufie', name: 'Crescent Kick', note: 'A spinning kick and a falling heel: 1-turn stun that cancels a charged attack.', cd: 3, t: 'melee', mult: 1.0, foe: [['stun', 1]], kind: 'melee' },
+  dufStars: { hero: 'dufie', name: 'Star Daggers', note: 'Five thrown knives: defence down for 2 turns.', cd: 2, t: 'ranged', mult: .26, hits: 5, foe: [['defDown', 2]], proj: 'dagger', kind: 'ranged' },
+};
+for (const [id, s] of Object.entries(SPELLS)) { s.id = id; (HEROES[s.hero].pool ||= []).push(id); }

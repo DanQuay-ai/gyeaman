@@ -400,8 +400,8 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 @media (max-width: 400px) { .pips { gap: 3px; } .pip { width: 11px; height: 11px; } }
 .ultcs.vid .cs-lines, .ultcs.vid .cs-sym, .ultcs.vid .cs-x, .ultcs.vid .cs-flash { display: none; }
 .ultcs.vid .cs-art video { animation: none; object-position: 50% 40%; }
-.ultcs.vid .cs-title { animation: csTitleV 4.4s ease-out forwards; }
-@keyframes csTitleV { 0%, 55% { transform: translateX(60%); opacity: 0; } 62% { transform: none; opacity: 1; } 92% { opacity: 1; } 100% { opacity: 0; } }
+.ultcs.vid .cs-title { animation: csTitleV 2.6s ease-out forwards; }
+@keyframes csTitleV { 0%, 30% { transform: translateX(60%); opacity: 0; } 40% { transform: none; opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; } }
 
 /* ---------- heroes list (Dislyte-like roster) ---------- */
 .ico { width: 18px; height: 18px; flex: none; }
@@ -479,3 +479,24 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .hdet.open .hrail { top: 50%; transform: translateY(-50%); grid-auto-flow: row; right: 436px; }
 }
 .hdet.open .hrail { top: auto; bottom: calc(58% + 10px); transform: none; }
+
+/* spell icons + stable action bar (selecting a spell never shifts the layout) */
+.sic { flex: none; width: 36px; height: 36px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; background: #120c14; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
+.sic img { width: 100%; height: 100%; object-fit: cover; }
+.sic.glyph { background: color-mix(in srgb, var(--rc) 25%, #120c14); color: var(--rc); } .sic.glyph .ico { width: 20px; height: 20px; }
+.ab { display: flex; align-items: center; justify-content: flex-start; gap: 8px; text-align: left; padding: 6px 8px; }
+.ab > div { min-width: 0; display: grid; gap: 1px; }
+.ab b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ab:disabled .sic { filter: grayscale(.8) brightness(.6); }
+.hintl { height: 38px; min-height: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 19px; }
+.act { height: calc(186px + var(--sb)); min-height: 0; grid-template-rows: 38px auto; }
+.act:not(.mine) { grid-template-rows: 1fr; }
+@media (orientation: landscape) and (min-width: 700px) { .act { height: auto; min-height: 92px; grid-template-rows: none; } .hintl { height: auto; -webkit-line-clamp: 3; } }
+.sktabs button { padding-top: 44px; } .sktabs button .sic { position: absolute; top: 6px; left: 6px; width: 32px; height: 32px; }
+.skh { display: flex; gap: 10px; align-items: center; } .skh .sic { width: 52px; height: 52px; border-radius: 10px; }
+.eqd { color: var(--good); font-weight: 800; font-size: 13px; } .eqrow { display: flex; gap: 8px; } .eqrow .btn { flex: 1; }
+.pool .sub { display: block; margin: 4px 0 6px; }
+.pgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pgrid button { display: grid; justify-items: center; gap: 3px; padding: 8px 4px; border-radius: 10px; background: rgba(255,255,255,.04); text-align: center; }
+.pgrid button .sic { width: 44px; height: 44px; } .pgrid b { font: 12px/1.1 var(--display); font-weight: 400; } .pgrid span { font-size: 10px; font-weight: 800; color: var(--muted); }
+.pgrid button.eq span { color: var(--good); } .pgrid button.on { box-shadow: inset 0 0 0 1.5px var(--rc); background: color-mix(in srgb, var(--rc) 18%, transparent); }
