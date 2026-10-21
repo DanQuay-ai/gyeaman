@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261021d';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021d';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021d';
+import { KF } from './kf.js?v=20261021e';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021e';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021e';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261021d'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
+const AV = '?v=20261021e'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
 function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
@@ -76,6 +76,7 @@ for (const id in ANIM) for (const c of Object.values(ANIM[id])) c.sheets.forEach
 // ---------- keyframe choreography (Firefly pose sheets + code movement, smears, speed lines, afterimages) ----------
 const kfImg = (id, p) => img(A + 'kf/' + KF[id].p[p][0] + AV);
 for (const id in KF) for (const p in KF[id].p) kfImg(id, p);
+for (let i = 0; i < 4; i++) img(A + 'kf/blay_fx_' + i + '.webp' + AV);
 // draw keyframe p for hero id with its floor point at (0,0), body scaled so the idle pose is bodyH tall
 function drawKF(g, id, p, bodyH, alpha = 1) {
   const D = KF[id].p[p]; if (!D) return false; const im = kfImg(id, p); if (!im.ok) return false;
@@ -95,6 +96,15 @@ const SEQ = {
       { p: 'ultF_2', ms: 230, x: 1.04, y: .58, lines: 1, ghost: 1, ev: 'k3' }, { p: 'ultF_3', ms: 420, x: 1.08, y: 0, lines: 1, ev: 's4' },
       { p: 'recover_1', ms: 130, x: .6, y: .36, ghost: 1 }, { p: 'recover_2', ms: 130, x: .25, y: .42, ghost: 1 }, { p: 'recover_3', ms: 180, x: 0, y: 0, ev: 'land' }],
   },
+  blay: {
+    recover: [{ p: 'idle_3', ms: 150, x: .45, y: 0, ghost: 1 }, { p: 'idle_0', ms: 140, x: 0, y: 0 }],
+    basic: [{ p: 'basic_1', ms: 200, x: .15 }, { p: 'basic_2', ms: 260, x: .2, lines: 1, ev: 'cut' }, { p: 'basic_3', ms: 220, x: .2 }],
+    blay1: [{ p: 'idle_3', ms: 150, x: .45, ghost: 1 }, { p: 'twin_1', ms: 240, x: .5, ev: 'cut1' }, { p: 'twin_2', ms: 280, x: .5, lines: 1, ev: 'cut2' }, { p: 'twin_3', ms: 200, x: .45 }],
+    blay2: [{ p: 'parry_1', ms: 520, x: 0, ev: 'guard' }],
+    blayRush: [{ p: 'idle_3', ms: 160, x: .8, lines: 1, ghost: 1 }, { p: 'basic_1', ms: 140, x: .9 }, { p: 'basic_2', ms: 300, x: 1, lines: 1, ev: 'cut' }, { p: 'basic_3', ms: 180, x: 1 }],
+    blayRally: [{ p: 'parry_3', ms: 650, x: 0, ev: 'rally' }],
+    ult: [{ p: 'ult_0', ms: 160, x: 0 }, { p: 'ult_1', ms: 520, x: -.05, ev: 'charge' }, { p: 'ult_2', ms: 700, x: .25, lines: 1, ghost: 1, ev: 'release' }, { p: 'ult_3', ms: 500, x: .25, ev: 'after' }, { p: 'idle_0', ms: 120, x: 0 }],
+  },
 };
 const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .42 - u.w * .3);
 // play a step list on a battle unit; onEv(name, step) fires at each step start
@@ -112,6 +122,7 @@ async function runKF(u, f, seq, onEv) {
 function kfOff(u) { const a = u.kfA; if (!a) return [0, 0]; const t = Math.min(1, (B.t - a.t0) / (a.d || .001)), e = 1 - (1 - t) ** 3; return [a.x0 + (a.x1 - a.x0) * e, a.y0 + (a.y1 - a.y0) * e]; }
 const kfEnd = (u) => { u.kf = null; u.kfA = null; u.kfAlpha = 1; };
 const VIO = '#c58bff';
+const SPL = { dufie: 'ultE_2', blay: 'ult_2' }; // ultimate splash pose
 async function dufieRecover(u, f) { await runKF(u, f, SEQ.dufie.recover, async (ev) => { if (ev === 'land') { const [x, y] = pos(u); burst(x, y, ['#d8c9b0', '#fff'], 10, 3); } }); kfEnd(u); }
 CHOREO.dufie = {
   basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.dufie.basic, async (ev) => { const [x, y] = pos(f);
@@ -146,6 +157,26 @@ CHOREO.dufie = {
       if (ev === 'k3' && f.alive) strike(.3, { yy: .8, dir: -1, tilt: .3, c: '#fff', stop: 90 });
       if (ev === 's4' && f.alive) { strike(.28, { r: .7, c: VIO }); strike(.27, { r: .55, c: '#fff', big: 1, stop: 140 }); fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: VIO }); fx('smoke', 900, { x, y, r: f.h * .5, c: VIO, n: 12 }); B.shake = 14; }
       if (ev === 'land') burst(hx, hy, ['#d8c9b0', '#fff'], 10, 3); });
+    kfEnd(u); },
+};
+// Blay: calm body, the cut is the event: blue-black crescents leave the blade and fly across the screen
+const BLU = '#2f6bff', BLK = '#0b1230';
+const sproj = (u, k, o = {}) => { const [hx, hy] = pos(u); fx('sproj', o.ms || 520, { k, x0: hx + u.w * .3, x1: o.x1 ?? B.w * 1.15, y: hy - u.h * (o.yy ?? .55), s: u.h * (o.s ?? .9), rot: o.rot || 0, flip: o.flip }); };
+async function blayRecover(u, f) { await runKF(u, f, SEQ.blay.recover); kfEnd(u); }
+CHOREO.blay = {
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.blay.basic, async (ev) => { if (ev === 'cut') { sproj(u, 0, { s: .55, ms: 420 }); await wait(150); d = hit(u, f, m, { ...o, color: BLU }); hitStop(70); } }); await blayRecover(u, f); return d; },
+  blay1: async (u, f, m) => { await runKF(u, f, SEQ.blay.blay1, async (ev) => {
+      if (ev === 'cut1') { sproj(u, 1, { s: .8, rot: .5, ms: 460, yy: .5 }); await wait(130); hit(u, f, .8 * m, { color: BLU }); hitStop(80); }
+      if (ev === 'cut2' && f.alive) { sproj(u, 1, { s: .8, rot: -.5, flip: 1, ms: 460, yy: .6 }); await wait(130); hit(u, f, .8 * m, { color: BLU }); hitStop(90); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } });
+    await blayRecover(u, f); },
+  blay2: async (u, f, m) => { await runKF(u, null, SEQ.blay.blay2, async (ev) => { if (ev === 'guard') { u.st.guard = 1; fx('spr', 600, { k: 'shield', unit: u, hs: .9, a: .45 }); float(u, 'PARRY', '#9fd0ff', .8); } }); kfEnd(u); },
+  blayRush: async (u, f, m) => { await runKF(u, f, SEQ.blay.blayRush, async (ev) => { if (ev === 'cut') { sproj(u, 0, { s: .7, ms: 420 }); await wait(120); hit(u, f, 1.4 * m, { color: BLU }); hitStop(110); B.shake = 6; } });
+    await blayRecover(u, f); pushTM(u, .3); float(u, 'TURN +30%', '#7ee08a', .8); },
+  blayRally: async (u, f, m) => { await runKF(u, null, SEQ.blay.blayRally, async (ev) => { if (ev === 'rally') { const [x, y] = pos(u); fx('star', 600, { x, y: y - u.h * 1.05, r: u.h * .4, c: BLU }); delete u.st.stun; delete u.st.burn; addSt(u, 'atkUp', 3); u.atkUpK = 1.25; float(u, 'ATK▲', '#ffb070', .8); } }); kfEnd(u); },
+  ult: async (u, f, m, T) => { await runKF(u, f, SEQ.blay.ult, async (ev) => { const [hx, hy] = pos(u);
+      if (ev === 'charge') { fx('star', 420, { x: hx, y: hy - u.h * .45, r: u.h * .6, c: BLU }); B.shake = 4; }
+      if (ev === 'release') { await impactFrames(T, u); sproj(u, 3, { s: 2.1, ms: 900, yy: .75, x1: B.w * 1.5 }); await wait(90); sproj(u, 0, { s: 1.2, ms: 700, yy: .45, x1: B.w * 1.4 }); await wait(160); B.shake = 16;
+        if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1, color: BLU }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 3.0 * m, { big: 1, color: BLU }); hitStop(160); } });
     kfEnd(u); },
 };
 // draw one clip frame with feet at (0,0) and body height bodyH
@@ -431,8 +462,8 @@ function heroesScreen(id) {
   const MOVES = [['atk', 1], [null, 's1'], [null, 's2'], [null, 2]];
   let mi = -1;
   let kseq = null, kT = 0;
-  const KMOVES = KF[heroSel] ? ['basic', 'dufie1', 'dufKick', 'dufStars', 'dufie2', 'ult'].filter((k) => SEQ[heroSel][k]) : [];
-  $('.play', s).onclick = () => { if (KMOVES.length) { mi = (mi + 1) % KMOVES.length; const k = KMOVES[mi], S0 = SEQ[heroSel][k]; kseq = ['basic', 'dufie1', 'dufKick', 'ult'].includes(k) ? [...S0, ...SEQ[heroSel].recover] : S0; kT = performance.now(); SFX.hit(); const nm = k === 'basic' ? H.kit[0] : k === 'ult' ? H.kit[3] : SPELLS[k].name; toast(nm); return; }
+  const KMOVES = KF[heroSel] && SEQ[heroSel] ? Object.keys(SEQ[heroSel]).filter((k) => k !== 'recover') : [];
+  $('.play', s).onclick = () => { if (KMOVES.length) { mi = (mi + 1) % KMOVES.length; const k = KMOVES[mi], S0 = SEQ[heroSel][k]; kseq = ['basic', 'dufie1', 'dufKick', 'ult', 'blay1', 'blayRush'].includes(k) && !(heroSel === 'blay' && k === 'ult') ? [...S0, ...SEQ[heroSel].recover] : S0; kT = performance.now(); SFX.hit(); const nm = k === 'basic' ? H.kit[0] : k === 'ult' ? H.kit[3] : SPELLS[k].name; toast(nm); return; }
     mi = (mi + 1) % MOVES.length; const [c, p] = MOVES[mi]; const AN = ANIM[heroSel]; clipName = AN && AN[c] ? c : null; pose = clipName ? 0 : (typeof p === 'string' && !AN ? 1 : p); poseT = performance.now(); if (p === 2) SFX.ult(); else SFX.hit(); };
   let sx = null; cv.onpointerdown = (e) => { sx = e.clientX; }; cv.onpointerup = (e) => { if (sx !== null && Math.abs(e.clientX - sx) > 50) go(e.clientX < sx ? 1 : -1); sx = null; };
   const draw = (now) => {
@@ -630,7 +661,7 @@ function hit(src, dst, mult, o = {}) {
   if (dst.hp <= 0) {
     dst.alive = false; dst.hp = 0; dst.dieT = 1; burst(x, y - dst.h * .4, ['#fff', '#d23b31', '#1a1216'], 16, 5); SFX.die(); B.slowT = .5;
     if (dst.d.gold) { B.bonusGold = (B.bonusGold || 0) + 200; B.floats.push({ x, y: y - dst.h, t: '+200 gold', c: '#e3b448', life: 1.3, size: 1 }); }
-  } else if (dst.st.guard && !o.counter) { delete dst.st.guard; float(dst, 'COUNTER', '#9fd0ff', .9); hit(dst, src, .8, { counter: 1, color: '#9fd0ff' }); }
+  } else if (dst.st.guard && !o.counter) { delete dst.st.guard; float(dst, 'COUNTER', '#9fd0ff', .9); if (dst.id === 'blay' && KF.blay) { dst.kf = 'parry_2'; sproj(dst, 0, { s: .5, ms: 380 }); setTimeout(() => { if (dst.kf === 'parry_2') kfEnd(dst); }, 450); } hit(dst, src, .8, { counter: 1, color: '#9fd0ff' }); }
   return d;
 }
 function heal(u, n, quiet) { if (!u.alive) return; const v = Math.round(n); u.hp = Math.min(u.max, u.hp + v); float(u, '+' + v, '#7ee08a'); if (!quiet) fx('spr', 750, { k: 'heal', unit: u, hs: .95, a: .7 }); }
@@ -755,7 +786,7 @@ async function ultIntro(u, sym, color) {
 // fullscreen ultimate cutscene: dedicated art (or a Veo clip once generated), push-in, speed lines, X-slash, title
 const CUTS = {}; // optional per-hero splash art; keyframe heroes use their signature pose
 function cutscene(u, sym, color) {
-  const C = CUTS[u.id] || (KF[u.id] && KF[u.id].p.ultE_2 ? { img: A + 'kf/' + KF[u.id].p.ultE_2[0] + AV, pose: 1, short: 1 } : { img: poseSrc(u.id, 2), pose: 1 });
+  const C = CUTS[u.id] || (KF[u.id] && KF[u.id].p[SPL[u.id]] ? { img: A + 'kf/' + KF[u.id].p[SPL[u.id]][0] + AV, pose: 1, short: 1 } : { img: poseSrc(u.id, 2), pose: 1 });
   const media = C.video ? `<video poster="${C.img}" muted playsinline autoplay preload="auto"><source src="${C.video.replace('.mp4', '.webm')}" type="video/webm"><source src="${C.video}" type="video/mp4"></video>` : `<img src="${C.img}" alt="" class="${C.pose ? 'pose' : ''} ${C.pose && u.flip[2] ? 'flip' : ''}">`;
   const el = h(`<div class="ultcs" style="--rc:${color}"><div class="cs-bg"></div><div class="cs-art">${media}</div><div class="cs-lines"></div>
     <div class="cs-sym">${adinkraSvg(sym)}</div><i class="cs-x a"></i><i class="cs-x b"></i><div class="cs-flash"></div>
@@ -848,7 +879,7 @@ async function doHero(u, i) {
   await ultIntro(u, u.d.sym, RARITY[u.d.rarity].color === '#6fb6ff' ? '#e3b448' : RARITY[u.d.rarity].color);
   const T = [f];
   switch (u.id) {
-    case 'blay': { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#fff', dir: 1, big: 1 }); if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1 }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 3.0 * m, { big: 1 }); break; }
+    case 'blay': if (CHOREO.blay.ult) { await CHOREO.blay.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#fff', dir: 1, big: 1 }); if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1 }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 3.0 * m, { big: 1 }); break; }
     case 'owureku': { await impactFrames(T, u); for (let k = 0; k < 3 && f.alive; k++) { fx('slash', 300, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .55, c: '#ffb070', dir: 1, big: 1 }); hit(u, f, 1.15 * m, { color: '#ffb070', big: 1 }); await wait(160); } break; }
     case 'gyakari': { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .35 * m); await wait(300); await impactFrames(T, u); hit(u, f, 1.2 * m + u.shieldAmt / u.atk * .5, { color: '#6fb6ff', big: 1 }); break; }
     case 'obiri': { await impactFrames(T, u); const [x0, y0] = pos(u), [x, y] = pos(f); fx('beam', 500, { x0, y0: y0 - u.h * .6, x1: x, y1: y - f.h * .5, c: '#ffd23c' }); hit(u, f, 3.2 * m, { color: '#ffd23c', crit: true, big: 1 }); break; }
@@ -1042,6 +1073,8 @@ function drawFx(g, f) {
       g.globalAlpha = fade * .55; g.fillStyle = f.c; crescent(R0 * 1.06, th * 1.5); g.fill();
       g.globalAlpha = fade; g.fillStyle = '#ffffff'; crescent(R0, th * .55); g.fill();
       g.globalCompositeOperation = 'source-over'; break; }
+    case 'sproj': { const im = img(A + 'kf/blay_fx_' + f.k + '.webp' + AV); if (!im.ok) break; const e = 1 - (1 - p) ** 2, x = f.x0 + (f.x1 - f.x0) * e, h = f.s, w = h * im.el.naturalWidth / im.el.naturalHeight;
+      g.translate(x, f.y); g.rotate(f.rot || 0); if (f.flip) g.scale(1, -1); g.globalAlpha = p < .75 ? 1 : 1 - (p - .75) / .25; g.drawImage(im.el, -w * .7, -h / 2, w, h); break; }
     case 'lines': { const fade = 1 - p; g.strokeStyle = '#ffffff'; g.lineCap = 'butt'; const L = f.x1 - f.x0; if (!f.ls) f.ls = Array.from({ length: 9 }, () => [Math.random(), rnd(.3, 1), rnd(1, 3)]);
       for (const [yy, len, w] of f.ls) { g.globalAlpha = fade * .8; g.lineWidth = w; const xe = f.x0 + L * (.2 + .8 * Math.min(1, p * 3)), xs = xe - L * len * (1 - p * .6); g.beginPath(); g.moveTo(xs, f.y - f.h / 2 + yy * f.h); g.lineTo(xe, f.y - f.h / 2 + yy * f.h); g.stroke(); } break; }
     case 'streak': { const e = Math.min(1, p / .4), fade = 1 - p; g.globalCompositeOperation = 'lighter';
