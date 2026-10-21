@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261022d';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261022d';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022d';
+import { KF } from './kf.js?v=20261022e';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261022e';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022e';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261022d';
+const AV = '?v=20261022e';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -187,7 +187,7 @@ const SEQ = {
     bayi2: [{ p: 'bA_1', ms: 160, x: 0 }, { p: 'bB_3', ms: 380, x: .05, phantom: 1, ev: 'x' }, { p: 'bB_1', ms: 640, x: 0, ev: 'steal' }, { p: 'idle_0', ms: 120, x: 0 }],
     bayMist: [{ p: 'bA_1', ms: 180, x: 0 }, { p: 'bA_2', ms: 280, x: .05, phantom: 1, ev: 'mist' }, { p: 'bB_1', ms: 620, x: 0, ev: 'sip' }, { p: 'idle_0', ms: 120, x: 0 }],
     bayCurse: [{ p: 'bB_2', ms: 520, x: .03, ev: 'curse' }, { p: 'bB_1', ms: 520, x: 0, ev: 'sip' }, { p: 'idle_0', ms: 120, x: 0 }],
-    ult: [{ p: 'bult_1', ms: 620, x: 0, y: .3, ev: 'rise' }, { p: 'bult_2', ms: 170, x: .04, y: .38, phantom: 1, ev: 's' }, { p: 'bA_3', ms: 170, x: .06, y: .34, phantom: 1, ev: 's' }, { p: 'bult_2', ms: 170, x: .08, y: .38, phantom: 1, ev: 's' }, { p: 'bB_3', ms: 220, x: .1, y: .3, phantom: 1, ev: 's' },
+    ult: [{ p: 'bult_1', ms: 620, x: 0, y: .3, ev: 'rise' }, { p: 'bult_2', ms: 170, x: .04, y: .38, phantom: 1, ev: 's' }, { p: 'bB_3', ms: 170, x: .06, y: .34, phantom: 1, ev: 's' }, { p: 'bult_2', ms: 170, x: .08, y: .38, phantom: 1, ev: 's' }, { p: 'bB_3', ms: 220, x: .1, y: .3, phantom: 1, ev: 's' },
       { p: 'idle_3', ms: 200, x: .72, y: 0, phantom: 1, lines: 1 }, { p: 'bult_3', ms: 460, x: .82, ev: 'feast' }, { p: 'bB_1', ms: 900, x: .82, ev: 'drink' }],
   },
 
@@ -215,6 +215,12 @@ const PH_HUE = { sekan: 45, bayi: 350, kome: 40, owureku: 5, blay: 185, kuukua: 
 const SOFT_HURT = new Set(['gyakari', 'afrakoma']);
 const PH_COL = { kome: '#ffd23c', owureku: '#d0402a', sekan: '#efe6cf', bayi: '#d01c3c', blay: '#3d7cff', kuukua: '#ff1f35', obiri: '#ffc83c', gyakari: '#ffb02e', afrakoma: '#ff6a1f', dufie: '#b070ff' }; // afterimage tint per hero
 const TINT = document.createElement('canvas'), TG = TINT.getContext('2d');
+const TINTS = new Map();
+function tintImg(el, col) { // recolour an image keeping its light/dark structure and alpha (blue-black slash -> crimson-black)
+  const key = el.src + col; let c = TINTS.get(key); if (c) return c;
+  c = document.createElement('canvas'); c.width = el.naturalWidth; c.height = el.naturalHeight; const t = c.getContext('2d');
+  t.drawImage(el, 0, 0); t.globalCompositeOperation = 'color'; t.fillStyle = col; t.fillRect(0, 0, c.width, c.height);
+  t.globalCompositeOperation = 'destination-in'; t.drawImage(el, 0, 0); TINTS.set(key, c); return c; }
 function drawTinted(g, q, col, alpha) { // the pose as a flat silhouette in the hero colour, with a light inner core
   const bh = q.bh || q.u.h, S = Math.ceil(bh * 2.4); if (TINT.width !== S) { TINT.width = S; TINT.height = S; }
   TG.setTransform(1, 0, 0, 1, 0, 0); TG.clearRect(0, 0, S, S); TG.save(); TG.translate(S / 2, S * .78); if (q.rot) { TG.translate(0, -bh * .5); TG.rotate(q.rot); TG.translate(0, bh * .5); } drawKF(TG, q.u.id, q.p, bh); TG.restore();
@@ -423,30 +429,31 @@ CHOREO.sekan = {
       if (e === 'slam') { debris(x, y, 16, u.h * .14); shock(u, f, SEK, 1); slam(u, f, SEK, 1); if (f.alive) { hit(u, f, 1.6 * m, { color: SEK, big: 1 }); addSt(f, 'stun', 1); } } });
     await heavyRecover(u, f); },
 };
-const redSlash = (u, f, o = {}) => { const [hx, hy] = pos(u), [x] = pos(f), [ox] = kfOff(u); fx('sproj', o.ms || 520, { k: o.k ?? ((Math.random() * 4) | 0), x0: hx + ox + u.h * .45, x1: x + f.w * .2, y: hy - u.h * (o.yy ?? .55), s: u.h * (o.s ?? .75), hue: 140, glow: '#ff1f45', glow2: '#ffc0c8', flip: o.flip, rot: o.rot }); };
+const redSlash = (u, f, o = {}) => { const [hx, hy] = pos(u), [x] = pos(f), [ox] = kfOff(u); fx('sproj', o.ms || 520, { k: o.k ?? ((Math.random() * 4) | 0), x0: hx + ox + u.h * .45, x1: x + f.w * .2, y: hy - u.h * (o.yy ?? .55), s: u.h * (o.s ?? 1.0), tint: '#ff1030', glow: '#ff1f45', glow2: '#ff8090', flip: o.flip, rot: o.rot }); };
+const bayImpact = (u, f, big) => { const [x, y] = pos(f); hitStop(big ? 170 : 85); B.shake = big ? 22 : 11; fx('flash', big ? 560 : 360, { x, y: y - f.h * .5, r: f.h * (big ? 1.5 : .9), c: BLD, n: 12 }); debris(x, y, big ? 18 : 7, u.h * .12); if (big) shock(u, f, BLD, 1); };
 const goop = (u, f, n = 12, sz = 1) => { const [hx, hy] = pos(u), [ox, oy] = kfOff(u), [x, y] = pos(f); fx('goop', 1000, { x0: x, y0: y - f.h * .5, x1: hx + ox, y1: hy - oy - u.h * .55, r: u.h * .032 * sz, arc: u.h * .55, c: '#a00d2a', n }); };
 CHOREO.bayi = {
   basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.bayi.basic, async (e) => { const [x, y] = pos(f);
-      if (e === 's1' || e === 's2') { redSlash(u, f, { flip: e === 's2', rot: e === 's1' ? .35 : 0 }); await wait(260); if (f.alive) { fx('arc', 280, { x, y: y - f.h * .55, r: f.h * .6, c: BLD, dir: e === 's1' ? -1 : 1 }); slam(u, f, BLD, 0); d += hit(u, f, .5 * m, { ...o, color: BLD }); } }
+      if (e === 's1' || e === 's2') { redSlash(u, f, { flip: e === 's2', rot: e === 's1' ? .35 : 0, s: e === 's2' ? 1.25 : 1 }); await wait(230); if (f.alive) { fx('arc', 280, { x, y: y - f.h * .55, r: f.h * .75, c: BLD, dir: e === 's1' ? -1 : 1, big: 1 }); bayImpact(u, f, e === 's2'); d += hit(u, f, .5 * m, { ...o, color: BLD }); } }
       if (e === 'sip' && d) { goop(u, f, 6, .8); await wait(500); heal(u, d * .25, 1); } });
     kfEnd(u); return d; },
   bayi1: async (u, f, m) => { let d = 0; await runKF(u, f, SEQ.bayi.bayi1, async (e) => { const [x, y] = pos(f);
-      if (e === 'grab' && f.alive) { fx('smoke', 700, { x, y: y - f.h * .3, r: f.h * .4, c: BLD, n: 10, rise: 1 }); d = hit(u, f, 1.0 * m, { color: BLD }); goop(u, f, 22, 1.3); }
-      if (e === 'drink') { await wait(450); const [hx, hy] = pos(u); fx('star', 520, { x: hx, y: hy - u.h * .55, r: u.h * .5, c: BLD }); heal(u, d); } }); kfEnd(u); },
+      if (e === 'grab' && f.alive) { fx('smoke', 700, { x, y: y - f.h * .3, r: f.h * .4, c: BLD, n: 10, rise: 1 }); bayImpact(u, f, 1); d = hit(u, f, 1.0 * m, { color: BLD, big: 1 }); goop(u, f, 28, 1.5); }
+      if (e === 'drink') { await wait(450); const [hx, hy] = pos(u); fx('star', 520, { x: hx, y: hy - u.h * .55, r: u.h * .7, c: BLD }); fx('ward', 700, { unit: u, c: BLD }); B.shake = 8; heal(u, d); } }); kfEnd(u); },
   bayi2: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayi2, async (e) => { const [x, y] = pos(f);
-      if (e === 'x') { redSlash(u, f, { rot: .5 }); redSlash(u, f, { rot: -.5, flip: 1 }); await wait(260); if (f.alive) { fx('x', 420, { unit: f, c: BLD }); hit(u, f, .4 * m, { color: BLD }); } }
+      if (e === 'x') { redSlash(u, f, { rot: .5 }); redSlash(u, f, { rot: -.5, flip: 1 }); await wait(230); if (f.alive) { fx('x', 420, { unit: f, c: BLD }); bayImpact(u, f, 0); hit(u, f, .4 * m, { color: BLD }); } }
       if (e === 'steal' && f.alive) { goop(u, f, 14); pushTM(f, -.35); pushTM(u, .35); float(f, 'TURN −35%', '#c58bff', .8); float(u, 'TURN +35%', '#7ee08a', .8); } }); kfEnd(u); },
   bayMist: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayMist, async (e) => { const [x, y] = pos(f);
-      if (e === 'mist') { redSlash(u, f, { s: .9 }); await wait(260); if (f.alive) { fx('smoke', 1300, { x, y, r: f.h * .75, c: BLD, n: 20, rise: 1 }); hit(u, f, .6 * m, { color: BLD }); addSt(f, 'burn', 3, { burnPow: u.atk * .5 * m }); } }
+      if (e === 'mist') { redSlash(u, f, { s: 1.2 }); await wait(230); if (f.alive) { bayImpact(u, f, 0); fx('smoke', 1300, { x, y, r: f.h * .75, c: BLD, n: 20, rise: 1 }); hit(u, f, .6 * m, { color: BLD }); addSt(f, 'burn', 3, { burnPow: u.atk * .5 * m }); } }
       if (e === 'sip') { goop(u, f, 10); await wait(450); heal(u, u.max * .08); } }); kfEnd(u); },
   bayCurse: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayCurse, async (e) => {
-      if (e === 'curse' && f.alive) { fx('x', 520, { unit: f, c: BLD }); fx('flash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .7, c: BLD }); hit(u, f, .5 * m, { color: BLD }); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); }
+      if (e === 'curse' && f.alive) { fx('x', 520, { unit: f, c: BLD }); bayImpact(u, f, 0); fx('flash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .7, c: BLD }); hit(u, f, .5 * m, { color: BLD }); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); }
       if (e === 'sip') { goop(u, f, 8); addSt(u, 'atkUp', 3); u.atkUpK = 1.2; float(u, 'ATK▲', '#ffb070', .8); } }); kfEnd(u); },
   ult: async (u, f, m, T) => { let d = 0; await runKF(u, f, SEQ.bayi.ult, async (e) => { const [x, y] = pos(f), [hx, hy] = pos(u);
       if (e === 'rise') { fx('smoke', 900, { x: hx, y: hy, r: u.h * .6, c: BLD, n: 16, rise: 1 }); B.shake = 6; }
-      if (e === 's') { redSlash(u, f, { ms: 420, yy: .7 + Math.random() * .2, flip: Math.random() < .5, rot: rnd(-.4, .4) }); await wait(200); if (f.alive) { fx('arc', 220, { x, y: y - f.h * (.4 + .3 * Math.random()), r: f.h * .55, c: BLD, dir: Math.random() < .5 ? 1 : -1 }); d += hit(u, f, .3 * m, { color: BLD }); goop(u, f, 5, .8); } }
-      if (e === 'feast') { await impactFrames(T, u); slam(u, f, BLD, 1); fx('flash', 520, { x, y: y - f.h * .5, r: f.h, c: BLD }); if (f.alive) d += hit(u, f, 1.6 * m, { color: BLD, big: 1 }); }
-      if (e === 'drink') { goop(u, f, 30, 1.5); await wait(600); fx('star', 600, { x: hx, y: hy - u.h * .55, r: u.h * .6, c: BLD }); heal(u, d); } });
+      if (e === 's') { redSlash(u, f, { ms: 400, yy: .75 + Math.random() * .2, s: 1.15, flip: Math.random() < .5, rot: rnd(-.5, .1) }); await wait(190); if (f.alive) { bayImpact(u, f, 0); fx('arc', 220, { x, y: y - f.h * (.4 + .3 * Math.random()), r: f.h * .55, c: BLD, dir: Math.random() < .5 ? 1 : -1 }); d += hit(u, f, .3 * m, { color: BLD }); goop(u, f, 5, .8); } }
+      if (e === 'feast') { await impactFrames(T, u); bayImpact(u, f, 1); slam(u, f, BLD, 1); redSlash(u, f, { s: 1.6, ms: 360 }); if (f.alive) d += hit(u, f, 1.6 * m, { color: BLD, big: 1 }); }
+      if (e === 'drink') { goop(u, f, 40, 1.7); await wait(600); fx('star', 600, { x: hx, y: hy - u.h * .55, r: u.h * .9, c: BLD }); fx('ward', 900, { unit: u, c: BLD }); fx('smoke', 900, { x: hx, y: hy, r: u.h * .6, c: BLD, n: 14, rise: 1 }); B.shake = 12; heal(u, d); } });
     await heavyRecover(u, f); },
 };
 // draw one clip frame with feet at (0,0) and body height bodyH
@@ -1360,8 +1367,8 @@ function drawFx(g, f) {
       g.globalCompositeOperation = 'source-over'; break; }
     case 'sproj': { const im = img(A + 'kf/' + (f.src || 'blay_fx_' + f.k) + '.webp' + AV); if (!im.ok) break; const e = p < .5 ? p * 1.25 : .625 + (p - .5) * .75, x = f.x0 + (f.x1 - f.x0) * Math.min(1, e), h = f.s * (.7 + .5 * Math.min(1, p * 1.4)), w = h * im.el.naturalWidth / im.el.naturalHeight;
       g.translate(x, f.y); if (f.mir) g.scale(-1, 1); g.rotate((f.rot || 0) + (f.spin ? p * f.spin : 0)); if (f.hue) g.filter = `hue-rotate(${f.hue}deg) saturate(1.4)`; if (f.flip) g.scale(1, -1); const al = p < .78 ? 1 : 1 - (p - .78) / .22, X = -w * .75, Y = -h / 2;
-      g.globalAlpha = al; g.shadowColor = f.glow || '#4f8dff'; g.shadowBlur = Math.max(18, h * .28); g.drawImage(im.el, X, Y, w, h); g.shadowBlur = Math.max(8, h * .1); g.shadowColor = f.glow2 || '#bfd6ff'; g.drawImage(im.el, X, Y, w, h);
-      g.shadowBlur = 0; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .55; g.drawImage(im.el, X, Y, w, h); g.globalCompositeOperation = 'source-over'; break; }
+      const SRC = f.tint ? tintImg(im.el, f.tint) : im.el; g.globalAlpha = al; g.shadowColor = f.glow || '#4f8dff'; g.shadowBlur = Math.max(18, h * .28); g.drawImage(SRC, X, Y, w, h); g.shadowBlur = Math.max(8, h * .1); g.shadowColor = f.glow2 || '#bfd6ff'; g.drawImage(SRC, X, Y, w, h);
+      g.shadowBlur = 0; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .55; g.drawImage(SRC, X, Y, w, h); g.globalCompositeOperation = 'source-over'; break; }
     case 'arrowP': { const im = img(A + 'kf/fx_arrow.webp' + AV); if (im.ok) { const e = Math.min(1, p / (f.hitAt || .55)), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e - Math.sin(e * Math.PI) * (f.arc || 0), a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0), al = e < 1 ? 1 : Math.max(0, 1 - (p - (f.hitAt || .55)) * 4);
         if (al <= 0) break; const h = (f.len || 46) * .9 * Math.sqrt((f.w || 3) / 3), w = h * im.el.naturalWidth / im.el.naturalHeight * 1.25; g.globalAlpha = al; g.translate(x, y); g.rotate(a); g.shadowColor = f.c || GOLD; g.shadowBlur = 16; g.drawImage(im.el, -w * .85, -h / 2, w, h); g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .4; g.drawImage(im.el, -w * .85, -h / 2, w, h); g.globalCompositeOperation = 'source-over'; break; } }
     case 'arrowP_code': { // code-drawn fallback: straight or falling (rain), with a light trail

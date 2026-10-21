@@ -28,3 +28,10 @@ Lessons from Dufie and Blay. Read before writing any hero's sheets.
 - Slash projectiles: separate keyed images, full size from the blade tip, growing a little, strong double glow, slow enough to read.
 - Phantom trail: blue tinted afterimages dropped every ~18 ms, ~1.6 s life.
 - Shunpo: anticipation pose, vanish with smear, reappear sliding (snap step).
+
+## Credit budget (important)
+- Never one pose per sheet: it costs 4x. Use the 4-figure sheet (idle anchor + 3 move poses) or 3 move poses, about 20 credits per sheet.
+- Prevent touching with layout words, not fewer figures: "four equal columns, each figure fully inside its own column with a wide empty gap of plain green between columns; weapons and cloth stay inside the column".
+- Validate every sheet with check2.py-style component separation before extracting; regenerate only the failing sheet.
+- Extract by connected components, never by column cuts (column cuts slice limbs).
+- Left-facing poses are fixed by mirroring in code, not by regenerating.
