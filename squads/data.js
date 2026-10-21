@@ -37,6 +37,10 @@ export const HEROES = {
     kit: ['Cleave', 'Bloodletting', 'Fury', 'Dwannimmen'], notes: ['Big cleave.', 'A cleave that heals for half the damage.', 'Hits 40% harder for 3 turns but costs 10% health.', 'Ram\'s horns: a crushing cleave that heals for half the damage.'], sym: 'dwannimen' },
   dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', kr: 'anadwo sekan', en: 'Night blade', rarity: 'SSR',   size: 0.98, hp: 800, atk: 74, def: 18, cls: 'shadow', spd: 124, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Night Cut', 'Shadow Step', 'Vanish', 'Nkyinkyim'], notes: ['Quick cut.', 'A certain critical strike, then Dufie moves 50% up the turn order.', 'Dodges the next attack completely.', 'The twisting path: six cuts in a row.'], sym: 'nkyimkyim' },
+  sekan:    { name: 'Anadwo Sekan', role: 'Ɔkofoɔ',   kr: 'ɔkofoɔ',       en: 'Kickboxer', rarity: 'SR',      size: 1.0,  hp: 860, atk: 66, def: 20, cls: 'shadow', spd: 116, cd: [2, 3], flip: [0, 0, 0],
+    kit: ['Jab Cross Kick', 'Spinning Back Kick', 'Flying Knee', 'Fawohodie'], notes: ['A jab, a cross and a high kick.', 'A spinning heel: damage and the enemy loses 30% of its turn meter.', 'A leaping knee: damage and a 1-turn stun that cancels a charged attack.', 'Freedom: a storm of punches and kicks ending in a falling heel that stuns.'], sym: 'fawohodie' },
+  bayi:     { name: 'Bayibɔnsam', role: 'Ɔbayifoɔ',    kr: 'ɔbayifoɔ',     en: 'Life drainer', rarity: 'SSR',  size: 1.04, hp: 900, atk: 62, def: 22, cls: 'sage', spd: 106, cd: [2, 3], flip: [0, 0, 0],
+    kit: ['Claw', 'Siphon', 'Hollow Pact', 'Ohene Adwa'], notes: ['A hooked claw cut that heals a little.', 'Drains the enemy: damage, and heals for all of it.', 'Steals 35% of the enemy\'s turn meter.', 'The king\'s stool: drains a huge chunk of health and heals for all of it.'], sym: 'oheneAdwa' },
 };
 export const STARTERS = Object.keys(HEROES); // beta: every hero unlocked while spells and animations are built
 export const SKILL_MAX = 10;
@@ -135,6 +139,12 @@ export const SPELLS = {
   afrakoma1: L('afrakoma', 1, 2), afrakoma2: L('afrakoma', 2, 3),
   afrWhirl: { hero: 'afrakoma', name: 'Whirlwind', note: 'Three spinning axe cuts.', cd: 3, t: 'melee', mult: .5, hits: 3, kind: 'melee' },
   afrOath: { hero: 'afrakoma', name: 'Blood Oath', note: 'Heals 20% and hits 20% harder for 2 turns.', cd: 4, t: 'self', heal: .2, atkUp: 1.2, turns: 2, kind: 'heal' },
+  sekan1: L('sekan', 1, 2), sekan2: L('sekan', 2, 3),
+  sekRush: { hero: 'sekan', name: 'Night Rush', note: 'Three fast strikes, then he moves 30% up the turn order.', cd: 3, t: 'melee', mult: .45, hits: 3, tmSelf: .3, kind: 'melee' },
+  sekGuard: { hero: 'sekan', name: 'Breath Guard', note: 'Heals 12% and guards: the next hit is halved.', cd: 4, t: 'self', heal: .12, guard: 1, kind: 'heal' },
+  bayi1: L('bayi', 1, 3), bayi2: L('bayi', 2, 3),
+  bayMist: { hero: 'bayi', name: 'Blood Mist', note: 'A blood mist: burns for 3 turns and heals 8%.', cd: 3, t: 'ranged', mult: .6, heal: .08, proj: 'hex', kind: 'ranged' },
+  bayCurse: { hero: 'bayi', name: 'Red Curse', note: 'Defence down for 2 turns, and he hits 20% harder for 2 turns.', cd: 4, t: 'ranged', mult: .5, foe: [['defDown', 2]], atkUp: 1.2, turns: 2, kind: 'ranged' },
   dufie1: L('dufie', 1, 2), dufie2: L('dufie', 2, 3),
   dufKick: { hero: 'dufie', name: 'Crescent Kick', note: 'A spinning kick and a falling heel: 1-turn stun that cancels a charged attack.', cd: 3, t: 'melee', mult: 1.0, foe: [['stun', 1]], kind: 'melee' },
   dufStars: { hero: 'dufie', name: 'Star Daggers', note: 'Five thrown knives: defence down for 2 turns.', cd: 2, t: 'ranged', mult: .26, hits: 5, foe: [['defDown', 2]], proj: 'dagger', kind: 'ranged' },
