@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261021o';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021o';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021o';
+import { KF } from './kf.js?v=20261021p';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021p';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021p';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261021o';
+const AV = '?v=20261021p';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -85,7 +85,7 @@ for (const id in ANIM) for (const c of Object.values(ANIM[id])) c.sheets.forEach
 const kfImg = (id, p) => img(A + 'kf/' + KF[id].p[p][0] + AV);
 for (const id in KF) for (const p in KF[id].p) kfImg(id, p);
 for (let i = 0; i < 4; i++) img(A + 'kf/blay_fx_' + i + '.webp' + AV);
-for (const k of ['fx_spear', 'fx_arrow', 'fx_flash', 'fx_debris']) img(A + 'kf/' + k + '.webp' + AV);
+for (const k of ['fx_spear', 'fx_arrow', 'fx_flash', 'fx_debris', 'fx_fireball', 'fx_pillar', 'fx_axe', 'fx_burst']) img(A + 'kf/' + k + '.webp' + AV);
 // draw keyframe p for hero id with its floor point at (0,0), body scaled so the idle pose is bodyH tall
 function drawKF(g, id, p, bodyH, alpha = 1) {
   const D = KF[id].p[p]; if (!D) return false; const im = kfImg(id, p); if (!im.ok) return false;
@@ -107,7 +107,7 @@ const SEQ = {
   },
   blay: { // slashes fly from where he stands; the running dash leaves a blue phantom trail; he flash-steps home
     recover: [{ p: 'idle_3', ms: 43, hold: 1, ev: 'blink' }, { p: 'idle_0', ms: 124, x: 0, y: 0, snap: 1, ev: 'appear' }],
-    basic: [{ p: 'swA_2', ms: 150, x: 0, ev: 'wind' }, { p: 'swB_2', ms: 300, x: .06, ev: 'cut' }, { p: 'idle_0', ms: 100, x: 0 }],
+    basic: [{ p: 'idle_0', ms: 80, x: 0, ev: 'wind' }, { p: 'swB_1', ms: 220, x: .12, y: .7, phantom: 1 }, { p: 'swB_2', ms: 340, x: .16, y: 0, ev: 'cut' }, { p: 'idle_0', ms: 110, x: 0 }],
     blay1: [{ p: 'swA_2', ms: 223, x: .03, ev: 'cut1' }, { p: 'swA_3', ms: 236, x: .06, ev: 'cut2' }, { p: 'idle_0', ms: 87, x: 0 }],
     blay2: [{ p: 'parry_1', ms: 347, x: 0, ev: 'guard' }],
     blayRush: [{ p: 'idle_0', ms: 74, x: 0 }, { p: 'idle_3', ms: 186, x: .88, phantom: 1, lines: 1, ev: 'run' }, { p: 'swB_3', ms: 161, x: .9, ev: 'sweep' }, { p: 'swB_1', ms: 186, x: .9, y: .3, ev: 'rise' }, { p: 'swB_2', ms: 149, x: .9, y: 0, ev: 'drop' }],
@@ -152,6 +152,24 @@ const SEQ = {
     afrOath: [{ p: 'acB_3', ms: 700, x: 0, ev: 'oath' }],
     ult: [{ p: 'acB_3', ms: 480, x: 0, ev: 'roar' }, { p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'acB_1', ms: 200, x: .78, phantom: 1, ev: 'w' }, { p: 'ault_1', ms: 380, x: .78, y: .55, phantom: 1, ev: 'leap' }, { p: 'ault_2', ms: 480, x: .82, y: 0, ev: 'slam' }, { p: 'ault_3', ms: 380, x: .84, phantom: 1, ev: 'finish' }],
   },
+  kome: { // fire priestess: bell rings, fire throws and pillars, quick machete cuts
+    recover: [{ p: 'idle_3', ms: 220, x: 0, phantom: 1 }, { p: 'idle_0', ms: 100, x: 0 }],
+    basic: [{ p: 'idle_3', ms: 220, x: .7, phantom: 1, lines: 1 }, { p: 'kA_2', ms: 300, x: .8, ev: 'cut' }, { p: 'kA_3', ms: 240, x: .8, phantom: 1, ev: 'cut2' }],
+    kome1: [{ p: 'kB_1', ms: 750, x: 0, ev: 'heal' }],
+    kome2: [{ p: 'kA_1', ms: 220, x: 0, ev: 'ring' }, { p: 'kB_2', ms: 420, x: .04, ev: 'fire' }, { p: 'idle_0', ms: 120, x: 0 }],
+    komeVeil: [{ p: 'kA_1', ms: 650, x: 0, ev: 'veil' }],
+    komeHex: [{ p: 'kB_2', ms: 420, x: .04, ev: 'hex' }, { p: 'idle_0', ms: 120, x: 0 }],
+    ult: [{ p: 'qult_1', ms: 620, x: 0, ev: 'summon' }, { p: 'qult_2', ms: 520, x: .03, ev: 'pillars' }, { p: 'qult_3', ms: 560, x: .06, ev: 'push' }, { p: 'idle_0', ms: 140, x: 0 }],
+  },
+  owureku: { // twin-axe brawler: double chops, thrown spinning axes, tornado
+    recover: [{ p: 'idle_3', ms: 230, x: 0, phantom: 1 }, { p: 'idle_0', ms: 110, x: 0 }],
+    basic: [{ p: 'idle_3', ms: 220, x: .7, phantom: 1, lines: 1 }, { p: 'wA_1', ms: 160, x: .74 }, { p: 'wA_2', ms: 320, x: .82, ev: 'chop' }],
+    owureku1: [{ p: 'wB_1', ms: 260, x: 0 }, { p: 'wB_2', ms: 440, x: .03, ev: 'throw' }, { p: 'idle_0', ms: 120, x: 0 }],
+    owureku2: [{ p: 'wB_3', ms: 700, x: 0, ev: 'roar' }],
+    owuRend: [{ p: 'idle_3', ms: 220, x: .7, phantom: 1, lines: 1 }, { p: 'wA_1', ms: 160, x: .74 }, { p: 'wA_3', ms: 320, x: .84, ev: 'rend' }],
+    owuHide: [{ p: 'wB_3', ms: 700, x: 0, ev: 'hide' }],
+    ult: [{ p: 'wB_3', ms: 400, x: 0, ev: 'roar' }, { p: 'idle_3', ms: 220, x: .7, phantom: 1, lines: 1 }, { p: 'wult_1', ms: 200, x: .8, phantom: 1, ev: 'c' }, { p: 'wA_3', ms: 180, x: .82, phantom: 1, ev: 'c' }, { p: 'wult_1', ms: 200, x: .82, phantom: 1, ev: 'c' }, { p: 'wult_2', ms: 360, x: .8, y: .55, phantom: 1, ev: 'leap' }, { p: 'wult_3', ms: 440, x: .84, y: 0, ev: 'smash' }],
+  },
 };
 const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .42 - u.w * .3);
 // play a step list on a battle unit; onEv(name, step) fires at each step start
@@ -171,10 +189,10 @@ async function runKF(u, f, seq, onEv) {
 function kfOff(u) { const a = u.kfA; if (!a) return [0, 0]; const t = Math.min(1, (B.t - a.t0) / (a.d || .001)), e = 1 - (1 - t) ** 3; return [a.x0 + (a.x1 - a.x0) * e, a.y0 + (a.y1 - a.y0) * e]; }
 const kfEnd = (u) => { u.kfSpin = null; u.kfPh = false; u.kf = null; u.kfA = null; u.kfAlpha = 1; };
 const VIO = '#c58bff';
-const SPL = { dufie: 'ultE_2', blay: 'ultX_2', kuukua: 'thB_2', obiri: 'oult_1', gyakari: 'gult_2', afrakoma: 'ault_2' };
-const PH_HUE = { blay: 185, kuukua: 322, obiri: 15, gyakari: 28, afrakoma: 0 };
+const SPL = { dufie: 'ultE_2', blay: 'ultX_2', kuukua: 'thB_2', obiri: 'oult_1', gyakari: 'gult_2', afrakoma: 'ault_2', kome: 'qult_1', owureku: 'wult_2' };
+const PH_HUE = { kome: 40, owureku: 5, blay: 185, kuukua: 322, obiri: 15, gyakari: 28, afrakoma: 0 };
 const SOFT_HURT = new Set(['gyakari', 'afrakoma']);
-const PH_COL = { blay: '#3d7cff', kuukua: '#ff1f35', obiri: '#ffc83c', gyakari: '#ffb02e', afrakoma: '#ff6a1f', dufie: '#b070ff' }; // afterimage tint per hero
+const PH_COL = { kome: '#ffd23c', owureku: '#d0402a', blay: '#3d7cff', kuukua: '#ff1f35', obiri: '#ffc83c', gyakari: '#ffb02e', afrakoma: '#ff6a1f', dufie: '#b070ff' }; // afterimage tint per hero
 const TINT = document.createElement('canvas'), TG = TINT.getContext('2d');
 function drawTinted(g, q, col, alpha) { // the pose as a flat silhouette in the hero colour, with a light inner core
   const bh = q.bh || q.u.h, S = Math.ceil(bh * 2.4); if (TINT.width !== S) { TINT.width = S; TINT.height = S; }
@@ -229,7 +247,7 @@ async function blayRecover(u, f) { const sh = shunpo(u, f); await runKF(u, f, SE
 CHOREO.blay = {
   basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.blay.basic, async (ev) => {
       if (ev === 'wind') { const [hx, hy] = pos(u); fx('star', 220, { x: hx, y: hy - u.h * .9, r: u.h * .3, c: BLU }); }
-      if (ev === 'cut') { sproj(u, 2, { s: 1.5, yy: .55, ms: 520 }); await wait(140); const [x, y] = pos(f); fx('flash', 380, { x, y: y - f.h * .5, r: f.h * .7, c: BLU, n: 10 }); d = hit(u, f, m, { ...o, color: BLU }); hitStop(110); B.shake = 8; } }); kfEnd(u); return d; },
+      if (ev === 'cut') { const [hx, hy] = pos(u), [ox] = kfOff(u); debris(hx + ox + u.h * .3, hy, 10, u.h * .1); burst(hx + ox + u.h * .3, hy, ['#9fc2ff', '#fff'], 10, 4); shock(u, f, BLU, 1); sproj(u, 0, { s: .9, yy: .12, ms: 520 }); await wait(160); const [x, y] = pos(f); fx('flash', 380, { x, y: y - f.h * .5, r: f.h * .7, c: BLU, n: 10 }); d = hit(u, f, m, { ...o, color: BLU }); hitStop(110); B.shake = 8; } }); kfEnd(u); return d; },
   blay1: async (u, f, m) => { await runKF(u, f, SEQ.blay.blay1, async (ev) => {
       if (ev === 'cut1') { sproj(u, 2, { s: 1.15, yy: .62 }); await wait(140); hit(u, f, .8 * m, { color: BLU }); hitStop(80); }
       if (ev === 'cut2' && f.alive) { sproj(u, 0, { s: .75, yy: .58, flip: 1 }); await wait(140); hit(u, f, .8 * m, { color: BLU }); hitStop(90); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } });
@@ -331,6 +349,39 @@ CHOREO.afrakoma = {
       if (e === 'slam') { debris(hx + u.w * .4, hy, 18, u.h * .15); shock(u, f, ORA, 1); slam(u, f, ORA, 1); if (f.alive) tot += hit(u, f, 1.8 * m, { color: ORA, big: 1 }); }
       if (e === 'finish' && f.alive) { slam(u, f, ORA, 1); tot += hit(u, f, .8 * m, { color: ORA, big: 1 }); } });
     heal(u, tot * .5, true); await heavyRecover(u, f); },
+};
+// Kome: fire and spirit; Owureku: axes that fly
+const FIRE = '#ff8a1f', SPIRIT = '#ffe9a0', HEX = '#a64dff', RUST = '#d0402a';
+const fireball = (u, f, o = {}) => { const [hx, hy] = pos(u), [x, y] = pos(f); fx('sproj', o.ms || 520, { src: 'fx_fireball', x0: hx + u.h * .35, x1: x, y: hy - u.h * (o.yy ?? .6), s: u.h * (o.s ?? .35), hue: o.hue }); };
+const pillar = (x, y, h, d = 700) => fx('rise', d, { src: 'fx_pillar', x, y, h });
+CHOREO.kome = {
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.kome.basic, async (e) => { const [x, y] = pos(f);
+      if (e === 'cut') { fx('sproj', 360, { src: 'fx_burst', x0: x, x1: x, y: y - f.h * .5, s: f.h * .8 }); d = hit(u, f, .6 * m, { ...o, color: FIRE }); hitStop(80); B.shake = 6; }
+      if (e === 'cut2' && f.alive) { fx('arc', 280, { x, y: y - f.h * .3, r: f.h * .5, c: FIRE, dir: -1, tilt: .3 }); d += hit(u, f, .4 * m, { ...o, color: FIRE }); } }); await heavyRecover(u, f); return d; },
+  kome1: async (u, f, m) => { await runKF(u, null, SEQ.kome.kome1, async (e) => { if (e === 'heal') { const [x, y] = pos(u); fx('ink', 900, { x, y: y - u.h * .55, s: u.h * .55, sym: 'nyameDua', c: '#7ee08a', small: 1 }); fx('ward', 900, { unit: u, c: '#7ee08a' }); heal(u, u.max * .22 * m); delete u.st.stun; delete u.st.burn; SFX.heal(); } }); kfEnd(u); },
+  kome2: async (u, f, m) => { await runKF(u, f, SEQ.kome.kome2, async (e) => { const [x, y] = pos(f); if (e === 'ring') { const [hx, hy] = pos(u); fx('star', 300, { x: hx - u.h * .1, y: hy - u.h * .9, r: u.h * .3, c: SPIRIT }); }
+      if (e === 'fire') { fireball(u, f); await wait(300); fx('sproj', 500, { src: 'fx_burst', x0: x, x1: x, y: y - f.h * .5, s: f.h * 1.1 }); pillar(x, y, f.h * 1.3); hit(u, f, .7 * m, { color: FIRE }); addSt(f, 'burn', 3, { burnPow: u.atk * .7 * m }); hitStop(90); B.shake = 7; } }); kfEnd(u); },
+  komeVeil: async (u, f, m) => { await runKF(u, null, SEQ.kome.komeVeil, async (e) => { if (e === 'veil') { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .2); delete u.st.stun; delete u.st.burn; fx('ward', 900, { unit: u, c: SPIRIT }); float(u, 'SPIRIT VEIL', SPIRIT, .9); } }); kfEnd(u); },
+  komeHex: async (u, f, m) => { await runKF(u, f, SEQ.kome.komeHex, async (e) => { if (e === 'hex') { fireball(u, f, { hue: 250 }); await wait(300); const [x, y] = pos(f); fx('flash', 420, { x, y: y - f.h * .5, r: f.h * .7, c: HEX }); hit(u, f, .9 * m, { color: HEX }); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } }); kfEnd(u); },
+  ult: async (u, f, m, T) => { const burning = !!f.st.burn; await runKF(u, f, SEQ.kome.ult, async (e) => { const [x, y] = pos(f), [hx, hy] = pos(u);
+      if (e === 'summon') { fx('star', 600, { x: hx, y: hy - u.h * 1.1, r: u.h * .7, c: SPIRIT }); heal(u, u.max * .2 * m); SFX.heal(); }
+      if (e === 'pillars') { await impactFrames(T, u); for (let k = 0; k < 5; k++) { pillar(x + (k - 2) * f.w * .45, y, f.h * rnd(1.2, 1.8), 800); await wait(70); } B.shake = 10; if (f.alive) hit(u, f, (burning ? 1.4 : .7) * m, { color: FIRE, big: 1 }); }
+      if (e === 'push' && f.alive) { fireball(u, f, { s: .8, ms: 420 }); await wait(260); fx('sproj', 600, { src: 'fx_burst', x0: x, x1: x, y: y - f.h * .5, s: f.h * 1.8 }); B.shake = 16; hitStop(150); hit(u, f, (burning ? 2.0 : 1.0) * m, { color: FIRE, big: 1 }); } });
+    kfEnd(u); },
+};
+const axeThrow = (u, f, o = {}) => { const [hx, hy] = pos(u), [x, y] = pos(f); fx('sproj', o.ms || 420, { src: 'fx_axe', x0: hx + u.h * .3, x1: x, y: hy - u.h * (o.yy ?? .7), s: u.h * (o.s ?? .3), spin: 22 }); };
+CHOREO.owureku = {
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.owureku.basic, async (e) => { if (e === 'chop') { shock(u, f, RUST, 0); slam(u, f, RUST, 1); d = hit(u, f, m, { ...o, color: RUST }); } }); await heavyRecover(u, f); return d; },
+  owureku1: async (u, f, m) => { await runKF(u, f, SEQ.owureku.owureku1, async (e) => { if (e === 'throw') { axeThrow(u, f); await wait(250); slam(u, f, RUST, 0); hit(u, f, 1.1 * m, { color: RUST }); addSt(f, 'stun', 1); } }); kfEnd(u); },
+  owureku2: async (u, f, m) => { await runKF(u, null, SEQ.owureku.owureku2, async (e) => { if (e === 'roar') { const [x, y] = pos(u); fx('star', 600, { x, y: y - u.h * .8, r: u.h * .8, c: RUST }); B.shake = 8; addSt(u, 'atkUp', 3); u.atkUpK = 1.3 + .03 * (m - 1) * 10; heal(u, u.max * .1); float(u, 'RAGE', RUST, 1); } }); kfEnd(u); },
+  owuRend: async (u, f, m) => { await runKF(u, f, SEQ.owureku.owuRend, async (e) => { if (e === 'rend' && f.alive) { const [x, y] = pos(f); fx('x', 420, { unit: f, c: RUST }); slam(u, f, RUST, 1); hit(u, f, 1.2 * m, { color: RUST, big: 1 }); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } }); await heavyRecover(u, f); },
+  owuHide: async (u, f, m) => { await runKF(u, null, SEQ.owureku.owuHide, async (e) => { if (e === 'hide') { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .25); fx('ward', 900, { unit: u, c: '#c9873a' }); float(u, 'IRON HIDE', '#e0b070', .9); } }); kfEnd(u); },
+  ult: async (u, f, m, T) => { await runKF(u, f, SEQ.owureku.ult, async (e) => { const [hx, hy] = pos(u);
+      if (e === 'roar') { fx('star', 500, { x: hx, y: hy - u.h * .8, r: u.h * .8, c: RUST }); B.shake = 8; for (let k = 0; k < 2; k++) { axeThrow(u, f, { yy: .5 + k * .3, ms: 380 }); await wait(120); } }
+      if (e === 'c' && f.alive) { slam(u, f, RUST, 0); hit(u, f, .5 * m, { color: RUST }); }
+      if (e === 'leap') await impactFrames(T, u);
+      if (e === 'smash') { debris(hx + u.w * .4, hy, 18, u.h * .15); shock(u, f, RUST, 1); slam(u, f, RUST, 1); if (f.alive) hit(u, f, 1.95 * m, { color: RUST, big: 1 }); } });
+    await heavyRecover(u, f); },
 };
 // draw one clip frame with feet at (0,0) and body height bodyH
 function drawClip(g, c, fi, bodyH) {
@@ -961,7 +1012,7 @@ async function impactFrames(targets, src) {
 function endUlt() { B.dimTo = 0; B.cam.tz = B.rest.z; B.cam.tx = .5; B.cam.ty = B.rest.y; }
 
 // spell icons: generated art when a hero has had an art pass, else a glyph on the class colour
-const ICONS = { gyakari: ['basic', 'gyakari1', 'gyakari2', 'gyaSweep', 'gyaFirm', 'ult'], afrakoma: ['basic', 'afrakoma1', 'afrakoma2', 'afrWhirl', 'afrOath', 'ult'], kuukua: ['basic', 'kuukua1', 'kuukua2', 'kuuThrow', 'kuuWall', 'ult'], obiri: ['basic', 'obiri1', 'obiri2', 'obiVolley', 'obiKnee', 'ult'], dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'], blay: ['basic', 'blay1', 'blay2', 'blayRush', 'blayRally', 'ult'] };
+const ICONS = { kome: ['basic', 'kome1', 'kome2', 'komeHex', 'komeVeil', 'ult'], owureku: ['basic', 'owureku1', 'owureku2', 'owuRend', 'owuHide', 'ult'], gyakari: ['basic', 'gyakari1', 'gyakari2', 'gyaSweep', 'gyaFirm', 'ult'], afrakoma: ['basic', 'afrakoma1', 'afrakoma2', 'afrWhirl', 'afrOath', 'ult'], kuukua: ['basic', 'kuukua1', 'kuukua2', 'kuuThrow', 'kuuWall', 'ult'], obiri: ['basic', 'obiri1', 'obiri2', 'obiVolley', 'obiKnee', 'ult'], dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'], blay: ['basic', 'blay1', 'blay2', 'blayRush', 'blayRally', 'ult'] };
 const KIND_GLYPH = { melee: 'warrior', ranged: 'hunter', buff: 'growth', shield: 'guardian', heal: 'sage' };
 function spellIcon(id, i, eq, sidIn) {
   const H = HEROES[id], key = sidIn || (i === 0 ? 'basic' : i === 3 ? 'ult' : (eq || SAVE.heroes[id]?.eq || H.pool)[i - 1]);
@@ -1033,11 +1084,11 @@ async function doHero(u, i) {
   const T = [f];
   switch (u.id) {
     case 'blay': if (CHOREO.blay.ult) { await CHOREO.blay.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#fff', dir: 1, big: 1 }); if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1 }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 3.0 * m, { big: 1 }); break; }
-    case 'owureku': { await impactFrames(T, u); for (let k = 0; k < 3 && f.alive; k++) { fx('slash', 300, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .55, c: '#ffb070', dir: 1, big: 1 }); hit(u, f, 1.15 * m, { color: '#ffb070', big: 1 }); await wait(160); } break; }
+    case 'owureku': if (CHOREO.owureku.ult && KF.owureku) { await CHOREO.owureku.ult(u, f, m, T); break; } { await impactFrames(T, u); for (let k = 0; k < 3 && f.alive; k++) { fx('slash', 300, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .55, c: '#ffb070', dir: 1, big: 1 }); hit(u, f, 1.15 * m, { color: '#ffb070', big: 1 }); await wait(160); } break; }
     case 'gyakari': if (CHOREO.gyakari.ult && KF.gyakari) { await CHOREO.gyakari.ult(u, f, m, T); break; } { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .35 * m); await wait(300); await impactFrames(T, u); hit(u, f, 1.2 * m + u.shieldAmt / u.atk * .5, { color: '#6fb6ff', big: 1 }); break; }
     case 'obiri': if (CHOREO.obiri.ult && KF.obiri) { await CHOREO.obiri.ult(u, f, m, T); break; } { await impactFrames(T, u); const [x0, y0] = pos(u), [x, y] = pos(f); fx('beam', 500, { x0, y0: y0 - u.h * .6, x1: x, y1: y - f.h * .5, c: '#ffd23c' }); hit(u, f, 3.2 * m, { color: '#ffd23c', crit: true, big: 1 }); break; }
     case 'kuukua': if (CHOREO.kuukua.ult && KF.kuukua) { await CHOREO.kuukua.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('rain', 600, { unit: f }); hit(u, f, (f.st.slow || f.st.defDown ? 3.6 : 1.8) * m, { color: '#e6edf5', big: 1 }); break; }
-    case 'kome': { heal(u, u.max * .2 * m); await impactFrames(T, u); fx('boom', 800, { unit: f }); hit(u, f, (f.st.burn ? 3.4 : 1.7) * m, { color: '#ffb43c', big: 1 }); SFX.heal(); break; }
+    case 'kome': if (CHOREO.kome.ult && KF.kome) { await CHOREO.kome.ult(u, f, m, T); break; } { heal(u, u.max * .2 * m); await impactFrames(T, u); fx('boom', 800, { unit: f }); hit(u, f, (f.st.burn ? 3.4 : 1.7) * m, { color: '#ffb43c', big: 1 }); SFX.heal(); break; }
     case 'afrakoma': if (CHOREO.afrakoma.ult && KF.afrakoma) { await CHOREO.afrakoma.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#ff8a3c', dir: 1, big: 1 }); const d = hit(u, f, 3.0 * m, { color: '#ff8a3c', big: 1 }); heal(u, d * .5, true); break; }
     case 'dufie': if (CHOREO.dufie.ult) { await CHOREO.dufie.ult(u, f, m, T); break; } { await impactFrames(T, u); const [x, y] = pos(f); for (let k = 0; k < 6 && f.alive; k++) { fx('arc', 260, { x: x + rnd(-8, 8), y: y - f.h * (.35 + .3 * Math.random()), r: f.h * rnd(.45, .7), c: k % 2 ? '#ffffff' : '#c58bff', dir: k % 2 ? -1 : 1, tilt: rnd(-.6, .6) }); hit(u, f, .62 * m, { color: '#c58bff' }); await wait(110); } fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: '#c58bff' }); fx('smoke', 900, { x, y, r: f.h * .5, c: '#c58bff', n: 12 }); break; }
   }
@@ -1235,7 +1286,7 @@ function drawFx(g, f) {
       g.globalAlpha = fade; g.fillStyle = '#ffffff'; crescent(R0, th * .55); g.fill();
       g.globalCompositeOperation = 'source-over'; break; }
     case 'sproj': { const im = img(A + 'kf/' + (f.src || 'blay_fx_' + f.k) + '.webp' + AV); if (!im.ok) break; const e = p < .5 ? p * 1.25 : .625 + (p - .5) * .75, x = f.x0 + (f.x1 - f.x0) * Math.min(1, e), h = f.s * (.7 + .5 * Math.min(1, p * 1.4)), w = h * im.el.naturalWidth / im.el.naturalHeight;
-      g.translate(x, f.y); if (f.mir) g.scale(-1, 1); g.rotate(f.rot || 0); if (f.flip) g.scale(1, -1); const al = p < .78 ? 1 : 1 - (p - .78) / .22, X = -w * .75, Y = -h / 2;
+      g.translate(x, f.y); if (f.mir) g.scale(-1, 1); g.rotate((f.rot || 0) + (f.spin ? p * f.spin : 0)); if (f.hue) g.filter = `hue-rotate(${f.hue}deg) saturate(1.4)`; if (f.flip) g.scale(1, -1); const al = p < .78 ? 1 : 1 - (p - .78) / .22, X = -w * .75, Y = -h / 2;
       g.globalAlpha = al; g.shadowColor = '#4f8dff'; g.shadowBlur = Math.max(18, h * .28); g.drawImage(im.el, X, Y, w, h); g.shadowBlur = Math.max(8, h * .1); g.shadowColor = '#bfd6ff'; g.drawImage(im.el, X, Y, w, h);
       g.shadowBlur = 0; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .55; g.drawImage(im.el, X, Y, w, h); g.globalCompositeOperation = 'source-over'; break; }
     case 'arrowP': { const im = img(A + 'kf/fx_arrow.webp' + AV); if (im.ok) { const e = Math.min(1, p / (f.hitAt || .55)), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e - Math.sin(e * Math.PI) * (f.arc || 0), a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0), al = e < 1 ? 1 : Math.max(0, 1 - (p - (f.hitAt || .55)) * 4);
@@ -1263,6 +1314,8 @@ function drawFx(g, f) {
       g.globalCompositeOperation = 'lighter'; g.globalAlpha = fade; const lg = g.createLinearGradient(x - H * 1.2, 0, x + H * .3, 0); lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(.8, f.c); lg.addColorStop(1, '#fff');
       g.fillStyle = lg; g.beginPath(); g.moveTo(x - H * 1.2, f.y); g.quadraticCurveTo(x - H * .2, f.y - H * 1.1, x + H * .3, f.y); g.closePath(); g.fill();
       g.globalCompositeOperation = 'source-over'; g.fillStyle = 'rgba(120,90,60,.55)'; for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(x - i * H * .22, f.y - H * .08 * (i % 3), H * .1 * (1 - i / 7), 0, 6.28); g.fill(); } break; }
+    case 'rise': { const im = img(A + 'kf/' + f.src + '.webp' + AV); if (!im.ok) break; const e = Math.min(1, p / .25), fade = p < .6 ? 1 : 1 - (p - .6) / .4, h = f.h * e, w = f.h * im.el.naturalWidth / im.el.naturalHeight;
+      g.globalAlpha = fade; g.globalCompositeOperation = 'lighter'; g.drawImage(im.el, 0, im.el.naturalHeight * (1 - e), im.el.naturalWidth, im.el.naturalHeight * e, f.x - w / 2, f.y - h, w, h); g.globalCompositeOperation = 'source-over'; break; }
     case 'ward': { const [x, y] = pos(f.unit), [ox, oy] = kfOff(f.unit), d = f.unit.side ? -1 : 1, H = f.unit.h * 1.15, X = x + d * (ox + f.unit.w * .45), e = Math.min(1, p / .15), fade = p < .6 ? 1 : 1 - (p - .6) / .4;
       g.globalCompositeOperation = 'lighter'; g.globalAlpha = fade * .85; const lg = g.createLinearGradient(X - 26, 0, X + 26, 0); lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(.5, f.c); lg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = lg;
       g.beginPath(); g.ellipse(X, y - oy - H * .5, 26 * e, H * .55 * e, 0, 0, 6.28); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.globalAlpha = fade * .7; g.beginPath(); g.ellipse(X, y - oy - H * .5, 10 * e, H * .52 * e, 0, 0, 6.28); g.stroke(); g.globalCompositeOperation = 'source-over'; break; }
