@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261021e';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021e';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021e';
+import { KF } from './kf.js?v=20261021f';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021f';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021f';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261021e'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
+const AV = '?v=20261021f'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
 function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
@@ -96,14 +96,14 @@ const SEQ = {
       { p: 'ultF_2', ms: 230, x: 1.04, y: .58, lines: 1, ghost: 1, ev: 'k3' }, { p: 'ultF_3', ms: 420, x: 1.08, y: 0, lines: 1, ev: 's4' },
       { p: 'recover_1', ms: 130, x: .6, y: .36, ghost: 1 }, { p: 'recover_2', ms: 130, x: .25, y: .42, ghost: 1 }, { p: 'recover_3', ms: 180, x: 0, y: 0, ev: 'land' }],
   },
-  blay: {
-    recover: [{ p: 'idle_3', ms: 150, x: .45, y: 0, ghost: 1 }, { p: 'idle_0', ms: 140, x: 0, y: 0 }],
-    basic: [{ p: 'basic_1', ms: 200, x: .15 }, { p: 'basic_2', ms: 260, x: .2, lines: 1, ev: 'cut' }, { p: 'basic_3', ms: 220, x: .2 }],
-    blay1: [{ p: 'idle_3', ms: 150, x: .45, ghost: 1 }, { p: 'twin_1', ms: 240, x: .5, ev: 'cut1' }, { p: 'twin_2', ms: 280, x: .5, lines: 1, ev: 'cut2' }, { p: 'twin_3', ms: 200, x: .45 }],
-    blay2: [{ p: 'parry_1', ms: 520, x: 0, ev: 'guard' }],
-    blayRush: [{ p: 'idle_3', ms: 160, x: .8, lines: 1, ghost: 1 }, { p: 'basic_1', ms: 140, x: .9 }, { p: 'basic_2', ms: 300, x: 1, lines: 1, ev: 'cut' }, { p: 'basic_3', ms: 180, x: 1 }],
-    blayRally: [{ p: 'parry_3', ms: 650, x: 0, ev: 'rally' }],
-    ult: [{ p: 'ult_0', ms: 160, x: 0 }, { p: 'ult_1', ms: 520, x: -.05, ev: 'charge' }, { p: 'ult_2', ms: 700, x: .25, lines: 1, ghost: 1, ev: 'release' }, { p: 'ult_3', ms: 500, x: .25, ev: 'after' }, { p: 'idle_0', ms: 120, x: 0 }],
+  blay: { // shunpo: anticipation, vanish with a smear, reappear sliding (no in-between frames)
+    recover: [{ p: 'idle_3', ms: 130, hold: 1, ghost: 1 }, { p: 'idle_3', ms: 60, hold: 1, ev: 'blink' }, { p: 'basic_1', ms: 190, x: 0, snap: 1, ev: 'appear' }, { p: 'idle_0', ms: 110, x: 0 }],
+    basic: [{ p: 'idle_3', ms: 130, x: 0, ghost: 1 }, { p: 'idle_3', ms: 60, x: 0, ev: 'blink' }, { p: 'basic_1', ms: 170, x: .75, snap: 1, ev: 'appear' }, { p: 'basic_2', ms: 300, x: .8, ev: 'cut' }, { p: 'basic_3', ms: 180, x: .8 }],
+    blay1: [{ p: 'idle_3', ms: 130, x: 0, ghost: 1 }, { p: 'idle_3', ms: 60, x: 0, ev: 'blink' }, { p: 'basic_1', ms: 150, x: .7, snap: 1, ev: 'appear' }, { p: 'twin_1', ms: 250, x: .75, ev: 'cut1' }, { p: 'twin_2', ms: 290, x: .75, ev: 'cut2' }, { p: 'twin_3', ms: 180, x: .75 }],
+    blay2: [{ p: 'parry_1', ms: 560, x: 0, ev: 'guard' }],
+    blayRush: [{ p: 'idle_3', ms: 130, x: 0, ghost: 1 }, { p: 'idle_3', ms: 60, x: 0, ev: 'blink' }, { p: 'basic_1', ms: 120, x: .95, snap: 1, ev: 'appear' }, { p: 'basic_2', ms: 320, x: 1, ev: 'cut' }, { p: 'basic_3', ms: 160, x: 1 }],
+    blayRally: [{ p: 'parry_3', ms: 700, x: 0, ev: 'rally' }],
+    ult: [{ p: 'ult_0', ms: 160, x: 0 }, { p: 'ult_1', ms: 560, x: -.03, ev: 'charge' }, { p: 'ult_2', ms: 800, x: .12, ev: 'release' }, { p: 'ult_3', ms: 520, x: .12 }, { p: 'idle_0', ms: 120, x: 0 }],
   },
 };
 const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .42 - u.w * .3);
@@ -111,8 +111,8 @@ const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .4
 async function runKF(u, f, seq, onEv) {
   const R = f ? reachTo(u, f) : 0;
   for (const st of seq) {
-    const x1 = (st.x ?? 0) * R, y1 = (st.y ?? 0) * u.h, cur = kfOff(u);
-    u.kf = st.p; u.kfA = { x0: cur[0], x1, y0: cur[1], y1, t0: B.t, d: st.ms / 1000 * .7 };
+    const cur = kfOff(u), x1 = st.hold ? cur[0] : (st.x ?? 0) * R, y1 = st.hold ? cur[1] : (st.y ?? 0) * u.h;
+    u.kf = st.p; u.kfA = st.snap ? { x0: x1, x1, y0: y1, y1, t0: B.t, d: .001 } : { x0: cur[0], x1, y0: cur[1], y1, t0: B.t, d: st.ms / 1000 * .7 };
     if (st.lines) { const [hx, hy] = pos(u); fx('lines', 260, { x0: hx + cur[0], x1: hx + x1, y: hy - u.h * .5, h: u.h * .7 }); }
     if (st.ghost) B.ghosts.push({ u, p: st.p, x: pos(u)[0] + cur[0], y: pos(u)[1] - cur[1], t0: B.t });
     if (st.ev && onEv) await onEv(st.ev, st);
@@ -161,21 +161,25 @@ CHOREO.dufie = {
 };
 // Blay: calm body, the cut is the event: blue-black crescents leave the blade and fly across the screen
 const BLU = '#2f6bff', BLK = '#0b1230';
-const sproj = (u, k, o = {}) => { const [hx, hy] = pos(u); fx('sproj', o.ms || 520, { k, x0: hx + u.w * .3, x1: o.x1 ?? B.w * 1.15, y: hy - u.h * (o.yy ?? .55), s: u.h * (o.s ?? .9), rot: o.rot || 0, flip: o.flip }); };
-async function blayRecover(u, f) { await runKF(u, f, SEQ.blay.recover); kfEnd(u); }
+const sproj = (u, k, o = {}) => { const [hx, hy] = pos(u), d = u.side ? -1 : 1, [ox] = kfOff(u); fx('sproj', o.ms || 560, { k, x0: hx + d * (ox + u.h * .5), x1: o.x1 ?? (d > 0 ? B.w * 1.25 : -B.w * .25), y: hy - u.h * (o.yy ?? .55), s: u.h * (o.s ?? .9), rot: o.rot || 0, flip: o.flip, mir: d < 0 }); };
+// shunpo events shared by every Blay move: vanish leaves a navy smear to where he lands
+const shunpo = (u, f) => async (ev, st) => { const [hx, hy] = pos(u), d = u.side ? -1 : 1;
+  if (ev === 'blink') { const [ox] = kfOff(u); u.kfAlpha = 0; u._sx = hx + d * ox; SFX.hit(); burst(u._sx, hy, ['#1a2550', '#9fb4ff'], 6, 2); }
+  if (ev === 'appear') { const [ox] = kfOff(u); u.kfAlpha = 1; fx('streak', 260, { x0: u._sx ?? hx, x1: hx + d * ox, y: hy - u.h * .45, h: u.h * .55, c: '#1a2a6a' }); burst(hx + d * ox, hy, ['#d8c9b0', '#fff'], 8, 3); } };
+async function blayRecover(u, f) { const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.recover, sh); kfEnd(u); }
 CHOREO.blay = {
-  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.blay.basic, async (ev) => { if (ev === 'cut') { sproj(u, 0, { s: .55, ms: 420 }); await wait(150); d = hit(u, f, m, { ...o, color: BLU }); hitStop(70); } }); await blayRecover(u, f); return d; },
-  blay1: async (u, f, m) => { await runKF(u, f, SEQ.blay.blay1, async (ev) => {
-      if (ev === 'cut1') { sproj(u, 1, { s: .8, rot: .5, ms: 460, yy: .5 }); await wait(130); hit(u, f, .8 * m, { color: BLU }); hitStop(80); }
-      if (ev === 'cut2' && f.alive) { sproj(u, 1, { s: .8, rot: -.5, flip: 1, ms: 460, yy: .6 }); await wait(130); hit(u, f, .8 * m, { color: BLU }); hitStop(90); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } });
+  basic: async (u, f, m, o) => { let d = 0; const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.basic, async (ev, st) => { await sh(ev, st); if (ev === 'cut') { sproj(u, 0, { s: .6, ms: 480, yy: .64 }); await wait(140); d = hit(u, f, m, { ...o, color: BLU }); hitStop(70); } }); await blayRecover(u, f); return d; },
+  blay1: async (u, f, m) => { const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.blay1, async (ev, st) => { await sh(ev, st);
+      if (ev === 'cut1') { sproj(u, 2, { s: .9, rot: .25, ms: 520, yy: .55 }); await wait(130); hit(u, f, .8 * m, { color: BLU }); hitStop(80); }
+      if (ev === 'cut2' && f.alive) { sproj(u, 2, { s: .9, rot: -.25, flip: 1, ms: 520, yy: .6 }); await wait(130); hit(u, f, .8 * m, { color: BLU }); hitStop(90); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } });
     await blayRecover(u, f); },
   blay2: async (u, f, m) => { await runKF(u, null, SEQ.blay.blay2, async (ev) => { if (ev === 'guard') { u.st.guard = 1; fx('spr', 600, { k: 'shield', unit: u, hs: .9, a: .45 }); float(u, 'PARRY', '#9fd0ff', .8); } }); kfEnd(u); },
-  blayRush: async (u, f, m) => { await runKF(u, f, SEQ.blay.blayRush, async (ev) => { if (ev === 'cut') { sproj(u, 0, { s: .7, ms: 420 }); await wait(120); hit(u, f, 1.4 * m, { color: BLU }); hitStop(110); B.shake = 6; } });
+  blayRush: async (u, f, m) => { const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.blayRush, async (ev, st) => { await sh(ev, st); if (ev === 'cut') { sproj(u, 1, { s: 1.1, ms: 520, yy: .64 }); await wait(120); hit(u, f, 1.4 * m, { color: BLU }); hitStop(110); B.shake = 6; } });
     await blayRecover(u, f); pushTM(u, .3); float(u, 'TURN +30%', '#7ee08a', .8); },
   blayRally: async (u, f, m) => { await runKF(u, null, SEQ.blay.blayRally, async (ev) => { if (ev === 'rally') { const [x, y] = pos(u); fx('star', 600, { x, y: y - u.h * 1.05, r: u.h * .4, c: BLU }); delete u.st.stun; delete u.st.burn; addSt(u, 'atkUp', 3); u.atkUpK = 1.25; float(u, 'ATK▲', '#ffb070', .8); } }); kfEnd(u); },
   ult: async (u, f, m, T) => { await runKF(u, f, SEQ.blay.ult, async (ev) => { const [hx, hy] = pos(u);
       if (ev === 'charge') { fx('star', 420, { x: hx, y: hy - u.h * .45, r: u.h * .6, c: BLU }); B.shake = 4; }
-      if (ev === 'release') { await impactFrames(T, u); sproj(u, 3, { s: 2.1, ms: 900, yy: .75, x1: B.w * 1.5 }); await wait(90); sproj(u, 0, { s: 1.2, ms: 700, yy: .45, x1: B.w * 1.4 }); await wait(160); B.shake = 16;
+      if (ev === 'release') { await impactFrames(T, u); sproj(u, 3, { s: 2.6, ms: 1000, yy: .6, x1: B.w * 1.6 }); await wait(80); sproj(u, 0, { s: 1.3, ms: 760, yy: .4, x1: B.w * 1.5 }); await wait(170); B.shake = 16;
         if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1, color: BLU }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 3.0 * m, { big: 1, color: BLU }); hitStop(160); } });
     kfEnd(u); },
 };
@@ -808,7 +812,7 @@ async function impactFrames(targets, src) {
 function endUlt() { B.dimTo = 0; B.cam.tz = B.rest.z; B.cam.tx = .5; B.cam.ty = B.rest.y; }
 
 // spell icons: generated art when a hero has had an art pass, else a glyph on the class colour
-const ICONS = { dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'] };
+const ICONS = { dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'], blay: ['basic', 'blay1', 'blay2', 'blayRush', 'blayRally', 'ult'] };
 const KIND_GLYPH = { melee: 'warrior', ranged: 'hunter', buff: 'growth', shield: 'guardian', heal: 'sage' };
 function spellIcon(id, i, eq, sidIn) {
   const H = HEROES[id], key = sidIn || (i === 0 ? 'basic' : i === 3 ? 'ult' : (eq || SAVE.heroes[id]?.eq || H.pool)[i - 1]);
@@ -1073,8 +1077,10 @@ function drawFx(g, f) {
       g.globalAlpha = fade * .55; g.fillStyle = f.c; crescent(R0 * 1.06, th * 1.5); g.fill();
       g.globalAlpha = fade; g.fillStyle = '#ffffff'; crescent(R0, th * .55); g.fill();
       g.globalCompositeOperation = 'source-over'; break; }
-    case 'sproj': { const im = img(A + 'kf/blay_fx_' + f.k + '.webp' + AV); if (!im.ok) break; const e = 1 - (1 - p) ** 2, x = f.x0 + (f.x1 - f.x0) * e, h = f.s, w = h * im.el.naturalWidth / im.el.naturalHeight;
-      g.translate(x, f.y); g.rotate(f.rot || 0); if (f.flip) g.scale(1, -1); g.globalAlpha = p < .75 ? 1 : 1 - (p - .75) / .25; g.drawImage(im.el, -w * .7, -h / 2, w, h); break; }
+    case 'sproj': { const im = img(A + 'kf/blay_fx_' + f.k + '.webp' + AV); if (!im.ok) break; const e = 1 - (1 - p) ** 2.2, x = f.x0 + (f.x1 - f.x0) * e, h = f.s * (.12 + .88 * Math.min(1, p * 1.6)), w = h * im.el.naturalWidth / im.el.naturalHeight;
+      g.translate(x, f.y); if (f.mir) g.scale(-1, 1); g.rotate(f.rot || 0); if (f.flip) g.scale(1, -1); const al = p < .7 ? 1 : 1 - (p - .7) / .3;
+      g.globalAlpha = al; g.shadowColor = '#3d7cff'; g.shadowBlur = Math.max(12, h * .18); g.drawImage(im.el, -w * .8, -h / 2, w, h); g.drawImage(im.el, -w * .8, -h / 2, w, h);
+      g.shadowBlur = 0; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .35; g.drawImage(im.el, -w * .8, -h / 2, w, h); g.globalCompositeOperation = 'source-over'; break; }
     case 'lines': { const fade = 1 - p; g.strokeStyle = '#ffffff'; g.lineCap = 'butt'; const L = f.x1 - f.x0; if (!f.ls) f.ls = Array.from({ length: 9 }, () => [Math.random(), rnd(.3, 1), rnd(1, 3)]);
       for (const [yy, len, w] of f.ls) { g.globalAlpha = fade * .8; g.lineWidth = w; const xe = f.x0 + L * (.2 + .8 * Math.min(1, p * 3)), xs = xe - L * len * (1 - p * .6); g.beginPath(); g.moveTo(xs, f.y - f.h / 2 + yy * f.h); g.lineTo(xe, f.y - f.h / 2 + yy * f.h); g.stroke(); } break; }
     case 'streak': { const e = Math.min(1, p / .4), fade = 1 - p; g.globalCompositeOperation = 'lighter';
