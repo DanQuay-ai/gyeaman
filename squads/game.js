@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261021n';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021n';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021n';
+import { KF } from './kf.js?v=20261021o';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021o';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021o';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261021n';
+const AV = '?v=20261021o';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -107,7 +107,7 @@ const SEQ = {
   },
   blay: { // slashes fly from where he stands; the running dash leaves a blue phantom trail; he flash-steps home
     recover: [{ p: 'idle_3', ms: 43, hold: 1, ev: 'blink' }, { p: 'idle_0', ms: 124, x: 0, y: 0, snap: 1, ev: 'appear' }],
-    basic: [{ p: 'swB_3', ms: 90, x: 0 }, { p: 'swA_1', ms: 260, x: .04, ev: 'cut' }, { p: 'idle_0', ms: 87, x: 0 }],
+    basic: [{ p: 'swA_2', ms: 150, x: 0, ev: 'wind' }, { p: 'swB_2', ms: 300, x: .06, ev: 'cut' }, { p: 'idle_0', ms: 100, x: 0 }],
     blay1: [{ p: 'swA_2', ms: 223, x: .03, ev: 'cut1' }, { p: 'swA_3', ms: 236, x: .06, ev: 'cut2' }, { p: 'idle_0', ms: 87, x: 0 }],
     blay2: [{ p: 'parry_1', ms: 347, x: 0, ev: 'guard' }],
     blayRush: [{ p: 'idle_0', ms: 74, x: 0 }, { p: 'idle_3', ms: 186, x: .88, phantom: 1, lines: 1, ev: 'run' }, { p: 'swB_3', ms: 161, x: .9, ev: 'sweep' }, { p: 'swB_1', ms: 186, x: .9, y: .3, ev: 'rise' }, { p: 'swB_2', ms: 149, x: .9, y: 0, ev: 'drop' }],
@@ -126,17 +126,17 @@ const SEQ = {
   },
   obiri: { // agile archer: back-jumps to reposition; flips only inside chains of shots (ult)
     recover: [{ p: 'shB_3', ms: 220, x: 0, y: .25, phantom: 1 }, { p: 'idle_0', ms: 100, x: 0, y: 0 }],
-    basic: [{ p: 'idle_0', ms: 120, x: 0 }, { p: 'shA_1', ms: 260, x: -.02, ev: 'shot' }, { p: 'shB_3', ms: 240, x: -.14, y: .35, phantom: 1 }, { p: 'idle_0', ms: 140, x: 0, y: 0 }],
+    basic: [{ p: 'oult_1', ms: 260, x: 0, ev: 'draw' }, { p: 'shA_1', ms: 380, x: -.05, ev: 'shot' }, { p: 'idle_0', ms: 140, x: 0 }],
     obiri1: [{ p: 'shB_3', ms: 220, x: -.16, y: .4, phantom: 1 }, { p: 'shB_2', ms: 320, x: -.12, y: .6, ev: 'pin' }, { p: 'shA_2', ms: 240, x: 0, y: 0, ev: 'land' }, { p: 'idle_0', ms: 100, x: 0 }],
     obiri2: [{ p: 'shB_3', ms: 220, x: .1, phantom: 1 }, { p: 'shA_2', ms: 600, x: .1, ev: 'aim' }, { p: 'idle_0', ms: 120, x: 0 }],
     obiVolley: [{ p: 'shB_3', ms: 180, x: .25, phantom: 1 }, { p: 'shB_2', ms: 380, x: .3, y: .8, phantom: 1, ev: 'volley' }, { p: 'shB_3', ms: 320, x: .1, y: 0, phantom: 1, ev: 'shot' }, { p: 'idle_0', ms: 120, x: 0 }],
-    obiKnee: [{ p: 'shB_3', ms: 400, x: .3, phantom: 1, ev: 'knee' }, { p: 'shA_2', ms: 220, x: .05, y: .3, phantom: 1 }, { p: 'idle_0', ms: 100, x: 0, y: 0 }],
+    obiKnee: [{ p: 'shB_3', ms: 260, x: .8, phantom: 1, lines: 1 }, { p: 'shA_2', ms: 260, x: .82, ev: 'knee' }, { p: 'idle_3', ms: 340, x: 0, y: .5, spin: -6.283, phantom: 1 }, { p: 'idle_0', ms: 100, x: 0, y: 0 }],
     ult: [{ p: 'oult_1', ms: 480, x: 0, ev: 'charge' }, { p: 'shA_3', ms: 600, x: -.03, ev: 'sky' }, { p: 'idle_3', ms: 300, x: .1, y: 1.1, spin: -6.283, phantom: 1 }, { p: 'shB_1', ms: 280, x: .2, y: 1, phantom: 1, ev: 'air' }, { p: 'shB_2', ms: 260, x: .3, y: .8, phantom: 1, ev: 'air' }, { p: 'oult_3', ms: 280, x: .25, y: .5, phantom: 1, ev: 'air' },
       { p: 'shB_3', ms: 220, x: 0, y: 0, phantom: 1 }, { p: 'oult_1', ms: 300, x: 0, ev: 'charge2' }, { p: 'oult_2', ms: 650, x: -.12, ev: 'big' }, { p: 'idle_0', ms: 140, x: 0 }],
   },
   gyakari: { // heavy shield tank: bull charges, bashes, spinning shield, ground slams
     recover: [{ p: 'idle_3', ms: 240, x: 0, phantom: 1 }, { p: 'idle_0', ms: 120, x: 0 }],
-    basic: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'gbA_1', ms: 140, x: .74 }, { p: 'gbA_3', ms: 260, x: .82, ev: 'jab' }],
+    basic: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'gbA_2', ms: 320, x: .84, ev: 'jab' }],
     gyakari1: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'gbA_1', ms: 220, x: .72, ev: 'charge' }, { p: 'gbA_2', ms: 340, x: .86, ev: 'bash' }],
     gyakari2: [{ p: 'gbB_3', ms: 650, x: 0, ev: 'brace' }],
     gyaSweep: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'gbB_1', ms: 240, x: .8, ev: 'spin' }, { p: 'gbB_2', ms: 300, x: .82, ev: 'sweep' }],
@@ -173,6 +173,14 @@ const kfEnd = (u) => { u.kfSpin = null; u.kfPh = false; u.kf = null; u.kfA = nul
 const VIO = '#c58bff';
 const SPL = { dufie: 'ultE_2', blay: 'ultX_2', kuukua: 'thB_2', obiri: 'oult_1', gyakari: 'gult_2', afrakoma: 'ault_2' };
 const PH_HUE = { blay: 185, kuukua: 322, obiri: 15, gyakari: 28, afrakoma: 0 };
+const SOFT_HURT = new Set(['gyakari', 'afrakoma']);
+const PH_COL = { blay: '#3d7cff', kuukua: '#ff1f35', obiri: '#ffc83c', gyakari: '#ffb02e', afrakoma: '#ff6a1f', dufie: '#b070ff' }; // afterimage tint per hero
+const TINT = document.createElement('canvas'), TG = TINT.getContext('2d');
+function drawTinted(g, q, col, alpha) { // the pose as a flat silhouette in the hero colour, with a light inner core
+  const bh = q.bh || q.u.h, S = Math.ceil(bh * 2.4); if (TINT.width !== S) { TINT.width = S; TINT.height = S; }
+  TG.setTransform(1, 0, 0, 1, 0, 0); TG.clearRect(0, 0, S, S); TG.save(); TG.translate(S / 2, S * .78); if (q.rot) { TG.translate(0, -bh * .5); TG.rotate(q.rot); TG.translate(0, bh * .5); } drawKF(TG, q.u.id, q.p, bh); TG.restore();
+  TG.globalCompositeOperation = 'source-atop'; TG.fillStyle = col; TG.fillRect(0, 0, S, S); TG.globalCompositeOperation = 'source-over';
+  g.save(); g.globalAlpha = alpha; g.drawImage(TINT, q.x - S / 2, q.y - S * .78); g.globalAlpha = alpha * .35; g.globalCompositeOperation = 'lighter'; g.drawImage(TINT, q.x - S / 2, q.y - S * .78); g.restore(); }
 const PH_LIFE = { blay: 4.8, kuukua: 5.2, obiri: 1.8 }, PH_GAP = { blay: .014, kuukua: .008, obiri: .018 }; // phantom trail tint per hero // ultimate splash pose
 async function dufieRecover(u, f) { await runKF(u, f, SEQ.dufie.recover, async (ev) => { if (ev === 'land') { const [x, y] = pos(u); burst(x, y, ['#d8c9b0', '#fff'], 10, 3); } }); kfEnd(u); }
 CHOREO.dufie = {
@@ -220,7 +228,8 @@ const shunpo = (u, f) => async (ev, st) => { const [hx, hy] = pos(u), d = u.side
 async function blayRecover(u, f) { const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.recover, sh); kfEnd(u); }
 CHOREO.blay = {
   basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.blay.basic, async (ev) => {
-      if (ev === 'cut') { sproj(u, 1, { s: 1, yy: .5, rot: -.3 }); await wait(150); d = hit(u, f, m, { ...o, color: BLU }); hitStop(80); } }); kfEnd(u); return d; },
+      if (ev === 'wind') { const [hx, hy] = pos(u); fx('star', 220, { x: hx, y: hy - u.h * .9, r: u.h * .3, c: BLU }); }
+      if (ev === 'cut') { sproj(u, 2, { s: 1.5, yy: .55, ms: 520 }); await wait(140); const [x, y] = pos(f); fx('flash', 380, { x, y: y - f.h * .5, r: f.h * .7, c: BLU, n: 10 }); d = hit(u, f, m, { ...o, color: BLU }); hitStop(110); B.shake = 8; } }); kfEnd(u); return d; },
   blay1: async (u, f, m) => { await runKF(u, f, SEQ.blay.blay1, async (ev) => {
       if (ev === 'cut1') { sproj(u, 2, { s: 1.15, yy: .62 }); await wait(140); hit(u, f, .8 * m, { color: BLU }); hitStop(80); }
       if (ev === 'cut2' && f.alive) { sproj(u, 0, { s: .75, yy: .58, flip: 1 }); await wait(140); hit(u, f, .8 * m, { color: BLU }); hitStop(90); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } });
@@ -272,12 +281,13 @@ CHOREO.kuukua = {
 // Obiri: arrows are glowing projectiles; flips, mid-air shots and arrow rain
 const arrow = (u, f, o = {}) => { const [hx, hy] = pos(u), [ox, oy] = kfOff(u), d = u.side ? -1 : 1, [x, y] = pos(f); fx('arrowP', o.ms || 420, { x0: hx + d * (ox + u.h * .35), y0: hy - oy - u.h * (o.yy ?? .62), x1: x + rnd(-6, 6), y1: y - f.h * (o.ty ?? .5), c: o.c || GOLD, hitAt: .6, len: u.h * .16, w: o.w || 3 }); };
 CHOREO.obiri = {
-  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.obiri.basic, async (e) => { if (e === 'shot') { arrow(u, f); await wait(250); d = hit(u, f, m, { ...o, color: GOLD }); } }); kfEnd(u); return d; },
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.obiri.basic, async (e) => { const [hx, hy] = pos(u); if (e === 'draw') fx('star', 260, { x: hx + u.h * .4, y: hy - u.h * .62, r: u.h * .3, c: GOLD });
+      if (e === 'shot') { arrow(u, f, { w: 7, ms: 360 }); await wait(210); const [x, y] = pos(f); fx('flash', 420, { x, y: y - f.h * .5, r: f.h * .75, c: GOLD, n: 10 }); d = hit(u, f, m, { ...o, color: GOLD }); hitStop(110); B.shake = 8; } }); kfEnd(u); return d; },
   obiri1: async (u, f, m) => { await runKF(u, f, SEQ.obiri.obiri1, async (e) => { if (e === 'pin') { arrow(u, f, { ty: .2, w: 4 }); await wait(250); const [x, y] = pos(f); fx('flash', 380, { x, y: y - f.h * .2, r: f.h * .5, c: GOLD }); hit(u, f, 1.0 * m, { color: GOLD }); addSt(f, 'slow', 2); float(f, 'PINNED', GOLD, .8); } if (e === 'land') { const [hx, hy] = pos(u); burst(hx, hy, ['#d8c9b0'], 8, 3); } }); kfEnd(u); },
   obiri2: async (u, f, m) => { await runKF(u, null, SEQ.obiri.obiri2, async (e) => { if (e === 'aim') { u.st.aim = 1; const [hx, hy] = pos(u); fx('star', 600, { x: hx + u.h * .35, y: hy - u.h * .6, r: u.h * .3, c: GOLD }); float(u, 'STEADY AIM', GOLD, .9); } }); kfEnd(u); },
   obiVolley: async (u, f, m) => { await runKF(u, f, SEQ.obiri.obiVolley, async (e) => { if (e === 'volley') for (let k = 0; k < 2; k++) { arrow(u, f, { ty: .4 + k * .2 }); await wait(110); }
       if (e === 'shot') { arrow(u, f, { yy: .3 }); } if (e === 'volley' || e === 'shot') { await wait(200); for (let k = 0; k < (e === 'volley' ? 2 : 1) && f.alive; k++) hit(u, f, .45 * m, { color: GOLD }); } }); kfEnd(u); },
-  obiKnee: async (u, f, m) => { await runKF(u, f, SEQ.obiri.obiKnee, async (e) => { if (e === 'knee') { arrow(u, f, { yy: .3, ty: .25, w: 4 }); await wait(260); const [x, y] = pos(f); fx('flash', 420, { x, y: y - f.h * .25, r: f.h * .6, c: GOLD }); hit(u, f, .9 * m, { color: GOLD }); addSt(f, 'stun', 1); if (f.charging) { f.charging = false; float(f, 'INTERRUPTED', GOLD, .9); } } }); kfEnd(u); },
+  obiKnee: async (u, f, m) => { await runKF(u, f, SEQ.obiri.obiKnee, async (e) => { if (e === 'knee') { arrow(u, f, { yy: .45, ty: .3, w: 5, ms: 160 }); await wait(80); const [x, y] = pos(f); fx('flash', 420, { x, y: y - f.h * .25, r: f.h * .6, c: GOLD }); hit(u, f, .9 * m, { color: GOLD }); addSt(f, 'stun', 1); if (f.charging) { f.charging = false; float(f, 'INTERRUPTED', GOLD, .9); } } }); kfEnd(u); },
   ult: async (u, f, m, T) => { await runKF(u, f, SEQ.obiri.ult, async (e) => { const [hx, hy] = pos(u), [x, y] = pos(f);
       if (e === 'charge' || e === 'charge2') { fx('star', 420, { x: hx + u.h * .35, y: hy - u.h * .6, r: u.h * .45, c: GOLD }); B.shake = 3; }
       if (e === 'sky') { for (let k = 0; k < 5; k++) { fx('arrowP', 380, { x0: hx + u.h * .3, y0: hy - u.h * .9, x1: hx + u.h * 1.2 + k * 20, y1: -40, c: GOLD, hitAt: 1, len: u.h * .14 }); await wait(60); }
@@ -292,7 +302,7 @@ const shock = (u, f, c, big) => { const [hx, hy] = pos(u), [x, y] = pos(f); fx('
 const slam = (u, f, c, big) => { const [x, y] = pos(f); fx('flash', big ? 560 : 380, { x, y: y - f.h * .45, r: f.h * (big ? 1.1 : .7), c, n: 12 }); debris(x, y, big ? 14 : 8, u.h * .12); B.shake = big ? 18 : 9; hitStop(big ? 170 : 100); };
 async function heavyRecover(u, f) { await runKF(u, f, SEQ[u.id].recover); kfEnd(u); }
 CHOREO.gyakari = {
-  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.gyakari.basic, async (e) => { if (e === 'jab') { slam(u, f, AMB, 0); d = hit(u, f, m, { ...o, color: AMB }); } }); await heavyRecover(u, f); return d; },
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.gyakari.basic, async (e) => { if (e === 'jab') { shock(u, f, AMB, 0); slam(u, f, AMB, 1); d = hit(u, f, m, { ...o, color: AMB }); } }); await heavyRecover(u, f); return d; },
   gyakari1: async (u, f, m) => { await runKF(u, f, SEQ.gyakari.gyakari1, async (e) => { const [hx, hy] = pos(u); if (e === 'charge') fx('star', 300, { x: hx, y: hy - u.h * .5, r: u.h * .5, c: AMB });
       if (e === 'bash') { shock(u, f, AMB, 0); slam(u, f, AMB, 1); hit(u, f, .9 * m, { color: AMB, big: 1 }); addSt(f, 'stun', 1); if (f.charging) { f.charging = false; float(f, 'INTERRUPTED', AMB, .9); } } }); await heavyRecover(u, f); },
   gyakari2: async (u, f, m) => { await runKF(u, null, SEQ.gyakari.gyakari2, async (e) => { if (e === 'brace') { const [x, y] = pos(u); debris(x + u.w * .4, y, 6, u.h * .1); addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .3 * m); fx('ward', 900, { unit: u, c: AMB }); float(u, 'BRACE', AMB, .9); B.shake = 6; } }); kfEnd(u); },
@@ -1111,7 +1121,9 @@ function loop(now) {
     B.ghosts.push({ u, p: u.kf, x: pos(u)[0] + d * ox, y: pos(u)[1] - oy, t0: B.t, life: .3, blue: 1, hue: u.phHue ?? 185, red: u.id === 'kuukua', bh: u._bh || u.h, rot: s ? s.a * (ts < .5 ? 2 * ts * ts : 1 - (-2 * ts + 2) ** 2 / 2) : 0 });
     const mine = B.ghosts.filter((q) => q.u === u && q.blue); if (mine.length > 9) B.ghosts.splice(B.ghosts.indexOf(mine[0]), 1); }
   B.ghosts = (B.ghosts || []).filter((q) => B.t - q.t0 < (q.life || .28));
-  for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / (q.life || .28), k0 = img(poseSrc(q.u.id, 0)); if (!k0.ok) continue; g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = q.red ? 'source-over' : 'lighter'; g.globalAlpha = a * (q.red ? .5 : q.blue ? .55 : .35); g.filter = q.red ? 'brightness(0.32) sepia(1) hue-rotate(-42deg) saturate(14) brightness(1.5)' : q.blue ? `brightness(0.55) sepia(1) hue-rotate(${q.hue ?? 185}deg) saturate(6)` : 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; if (q.rot) { g.translate(0, -q.bh * .5); g.rotate(q.rot); g.translate(0, q.bh * .5); } drawKF(g, q.u.id, q.p, q.bh || q.u.h); g.restore(); }
+  for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / (q.life || .28); if (!img(poseSrc(q.u.id, 0)).ok) continue;
+    if (q.blue) { drawTinted(g, q, PH_COL[q.u.id] || '#7fb2ff', a * .6); continue; }
+    g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * .35; g.filter = 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; drawKF(g, q.u.id, q.p, q.u.h); g.restore(); }
   for (const u of units) {
     u.h = baseH * u.size * u.depth;
     if (u.enter) u.enter = Math.max(0, u.enter - dt * 2.2);
@@ -1136,7 +1148,8 @@ function loop(now) {
     if (ring) { const sil = silhouette(e, th, ring); if (sil) { g.save(); g.globalAlpha *= .85; for (const [ox, oy] of [[-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, 2], [-2, 2], [2, -2]]) g.drawImage(sil, -pw / 2 + ox, -ph + oy, pw, ph); g.restore(); } }
     const AN = ANIM[u.id], bodyH = e0.el.naturalHeight * k; u._bh = bodyH; let drawn = false;
     if (KF[u.id]) { // keyframe heroes: move pose, else idle breathing / hurt / defeated
-      const [ox, oy] = kfOff(u), p = u.kf || (!u.alive ? 'idle_2' : u.hurt > .35 ? 'idle_1' : 'idle_0');
+      const softHurt = SOFT_HURT.has(u.id), [ox, oy] = kfOff(u), p = u.kf || (!u.alive ? 'idle_2' : u.hurt > .35 && !softHurt ? 'idle_1' : 'idle_0');
+      if (softHurt && !u.kf && u.alive && u.hurt > .2) { const k = Math.min(1, (u.hurt - .2) * 2); g.translate(-bodyH * .06 * k, 0); g.rotate(-.12 * k); }
       g.save(); g.translate((flip ? -1 : 1) * ox, -oy - (u.kf ? 0 : bob * .3)); if (!u.kf) { const br = Math.sin(B.t * 2.2) * .006; g.scale(1 - br * .4, 1 + br); } if (u.kfSpin) { const s = u.kfSpin, t = Math.min(1, (B.t - s.t0) / s.d), e = t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; g.translate(0, -bodyH * .5); g.rotate(s.a * e); g.translate(0, bodyH * .5); } drawn = drawKF(g, u.id, p, bodyH, u.kfAlpha); g.restore();
     }
     if (AN && u.alive && u.pose === 0) { const P = AN.idle.play; drawn = drawClip(g, AN.idle, P[Math.floor(B.t * 12) % P.length], bodyH); }
