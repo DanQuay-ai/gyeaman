@@ -6,3 +6,8 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/squads/*"
+  [headers.values]
+    Cache-Control = "no-cache"

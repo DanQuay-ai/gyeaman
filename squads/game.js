@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261021i';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021i';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021i';
+import { KF } from './kf.js?v=20261021j';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021j';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021j';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,15 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261021i'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
+const AV = '?v=20261021j';
+// stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
+(async function checkBuild() {
+  const mine = AV.slice(3);
+  const look = async () => { try { const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }); const { av } = await r.json();
+    if (av && av !== mine && sessionStorage.getItem('gy.reloadedFor') !== av) { sessionStorage.setItem('gy.reloadedFor', av); location.replace(location.pathname + '?b=' + av); } } catch (e) { /* offline: keep playing */ } };
+  look(); document.addEventListener('visibilitychange', () => { if (!document.hidden) look(); });
+  const tag = document.createElement('div'); tag.textContent = 'build ' + mine; tag.style.cssText = 'position:fixed;right:4px;bottom:2px;font:10px sans-serif;opacity:.35;color:#fff;pointer-events:none;z-index:9999'; document.body.appendChild(tag);
+})(); // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
 function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
