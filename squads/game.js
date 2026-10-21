@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261021f';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021f';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021f';
+import { KF } from './kf.js?v=20261021g';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021g';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021g';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261021f'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
+const AV = '?v=20261021g'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
 function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
@@ -96,14 +96,15 @@ const SEQ = {
       { p: 'ultF_2', ms: 230, x: 1.04, y: .58, lines: 1, ghost: 1, ev: 'k3' }, { p: 'ultF_3', ms: 420, x: 1.08, y: 0, lines: 1, ev: 's4' },
       { p: 'recover_1', ms: 130, x: .6, y: .36, ghost: 1 }, { p: 'recover_2', ms: 130, x: .25, y: .42, ghost: 1 }, { p: 'recover_3', ms: 180, x: 0, y: 0, ev: 'land' }],
   },
-  blay: { // shunpo: anticipation, vanish with a smear, reappear sliding (no in-between frames)
-    recover: [{ p: 'idle_3', ms: 130, hold: 1, ghost: 1 }, { p: 'idle_3', ms: 60, hold: 1, ev: 'blink' }, { p: 'basic_1', ms: 190, x: 0, snap: 1, ev: 'appear' }, { p: 'idle_0', ms: 110, x: 0 }],
-    basic: [{ p: 'idle_3', ms: 130, x: 0, ghost: 1 }, { p: 'idle_3', ms: 60, x: 0, ev: 'blink' }, { p: 'basic_1', ms: 170, x: .75, snap: 1, ev: 'appear' }, { p: 'basic_2', ms: 300, x: .8, ev: 'cut' }, { p: 'basic_3', ms: 180, x: .8 }],
-    blay1: [{ p: 'idle_3', ms: 130, x: 0, ghost: 1 }, { p: 'idle_3', ms: 60, x: 0, ev: 'blink' }, { p: 'basic_1', ms: 150, x: .7, snap: 1, ev: 'appear' }, { p: 'twin_1', ms: 250, x: .75, ev: 'cut1' }, { p: 'twin_2', ms: 290, x: .75, ev: 'cut2' }, { p: 'twin_3', ms: 180, x: .75 }],
+  blay: { // shunpo = anticipation, vanish, reappear sliding; the dive leaves a blue phantom trail
+    recover: [{ p: 'dash_1', ms: 140, hold: 1, ghost: 1 }, { p: 'dash_1', ms: 60, hold: 1, ev: 'blink' }, { p: 'dash_3', ms: 170, x: 0, snap: 1, ev: 'appear' }, { p: 'idle_0', ms: 110, x: 0 }],
+    basic: [{ p: 'dash_1', ms: 140, hold: 1, ghost: 1 }, { p: 'dash_1', ms: 60, hold: 1, ev: 'blink' }, { p: 'dash_3', ms: 160, x: .75, snap: 1, ev: 'appear' }, { p: 'swA_1', ms: 320, x: .8, ev: 'cut' }],
+    blay1: [{ p: 'dash_1', ms: 140, hold: 1, ghost: 1 }, { p: 'dash_1', ms: 60, hold: 1, ev: 'blink' }, { p: 'dash_3', ms: 160, x: .75, snap: 1, ev: 'appear' }, { p: 'swA_2', ms: 280, x: .8, ev: 'cut1' }, { p: 'swA_3', ms: 300, x: .82, ev: 'cut2' }],
     blay2: [{ p: 'parry_1', ms: 560, x: 0, ev: 'guard' }],
-    blayRush: [{ p: 'idle_3', ms: 130, x: 0, ghost: 1 }, { p: 'idle_3', ms: 60, x: 0, ev: 'blink' }, { p: 'basic_1', ms: 120, x: .95, snap: 1, ev: 'appear' }, { p: 'basic_2', ms: 320, x: 1, ev: 'cut' }, { p: 'basic_3', ms: 160, x: 1 }],
+    blayRush: [{ p: 'dash_1', ms: 160, x: 0, ghost: 1 }, { p: 'dash_2', ms: 280, x: .9, y: .35, phantom: 1, ev: 'dive' }, { p: 'dash_3', ms: 150, x: .9, y: 0, phantom: 1 }, { p: 'swB_3', ms: 260, x: .92, ev: 'sweep' }, { p: 'swB_1', ms: 300, x: .92, y: .25, ev: 'rise' }, { p: 'swB_2', ms: 200, x: .9, y: 0 }],
     blayRally: [{ p: 'parry_3', ms: 700, x: 0, ev: 'rally' }],
-    ult: [{ p: 'ult_0', ms: 160, x: 0 }, { p: 'ult_1', ms: 560, x: -.03, ev: 'charge' }, { p: 'ult_2', ms: 800, x: .12, ev: 'release' }, { p: 'ult_3', ms: 520, x: .12 }, { p: 'idle_0', ms: 120, x: 0 }],
+    ult: [{ p: 'ultX_1', ms: 520, x: 0, ev: 'charge' }, { p: 'dash_1', ms: 160, x: 0, ghost: 1 }, { p: 'dash_2', ms: 280, x: .85, y: .35, phantom: 1, ev: 'dive' }, { p: 'dash_3', ms: 150, x: .85, y: 0, phantom: 1 }, { p: 'swB_1', ms: 220, x: .9, y: .3, ev: 'u1' }, { p: 'swA_2', ms: 220, x: .9, y: 0, ev: 'u2' }, { p: 'swA_3', ms: 220, x: .92, ev: 'u3' }, { p: 'swB_3', ms: 220, x: .94, ev: 'u4' },
+      { p: 'dash_1', ms: 140, hold: 1, ghost: 1 }, { p: 'dash_1', ms: 60, hold: 1, ev: 'blink' }, { p: 'dash_3', ms: 160, x: .05, snap: 1, ev: 'appear' }, { p: 'ultX_2', ms: 820, x: .15, ev: 'release' }, { p: 'ultX_3', ms: 520, x: .15 }, { p: 'idle_0', ms: 120, x: 0 }],
   },
 };
 const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .42 - u.w * .3);
@@ -115,14 +116,15 @@ async function runKF(u, f, seq, onEv) {
     u.kf = st.p; u.kfA = st.snap ? { x0: x1, x1, y0: y1, y1, t0: B.t, d: .001 } : { x0: cur[0], x1, y0: cur[1], y1, t0: B.t, d: st.ms / 1000 * .7 };
     if (st.lines) { const [hx, hy] = pos(u); fx('lines', 260, { x0: hx + cur[0], x1: hx + x1, y: hy - u.h * .5, h: u.h * .7 }); }
     if (st.ghost) B.ghosts.push({ u, p: st.p, x: pos(u)[0] + cur[0], y: pos(u)[1] - cur[1], t0: B.t });
+    u.kfPh = !!st.phantom;
     if (st.ev && onEv) await onEv(st.ev, st);
     await wait(st.ms);
   }
 }
 function kfOff(u) { const a = u.kfA; if (!a) return [0, 0]; const t = Math.min(1, (B.t - a.t0) / (a.d || .001)), e = 1 - (1 - t) ** 3; return [a.x0 + (a.x1 - a.x0) * e, a.y0 + (a.y1 - a.y0) * e]; }
-const kfEnd = (u) => { u.kf = null; u.kfA = null; u.kfAlpha = 1; };
+const kfEnd = (u) => { u.kfPh = false; u.kf = null; u.kfA = null; u.kfAlpha = 1; };
 const VIO = '#c58bff';
-const SPL = { dufie: 'ultE_2', blay: 'ult_2' }; // ultimate splash pose
+const SPL = { dufie: 'ultE_2', blay: 'ultX_2' }; // ultimate splash pose
 async function dufieRecover(u, f) { await runKF(u, f, SEQ.dufie.recover, async (ev) => { if (ev === 'land') { const [x, y] = pos(u); burst(x, y, ['#d8c9b0', '#fff'], 10, 3); } }); kfEnd(u); }
 CHOREO.dufie = {
   basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.dufie.basic, async (ev) => { const [x, y] = pos(f);
@@ -168,19 +170,27 @@ const shunpo = (u, f) => async (ev, st) => { const [hx, hy] = pos(u), d = u.side
   if (ev === 'appear') { const [ox] = kfOff(u); u.kfAlpha = 1; fx('streak', 260, { x0: u._sx ?? hx, x1: hx + d * ox, y: hy - u.h * .45, h: u.h * .55, c: '#1a2a6a' }); burst(hx + d * ox, hy, ['#d8c9b0', '#fff'], 8, 3); } };
 async function blayRecover(u, f) { const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.recover, sh); kfEnd(u); }
 CHOREO.blay = {
-  basic: async (u, f, m, o) => { let d = 0; const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.basic, async (ev, st) => { await sh(ev, st); if (ev === 'cut') { sproj(u, 0, { s: .6, ms: 480, yy: .64 }); await wait(140); d = hit(u, f, m, { ...o, color: BLU }); hitStop(70); } }); await blayRecover(u, f); return d; },
+  basic: async (u, f, m, o) => { let d = 0; const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.basic, async (ev, st) => { await sh(ev, st);
+      if (ev === 'cut') { sproj(u, 1, { s: .9, ms: 520, yy: .5, rot: -.35 }); await wait(130); d = hit(u, f, m, { ...o, color: BLU }); hitStop(80); } }); await blayRecover(u, f); return d; },
   blay1: async (u, f, m) => { const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.blay1, async (ev, st) => { await sh(ev, st);
-      if (ev === 'cut1') { sproj(u, 2, { s: .9, rot: .25, ms: 520, yy: .55 }); await wait(130); hit(u, f, .8 * m, { color: BLU }); hitStop(80); }
-      if (ev === 'cut2' && f.alive) { sproj(u, 2, { s: .9, rot: -.25, flip: 1, ms: 520, yy: .6 }); await wait(130); hit(u, f, .8 * m, { color: BLU }); hitStop(90); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } });
+      if (ev === 'cut1') { sproj(u, 2, { s: 1.1, ms: 520, yy: .6 }); await wait(120); hit(u, f, .8 * m, { color: BLU }); hitStop(80); }
+      if (ev === 'cut2' && f.alive) { sproj(u, 0, { s: .7, ms: 520, yy: .5, flip: 1 }); await wait(120); hit(u, f, .8 * m, { color: BLU }); hitStop(90); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } });
     await blayRecover(u, f); },
   blay2: async (u, f, m) => { await runKF(u, null, SEQ.blay.blay2, async (ev) => { if (ev === 'guard') { u.st.guard = 1; fx('spr', 600, { k: 'shield', unit: u, hs: .9, a: .45 }); float(u, 'PARRY', '#9fd0ff', .8); } }); kfEnd(u); },
-  blayRush: async (u, f, m) => { const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.blayRush, async (ev, st) => { await sh(ev, st); if (ev === 'cut') { sproj(u, 1, { s: 1.1, ms: 520, yy: .64 }); await wait(120); hit(u, f, 1.4 * m, { color: BLU }); hitStop(110); B.shake = 6; } });
+  blayRush: async (u, f, m) => { const sh = shunpo(u, f); await runKF(u, f, SEQ.blay.blayRush, async (ev, st) => { await sh(ev, st);
+      if (ev === 'sweep') { sproj(u, 0, { s: .6, ms: 460, yy: .18 }); await wait(110); hit(u, f, .7 * m, { color: BLU }); hitStop(70); }
+      if (ev === 'rise' && f.alive) { sproj(u, 2, { s: 1.2, ms: 500, yy: .7, flip: 1 }); await wait(110); hit(u, f, .7 * m, { color: BLU }); hitStop(100); B.shake = 6; } });
     await blayRecover(u, f); pushTM(u, .3); float(u, 'TURN +30%', '#7ee08a', .8); },
   blayRally: async (u, f, m) => { await runKF(u, null, SEQ.blay.blayRally, async (ev) => { if (ev === 'rally') { const [x, y] = pos(u); fx('star', 600, { x, y: y - u.h * 1.05, r: u.h * .4, c: BLU }); delete u.st.stun; delete u.st.burn; addSt(u, 'atkUp', 3); u.atkUpK = 1.25; float(u, 'ATK▲', '#ffb070', .8); } }); kfEnd(u); },
-  ult: async (u, f, m, T) => { await runKF(u, f, SEQ.blay.ult, async (ev) => { const [hx, hy] = pos(u);
+  ult: async (u, f, m, T) => { const sh = shunpo(u, f); let execd = false; await runKF(u, f, SEQ.blay.ult, async (ev, st) => { await sh(ev, st); const [hx, hy] = pos(u);
+      const cut = (k, o, part) => { sproj(u, k, o); if (f.alive) { hit(u, f, part * m, { color: BLU }); hitStop(60); } };
       if (ev === 'charge') { fx('star', 420, { x: hx, y: hy - u.h * .45, r: u.h * .6, c: BLU }); B.shake = 4; }
-      if (ev === 'release') { await impactFrames(T, u); sproj(u, 3, { s: 2.6, ms: 1000, yy: .6, x1: B.w * 1.6 }); await wait(80); sproj(u, 0, { s: 1.3, ms: 760, yy: .4, x1: B.w * 1.5 }); await wait(170); B.shake = 16;
-        if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1, color: BLU }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 3.0 * m, { big: 1, color: BLU }); hitStop(160); } });
+      if (ev === 'u1') cut(2, { s: 1.2, ms: 460, yy: .75, flip: 1 }, .25);
+      if (ev === 'u2') cut(2, { s: 1.2, ms: 460, yy: .6 }, .25);
+      if (ev === 'u3') cut(0, { s: .8, ms: 460, yy: .5, flip: 1 }, .25);
+      if (ev === 'u4') cut(1, { s: .9, ms: 460, yy: .3, rot: -.35 }, .25);
+      if (ev === 'release') { await impactFrames(T, u); sproj(u, 3, { s: 2.6, ms: 1000, yy: .6, x1: B.w * 1.6 }); await wait(80); sproj(u, 0, { s: 1.3, ms: 760, yy: .45, x1: B.w * 1.5 }); await wait(170); B.shake = 16;
+        if (!f.alive) return; if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1, color: BLU }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 2.0 * m, { big: 1, color: BLU }); hitStop(160); } });
     kfEnd(u); },
 };
 // draw one clip frame with feet at (0,0) and body height bodyH
@@ -966,8 +976,10 @@ function loop(now) {
   B.fx = B.fx.filter((f) => f.type !== 'ink' || drawFx(g, f)); // ink symbols sit behind the fighters
   const units = [...B.heroes, ...B.foes].filter((u) => u.alive || u.dieT > 0).sort((a, b) => a.fy - b.fy);
   const portrait = r.height > r.width * .9, baseH = portrait ? Math.min(r.height * .36, r.width * .42) : Math.min(r.height * .5, r.width * .24);
-  B.ghosts = (B.ghosts || []).filter((q) => B.t - q.t0 < .28);
-  for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / .28, k0 = img(poseSrc(q.u.id, 0)); if (!k0.ok) continue; g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * .35; g.filter = 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; drawKF(g, q.u.id, q.p, q.u.h); g.restore(); }
+  // phantom trail: a moving keyframe step flagged phantom drops blue afterimages every few frames
+  for (const u of [...(B.heroes || []), ...(B.foes || [])]) if (u.kfPh && u.kf && B.t - (u.phT || 0) > .025) { u.phT = B.t; const [ox, oy] = kfOff(u), d = u.side ? -1 : 1; B.ghosts.push({ u, p: u.kf, x: pos(u)[0] + d * ox, y: pos(u)[1] - oy, t0: B.t, life: .42, blue: 1 }); }
+  B.ghosts = (B.ghosts || []).filter((q) => B.t - q.t0 < (q.life || .28));
+  for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / (q.life || .28), k0 = img(poseSrc(q.u.id, 0)); if (!k0.ok) continue; g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * (q.blue ? .55 : .35); g.filter = q.blue ? 'brightness(0.55) sepia(1) hue-rotate(185deg) saturate(6)' : 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; drawKF(g, q.u.id, q.p, q.u.h); g.restore(); }
   for (const u of units) {
     u.h = baseH * u.size * u.depth;
     if (u.enter) u.enter = Math.max(0, u.enter - dt * 2.2);
