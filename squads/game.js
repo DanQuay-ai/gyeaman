@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js';
+import { KF } from './kf.js?v=20261021b';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021b';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021b';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,6 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
+const AV = '?v=20261021b'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
 function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
@@ -73,7 +74,7 @@ const CHOREO = {}; // per-hero hand-animated moves (keyframe timelines)
 const ANIM = {}; // Veo clip sheets (none active: keyframe poses replaced them)
 for (const id in ANIM) for (const c of Object.values(ANIM[id])) c.sheets.forEach((u) => img(u));
 // ---------- keyframe choreography (Firefly pose sheets + code movement, smears, speed lines, afterimages) ----------
-const kfImg = (id, p) => img(A + 'kf/' + KF[id].p[p][0]);
+const kfImg = (id, p) => img(A + 'kf/' + KF[id].p[p][0] + AV);
 for (const id in KF) for (const p in KF[id].p) kfImg(id, p);
 // draw keyframe p for hero id with its floor point at (0,0), body scaled so the idle pose is bodyH tall
 function drawKF(g, id, p, bodyH, alpha = 1) {
@@ -148,8 +149,8 @@ function drawClip(g, c, fi, bodyH) {
   g.drawImage(im.el, (j % c.cols) * c.fw, Math.floor(j / c.cols) * c.fh, c.fw, c.fh, -c.ax * k, -c.fy * k, c.fw * k, c.fh * k);
   return true;
 }
-const poseSrc = (id, k) => `${A}${id}_${k}.webp`;
-const faceSrc = (id) => (HEROES[id] ? `${A}face_${id}.webp` : poseSrc(id, 0));
+const poseSrc = (id, k) => `${A}${id}_${k}.webp${AV}`;
+const faceSrc = (id) => (HEROES[id] ? `${A}face_${id}.webp${AV}` : poseSrc(id, 0));
 function scaled(e, th) {
   if (!e.ok) return null; th = Math.max(16, Math.round(th / 8) * 8);
   if (th >= e.el.naturalHeight * 0.8) return e.el;
@@ -747,7 +748,7 @@ async function ultIntro(u, sym, color) {
 // fullscreen ultimate cutscene: dedicated art (or a Veo clip once generated), push-in, speed lines, X-slash, title
 const CUTS = {}; // optional per-hero splash art; keyframe heroes use their signature pose
 function cutscene(u, sym, color) {
-  const C = CUTS[u.id] || (KF[u.id] && KF[u.id].p.ultA_1 ? { img: A + 'kf/' + KF[u.id].p.ultA_1[0], pose: 1, short: 1 } : { img: poseSrc(u.id, 2), pose: 1 });
+  const C = CUTS[u.id] || (KF[u.id] && KF[u.id].p.ultA_1 ? { img: A + 'kf/' + KF[u.id].p.ultA_1[0] + AV, pose: 1, short: 1 } : { img: poseSrc(u.id, 2), pose: 1 });
   const media = C.video ? `<video poster="${C.img}" muted playsinline autoplay preload="auto"><source src="${C.video.replace('.mp4', '.webm')}" type="video/webm"><source src="${C.video}" type="video/mp4"></video>` : `<img src="${C.img}" alt="" class="${C.pose ? 'pose' : ''} ${C.pose && u.flip[2] ? 'flip' : ''}">`;
   const el = h(`<div class="ultcs" style="--rc:${color}"><div class="cs-bg"></div><div class="cs-art">${media}</div><div class="cs-lines"></div>
     <div class="cs-sym">${adinkraSvg(sym)}</div><i class="cs-x a"></i><i class="cs-x b"></i><div class="cs-flash"></div>
@@ -773,7 +774,7 @@ const ICONS = { dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult
 const KIND_GLYPH = { melee: 'warrior', ranged: 'hunter', buff: 'growth', shield: 'guardian', heal: 'sage' };
 function spellIcon(id, i, eq, sidIn) {
   const H = HEROES[id], key = sidIn || (i === 0 ? 'basic' : i === 3 ? 'ult' : (eq || SAVE.heroes[id]?.eq || H.pool)[i - 1]);
-  if ((ICONS[id] || []).includes(key)) return `<span class="sic"><img src="${A}icons/${id}_${key}.webp" alt=""></span>`;
+  if ((ICONS[id] || []).includes(key)) return `<span class="sic"><img src="${A}icons/${id}_${key}.webp${AV}" alt=""></span>`;
   const S = SPELLS[key], g = key === 'basic' ? H.cls : key === 'ult' ? 'stars' : S && S.legacy ? 'skills' : KIND_GLYPH[S && S.kind] || 'skills';
   return `<span class="sic glyph" style="--rc:${RARITY[H.rarity].color}">${icon(g)}</span>`;
 }
