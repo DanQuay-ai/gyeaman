@@ -21,7 +21,7 @@ export const CLASSES = {
 // Growth: one point per level. Speed points cost 2 and cap at SPD_CAP points.
 export const GROWTH = { hp: 0.05, atk: 0.05, mag: 0.05, spd: 2, spdCost: 2, spdCap: 5 };
 export const HEROES = {
-  blay:     { name: 'Blay',     role: 'Asafo',        kr: 'asafo',        en: 'Sword fighter', rarity: 'R',   size: 1.06, hp: 1050, atk: 66, def: 26, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
+  blay:     { name: 'Blay',     role: 'Asafo',        kr: 'asafo',        en: 'Sword fighter', rarity: 'R',   size: 1.28, hp: 1050, atk: 66, def: 26, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Slash', 'Twin Cut', 'Parry', 'Gyawu Atiko'], notes: ['One afena cut.', 'Two cuts and the enemy\'s defence drops for 2 turns.', 'Guard: the next hit is halved and Blay strikes back.', 'Valour of Gyawu: a huge cut. Kills outright below 30% health.'], sym: 'gyawuAtiko' },
   owureku:  { name: 'Owureku',  role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Twin-axe bruiser', rarity: 'R', size: 0.94, hp: 1080, atk: 60, def: 30, cls: 'warrior', spd: 100, cd: [3, 3], flip: [0, 0, 0],
     kit: ['Axe Chop', 'Axe Toss', 'War Cry', 'Ese Ne Tekrema'], notes: ['Heavy axe chop.', 'Hurls an axe: damage and a 1-turn stun that cancels a charged attack.', 'Hits 30% harder for 3 turns and heals 10%.', 'Teeth and tongue: three heavy blows in a row.'], sym: 'eseNeTekrema' },

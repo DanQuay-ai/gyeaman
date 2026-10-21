@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261021h';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021h';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021h';
+import { KF } from './kf.js?v=20261021i';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021i';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021i';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261021h'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
+const AV = '?v=20261021i'; // bump when art files are replaced under the same name (defeats stale browser/CDN caches)
 function img(src) {
   if (!IM[src]) { const e = { el: new Image(), ok: false, sc: {}, sil: {} }; e.el.decoding = 'async'; e.el.onload = () => { e.ok = true; }; e.el.src = src; IM[src] = e; }
   return IM[src];
@@ -978,7 +978,7 @@ function loop(now) {
   const units = [...B.heroes, ...B.foes].filter((u) => u.alive || u.dieT > 0).sort((a, b) => a.fy - b.fy);
   const portrait = r.height > r.width * .9, baseH = portrait ? Math.min(r.height * .36, r.width * .42) : Math.min(r.height * .5, r.width * .24);
   // phantom trail: a moving keyframe step flagged phantom drops blue afterimages every few frames
-  for (const u of [...(B.heroes || []), ...(B.foes || [])]) if (u.kfPh && u.kf && B.t - (u.phT || 0) > .025) { u.phT = B.t; const [ox, oy] = kfOff(u), d = u.side ? -1 : 1; B.ghosts.push({ u, p: u.kf, x: pos(u)[0] + d * ox, y: pos(u)[1] - oy, t0: B.t, life: .42, blue: 1 }); }
+  for (const u of [...(B.heroes || []), ...(B.foes || [])]) if (u.kfPh && u.kf && B.t - (u.phT || 0) > .018) { u.phT = B.t; const [ox, oy] = kfOff(u), d = u.side ? -1 : 1; B.ghosts.push({ u, p: u.kf, x: pos(u)[0] + d * ox, y: pos(u)[1] - oy, t0: B.t, life: 1.6, blue: 1 }); }
   B.ghosts = (B.ghosts || []).filter((q) => B.t - q.t0 < (q.life || .28));
   for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / (q.life || .28), k0 = img(poseSrc(q.u.id, 0)); if (!k0.ok) continue; g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * (q.blue ? .55 : .35); g.filter = q.blue ? 'brightness(0.55) sepia(1) hue-rotate(185deg) saturate(6)' : 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; drawKF(g, q.u.id, q.p, q.u.h); g.restore(); }
   for (const u of units) {
@@ -1091,7 +1091,7 @@ function drawFx(g, f) {
       g.globalAlpha = fade; g.fillStyle = '#ffffff'; crescent(R0, th * .55); g.fill();
       g.globalCompositeOperation = 'source-over'; break; }
     case 'sproj': { const im = img(A + 'kf/blay_fx_' + f.k + '.webp' + AV); if (!im.ok) break; const e = p < .5 ? p * 1.25 : .625 + (p - .5) * .75, x = f.x0 + (f.x1 - f.x0) * Math.min(1, e), h = f.s * (.7 + .5 * Math.min(1, p * 1.4)), w = h * im.el.naturalWidth / im.el.naturalHeight;
-      g.translate(x, f.y); if (f.mir) g.scale(-1, 1); g.rotate(f.rot || 0); if (f.flip) g.scale(1, -1); const al = p < .78 ? 1 : 1 - (p - .78) / .22, X = -w * .75, Y = -h / 2;
+      g.translate(x, f.y); if (f.mir) g.scale(-1, 1); g.rotate(f.rot || 0); if (f.flip) g.scale(1, -1); g.scale(-1, 1); const al = p < .78 ? 1 : 1 - (p - .78) / .22, X = -w * .25, Y = -h / 2;
       g.globalAlpha = al; g.shadowColor = '#4f8dff'; g.shadowBlur = Math.max(18, h * .28); g.drawImage(im.el, X, Y, w, h); g.shadowBlur = Math.max(8, h * .1); g.shadowColor = '#bfd6ff'; g.drawImage(im.el, X, Y, w, h);
       g.shadowBlur = 0; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .55; g.drawImage(im.el, X, Y, w, h); g.globalCompositeOperation = 'source-over'; break; }
     case 'lines': { const fade = 1 - p; g.strokeStyle = '#ffffff'; g.lineCap = 'butt'; const L = f.x1 - f.x0; if (!f.ls) f.ls = Array.from({ length: 9 }, () => [Math.random(), rnd(.3, 1), rnd(1, 3)]);
