@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261021m';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021m';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021m';
+import { KF } from './kf.js?v=20261021n';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261021n';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261021n';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261021m';
+const AV = '?v=20261021n';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -122,17 +122,35 @@ const SEQ = {
     kuukua2: [{ p: 'thA_1', ms: 190, x: .72, phantom: 1, lines: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thB_3', ms: 340, x: .82, phantom: 1, ev: 'sweep' }],
     kuuThrow: [{ p: 'kult_1', ms: 300, x: 0, phantom: 1, ev: 'charge' }, { p: 'kult_2', ms: 420, x: .05, phantom: 1, ev: 'throw' }, { p: 'idle_0', ms: 120, x: 0 }],
     kuuWall: [{ p: 'idle_3', ms: 650, x: 0, ev: 'wall' }],
-    ult: [{ p: 'thB_1', ms: 360, x: 0, phantom: 1, ev: 'charge' }, { p: 'thA_1', ms: 260, x: .72, phantom: 1, lines: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thB_1', ms: 160, x: .7, phantom: 1 }, { p: 'thB_2', ms: 280, x: .92, phantom: 1, ev: 'POW' }, { p: 'kult_3', ms: 420, x: .4, phantom: 1, y: 1.1, phantom: 1, ev: 'leap' }, { p: 'kult_3', ms: 700, x: 0, phantom: 1, y: 1.3, ev: 'rain' }, { p: 'thB_3', ms: 260, x: 0, phantom: 1, y: 0, ev: 'land' }, { p: 'idle_0', ms: 120, x: 0 }],
+    ult: [{ p: 'thB_1', ms: 360, x: 0, phantom: 1, ev: 'charge' }, { p: 'thA_1', ms: 260, x: .72, phantom: 1, lines: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_2', ms: 85, x: .78, phantom: 1, ev: 't' }, { p: 'thA_1', ms: 55, x: .74, phantom: 1 }, { p: 'thA_3', ms: 85, x: .8, phantom: 1, ev: 't' }, { p: 'thB_1', ms: 160, x: .7, phantom: 1 }, { p: 'thB_2', ms: 280, x: .92, phantom: 1, ev: 'POW' }, { p: 'kult_3', ms: 420, x: .4, y: .45, phantom: 1, ev: 'leap' }, { p: 'kult_3', ms: 700, x: .15, y: .55, phantom: 1, ev: 'rain' }, { p: 'thB_3', ms: 260, x: 0, phantom: 1, y: 0, ev: 'land' }, { p: 'idle_0', ms: 120, x: 0 }],
   },
-  obiri: { // agile archer: keeps moving, flips are rotated, arrows are projectiles
-    recover: [{ p: 'idle_3', ms: 300, x: 0, y: .5, spin: -6.283, phantom: 1 }, { p: 'shA_2', ms: 140, x: 0, y: 0 }, { p: 'idle_0', ms: 100, x: 0 }],
-    basic: [{ p: 'shB_3', ms: 200, x: .18, phantom: 1 }, { p: 'shA_1', ms: 280, x: .18, ev: 'shot' }, { p: 'idle_3', ms: 280, x: 0, y: .45, spin: -6.283, phantom: 1 }, { p: 'idle_0', ms: 90, x: 0, y: 0 }],
-    obiri1: [{ p: 'idle_3', ms: 300, x: -.15, y: 1, spin: -6.283, phantom: 1 }, { p: 'shB_1', ms: 320, x: -.1, y: .9, ev: 'pin' }, { p: 'shA_2', ms: 240, x: 0, y: 0, ev: 'land' }, { p: 'idle_0', ms: 100, x: 0 }],
+  obiri: { // agile archer: back-jumps to reposition; flips only inside chains of shots (ult)
+    recover: [{ p: 'shB_3', ms: 220, x: 0, y: .25, phantom: 1 }, { p: 'idle_0', ms: 100, x: 0, y: 0 }],
+    basic: [{ p: 'idle_0', ms: 120, x: 0 }, { p: 'shA_1', ms: 260, x: -.02, ev: 'shot' }, { p: 'shB_3', ms: 240, x: -.14, y: .35, phantom: 1 }, { p: 'idle_0', ms: 140, x: 0, y: 0 }],
+    obiri1: [{ p: 'shB_3', ms: 220, x: -.16, y: .4, phantom: 1 }, { p: 'shB_2', ms: 320, x: -.12, y: .6, ev: 'pin' }, { p: 'shA_2', ms: 240, x: 0, y: 0, ev: 'land' }, { p: 'idle_0', ms: 100, x: 0 }],
     obiri2: [{ p: 'shB_3', ms: 220, x: .1, phantom: 1 }, { p: 'shA_2', ms: 600, x: .1, ev: 'aim' }, { p: 'idle_0', ms: 120, x: 0 }],
-    obiVolley: [{ p: 'shB_3', ms: 180, x: .25, phantom: 1 }, { p: 'shB_2', ms: 380, x: .3, y: .8, phantom: 1, ev: 'volley' }, { p: 'idle_3', ms: 260, x: .2, y: .9, spin: -6.283, phantom: 1 }, { p: 'shB_3', ms: 320, x: .1, y: 0, phantom: 1, ev: 'shot' }, { p: 'idle_0', ms: 120, x: 0 }],
-    obiKnee: [{ p: 'shB_3', ms: 400, x: .3, phantom: 1, ev: 'knee' }, { p: 'idle_3', ms: 280, x: 0, y: .45, spin: -6.283, phantom: 1 }, { p: 'idle_0', ms: 100, x: 0, y: 0 }],
+    obiVolley: [{ p: 'shB_3', ms: 180, x: .25, phantom: 1 }, { p: 'shB_2', ms: 380, x: .3, y: .8, phantom: 1, ev: 'volley' }, { p: 'shB_3', ms: 320, x: .1, y: 0, phantom: 1, ev: 'shot' }, { p: 'idle_0', ms: 120, x: 0 }],
+    obiKnee: [{ p: 'shB_3', ms: 400, x: .3, phantom: 1, ev: 'knee' }, { p: 'shA_2', ms: 220, x: .05, y: .3, phantom: 1 }, { p: 'idle_0', ms: 100, x: 0, y: 0 }],
     ult: [{ p: 'oult_1', ms: 480, x: 0, ev: 'charge' }, { p: 'shA_3', ms: 600, x: -.03, ev: 'sky' }, { p: 'idle_3', ms: 300, x: .1, y: 1.1, spin: -6.283, phantom: 1 }, { p: 'shB_1', ms: 280, x: .2, y: 1, phantom: 1, ev: 'air' }, { p: 'shB_2', ms: 260, x: .3, y: .8, phantom: 1, ev: 'air' }, { p: 'oult_3', ms: 280, x: .25, y: .5, phantom: 1, ev: 'air' },
       { p: 'shB_3', ms: 220, x: 0, y: 0, phantom: 1 }, { p: 'oult_1', ms: 300, x: 0, ev: 'charge2' }, { p: 'oult_2', ms: 650, x: -.12, ev: 'big' }, { p: 'idle_0', ms: 140, x: 0 }],
+  },
+  gyakari: { // heavy shield tank: bull charges, bashes, spinning shield, ground slams
+    recover: [{ p: 'idle_3', ms: 240, x: 0, phantom: 1 }, { p: 'idle_0', ms: 120, x: 0 }],
+    basic: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'gbA_1', ms: 140, x: .74 }, { p: 'gbA_3', ms: 260, x: .82, ev: 'jab' }],
+    gyakari1: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'gbA_1', ms: 220, x: .72, ev: 'charge' }, { p: 'gbA_2', ms: 340, x: .86, ev: 'bash' }],
+    gyakari2: [{ p: 'gbB_3', ms: 650, x: 0, ev: 'brace' }],
+    gyaSweep: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'gbB_1', ms: 240, x: .8, ev: 'spin' }, { p: 'gbB_2', ms: 300, x: .82, ev: 'sweep' }],
+    gyaFirm: [{ p: 'gbB_3', ms: 650, x: 0, ev: 'firm' }],
+    ult: [{ p: 'gbB_3', ms: 420, x: 0, ev: 'wall' }, { p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'gult_1', ms: 380, x: .78, y: .5, phantom: 1, ev: 'leap' }, { p: 'gult_2', ms: 420, x: .8, y: 0, ev: 'slam' }, { p: 'gbB_1', ms: 220, x: .8, phantom: 1, ev: 'spin' }, { p: 'gult_3', ms: 420, x: .9, ev: 'thrust' }],
+  },
+  afrakoma: { // axe berserker: overhead crushes, whirlwinds, earth-shattering slams
+    recover: [{ p: 'idle_3', ms: 240, x: 0, phantom: 1 }, { p: 'idle_0', ms: 120, x: 0 }],
+    basic: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'acA_1', ms: 200, x: .72 }, { p: 'acA_2', ms: 300, x: .8, ev: 'crush' }],
+    afrakoma1: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'acA_1', ms: 180, x: .72 }, { p: 'acA_3', ms: 320, x: .82, ev: 'bleed' }],
+    afrakoma2: [{ p: 'acB_3', ms: 700, x: 0, ev: 'fury' }],
+    afrWhirl: [{ p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'acB_1', ms: 180, x: .8, phantom: 1, ev: 'w' }, { p: 'acA_3', ms: 160, x: .82, phantom: 1, ev: 'w' }, { p: 'acB_1', ms: 180, x: .82, phantom: 1, ev: 'w' }, { p: 'acB_2', ms: 300, x: .82, y: .3, ev: 'rise' }],
+    afrOath: [{ p: 'acB_3', ms: 700, x: 0, ev: 'oath' }],
+    ult: [{ p: 'acB_3', ms: 480, x: 0, ev: 'roar' }, { p: 'idle_3', ms: 230, x: .7, phantom: 1, lines: 1 }, { p: 'acB_1', ms: 200, x: .78, phantom: 1, ev: 'w' }, { p: 'ault_1', ms: 380, x: .78, y: .55, phantom: 1, ev: 'leap' }, { p: 'ault_2', ms: 480, x: .82, y: 0, ev: 'slam' }, { p: 'ault_3', ms: 380, x: .84, phantom: 1, ev: 'finish' }],
   },
 };
 const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .42 - u.w * .3);
@@ -153,8 +171,8 @@ async function runKF(u, f, seq, onEv) {
 function kfOff(u) { const a = u.kfA; if (!a) return [0, 0]; const t = Math.min(1, (B.t - a.t0) / (a.d || .001)), e = 1 - (1 - t) ** 3; return [a.x0 + (a.x1 - a.x0) * e, a.y0 + (a.y1 - a.y0) * e]; }
 const kfEnd = (u) => { u.kfSpin = null; u.kfPh = false; u.kf = null; u.kfA = null; u.kfAlpha = 1; };
 const VIO = '#c58bff';
-const SPL = { dufie: 'ultE_2', blay: 'ultX_2', kuukua: 'thB_2', obiri: 'oult_1' };
-const PH_HUE = { blay: 185, kuukua: 322, obiri: 15 };
+const SPL = { dufie: 'ultE_2', blay: 'ultX_2', kuukua: 'thB_2', obiri: 'oult_1', gyakari: 'gult_2', afrakoma: 'ault_2' };
+const PH_HUE = { blay: 185, kuukua: 322, obiri: 15, gyakari: 28, afrakoma: 0 };
 const PH_LIFE = { blay: 4.8, kuukua: 5.2, obiri: 1.8 }, PH_GAP = { blay: .014, kuukua: .008, obiri: .018 }; // phantom trail tint per hero // ultimate splash pose
 async function dufieRecover(u, f) { await runKF(u, f, SEQ.dufie.recover, async (ev) => { if (ev === 'land') { const [x, y] = pos(u); burst(x, y, ['#d8c9b0', '#fff'], 10, 3); } }); kfEnd(u); }
 CHOREO.dufie = {
@@ -241,14 +259,14 @@ CHOREO.kuukua = {
   kuukua2: async (u, f, m) => { const ev = kuuEv(u, f, m, .3); await runKF(u, f, SEQ.kuukua.kuukua2, async (e) => { await ev(e); if (e === 'sweep' && f.alive) { const [x, y] = pos(f); fx('arc', 320, { x, y: y - f.h * .12, r: f.h * .5, c: RED, dir: 1, tilt: 1.5 }); hit(u, f, .8 * m, { color: RED }); hitStop(90); pushTM(f, -.4); addSt(f, 'slow', 1); float(f, 'TURN −40%', '#c58bff', .8); } }); await kuuRecover(u, f); },
   kuuThrow: async (u, f, m) => { await runKF(u, f, SEQ.kuukua.kuuThrow, async (e) => { const [hx, hy] = pos(u), [x, y] = pos(f);
       if (e === 'charge') fx('star', 300, { x: hx, y: hy - u.h * .9, r: u.h * .4, c: RED });
-      if (e === 'throw') { fx('sproj', 560, { src: 'fx_spear', x0: hx + u.w * .3, x1: x + f.w * .2, y: hy - u.h * .65, s: u.h * .22 }); await wait(300); debris(x, y, 8, u.h * .12); fx('flash', 520, { x, y: y - f.h * .5, r: f.h * .9, c: RED, n: 12 }); hit(u, f, 1.3 * m, { color: RED, crit: true, big: 1 }); hitStop(140); B.shake = 10; } }); kfEnd(u); },
+      if (e === 'throw') { fx('sproj', 560, { src: 'fx_spear', x0: hx + u.w * .3, x1: x + f.w * .2, y: hy - u.h * .65, s: u.h * .4 }); await wait(300); debris(x, y, 8, u.h * .12); fx('flash', 520, { x, y: y - f.h * .5, r: f.h * .9, c: RED, n: 12 }); hit(u, f, 1.3 * m, { color: RED, crit: true, big: 1 }); hitStop(140); B.shake = 10; } }); kfEnd(u); },
   kuuWall: async (u, f, m) => { await runKF(u, null, SEQ.kuukua.kuuWall, async (e) => { if (e === 'wall') { u.st.guard = 1; addSt(u, 'atkUp', 3); u.atkUpK = 1.2; fx('ward', 900, { unit: u, c: '#ff3040' }); float(u, 'LANCE WALL', '#ffb0b8', .9); } }); kfEnd(u); },
   ult: async (u, f, m, T) => { const ev = kuuEv(u, f, m, .07); const dbl = f.st.slow || f.st.defDown; await runKF(u, f, SEQ.kuukua.ult, async (e) => { const r = await ev(e);
       if (r === 'pow') hit(u, f, .5 * m, { color: RED, big: 1 });
-      if (e === 'leap') { B.cam.tz = B.rest.z * .72; B.cam.ty = B.rest.y - .12; await impactFrames(T, u); B.cam.tz = B.rest.z * .72; B.cam.ty = B.rest.y - .12; }
+      if (e === 'leap') await impactFrames(T, u);
       if (e === 'rain') { const [x, y] = pos(f); for (let k = 0; k < 14; k++) { const xx = x + rnd(-f.w * .9, f.w * .9); fx('spearP', 520, { x0: xx - 60, y0: y - B.hh * .9, x1: xx, y1: y - f.h * rnd(.1, .5), len: u.h * .35, c: RED }); if (k % 3 === 2) setTimeout(() => debris(xx, y, 6, u.h * .1), 260); await wait(45); }
         await wait(160); fx('flash', 600, { x, y: y - f.h * .4, r: f.h * 1.2, c: RED, n: 16 }); B.shake = 16; if (f.alive) hit(u, f, (dbl ? 2.4 : 1.2) * m, { color: RED, big: 1 }); hitStop(160); }
-      if (e === 'land') { const [hx, hy] = pos(u); burst(hx, hy, ['#d8c9b0', '#fff'], 12, 4); debris(hx, hy, 8, u.h * .1); B.cam.tz = B.rest.z; B.cam.ty = B.rest.y; } });
+      if (e === 'land') { const [hx, hy] = pos(u); burst(hx, hy, ['#d8c9b0', '#fff'], 12, 4); debris(hx, hy, 8, u.h * .1); } });
     await kuuRecover(u, f); },
 };
 // Obiri: arrows are glowing projectiles; flips, mid-air shots and arrow rain
@@ -267,6 +285,42 @@ CHOREO.obiri = {
       if (e === 'air' && f.alive) { arrow(u, f); await wait(200); hit(u, f, .25 * m, { color: GOLD }); }
       if (e === 'big') { await impactFrames(T, u); fx('arrowP', 360, { x0: hx + u.h * .4, y0: hy - u.h * .6, x1: x, y1: y - f.h * .5, c: '#fff1b0', hitAt: .5, len: u.h * .4, w: 7 }); await wait(180); fx('beam', 500, { x0: hx, y0: hy - u.h * .6, x1: x + B.w, y1: y - f.h * .5, c: GOLD }); fx('flash', 600, { x, y: y - f.h * .5, r: f.h * 1.3, c: GOLD, n: 16 }); B.shake = 16; if (f.alive) hit(u, f, 2.0 * m, { color: GOLD, crit: true, big: 1 }); hitStop(160); } });
     kfEnd(u); },
+};
+// Gyakari & Afrakoma: weight and impact; their projectiles are ground shockwaves that roll to the enemy
+const AMB = '#ffb43c', ORA = '#ff7a2a';
+const shock = (u, f, c, big) => { const [hx, hy] = pos(u), [x, y] = pos(f); fx('shock', big ? 620 : 460, { x0: hx + u.w * .4, x1: x + f.w * .3, y: hy, h: u.h * (big ? .55 : .35), c }); };
+const slam = (u, f, c, big) => { const [x, y] = pos(f); fx('flash', big ? 560 : 380, { x, y: y - f.h * .45, r: f.h * (big ? 1.1 : .7), c, n: 12 }); debris(x, y, big ? 14 : 8, u.h * .12); B.shake = big ? 18 : 9; hitStop(big ? 170 : 100); };
+async function heavyRecover(u, f) { await runKF(u, f, SEQ[u.id].recover); kfEnd(u); }
+CHOREO.gyakari = {
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.gyakari.basic, async (e) => { if (e === 'jab') { slam(u, f, AMB, 0); d = hit(u, f, m, { ...o, color: AMB }); } }); await heavyRecover(u, f); return d; },
+  gyakari1: async (u, f, m) => { await runKF(u, f, SEQ.gyakari.gyakari1, async (e) => { const [hx, hy] = pos(u); if (e === 'charge') fx('star', 300, { x: hx, y: hy - u.h * .5, r: u.h * .5, c: AMB });
+      if (e === 'bash') { shock(u, f, AMB, 0); slam(u, f, AMB, 1); hit(u, f, .9 * m, { color: AMB, big: 1 }); addSt(f, 'stun', 1); if (f.charging) { f.charging = false; float(f, 'INTERRUPTED', AMB, .9); } } }); await heavyRecover(u, f); },
+  gyakari2: async (u, f, m) => { await runKF(u, null, SEQ.gyakari.gyakari2, async (e) => { if (e === 'brace') { const [x, y] = pos(u); debris(x + u.w * .4, y, 6, u.h * .1); addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .3 * m); fx('ward', 900, { unit: u, c: AMB }); float(u, 'BRACE', AMB, .9); B.shake = 6; } }); kfEnd(u); },
+  gyaSweep: async (u, f, m) => { await runKF(u, f, SEQ.gyakari.gyaSweep, async (e) => { if (e === 'spin' && f.alive) { slam(u, f, AMB, 0); hit(u, f, .4 * m, { color: AMB }); }
+      if (e === 'sweep' && f.alive) { shock(u, f, AMB, 0); hit(u, f, .5 * m, { color: AMB }); addSt(f, 'slow', 2); pushTM(f, -.25); float(f, 'TURN −25%', '#c58bff', .8); } }); await heavyRecover(u, f); },
+  gyaFirm: async (u, f, m) => { await runKF(u, null, SEQ.gyakari.gyaFirm, async (e) => { if (e === 'firm') { heal(u, u.max * .15); u.st.guard = 1; fx('ward', 900, { unit: u, c: '#7ee08a' }); SFX.heal(); } }); kfEnd(u); },
+  ult: async (u, f, m, T) => { await runKF(u, f, SEQ.gyakari.ult, async (e) => {
+      if (e === 'wall') { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .35 * m); fx('ward', 900, { unit: u, c: AMB }); }
+      if (e === 'leap') await impactFrames(T, u);
+      if (e === 'slam') { const [hx, hy] = pos(u); debris(hx + u.w * .4, hy, 16, u.h * .14); shock(u, f, AMB, 1); slam(u, f, AMB, 1); if (f.alive) hit(u, f, .5 * m, { color: AMB, big: 1 }); }
+      if (e === 'spin' && f.alive) { slam(u, f, AMB, 0); hit(u, f, .3 * m, { color: AMB }); }
+      if (e === 'thrust' && f.alive) { slam(u, f, AMB, 1); hit(u, f, .6 * m + (u.shieldAmt || 0) / u.atk * .5, { color: AMB, big: 1 }); } });
+    await heavyRecover(u, f); },
+};
+CHOREO.afrakoma = {
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.afrakoma.basic, async (e) => { if (e === 'crush') { shock(u, f, ORA, 0); slam(u, f, ORA, 1); d = hit(u, f, m, { ...o, color: ORA }); } }); await heavyRecover(u, f); return d; },
+  afrakoma1: async (u, f, m) => { await runKF(u, f, SEQ.afrakoma.afrakoma1, async (e) => { if (e === 'bleed' && f.alive) { slam(u, f, ORA, 1); const d = hit(u, f, 1.25 * m, { color: ORA, big: 1 }); heal(u, d * .5, true); } }); await heavyRecover(u, f); },
+  afrakoma2: async (u, f, m) => { await runKF(u, null, SEQ.afrakoma.afrakoma2, async (e) => { if (e === 'fury') { const [x, y] = pos(u); fx('star', 600, { x, y: y - u.h * .8, r: u.h * .7, c: ORA }); B.shake = 8; addSt(u, 'atkUp', 3); u.atkUpK = 1.4; u.hp = Math.max(1, Math.round(u.hp - u.max * .1)); float(u, '−10%', '#ff6a5a'); float(u, 'FURY', ORA, 1); } }); kfEnd(u); },
+  afrWhirl: async (u, f, m) => { await runKF(u, f, SEQ.afrakoma.afrWhirl, async (e) => { if (e === 'w' && f.alive) { const [x, y] = pos(f); fx('arc', 280, { x, y: y - f.h * .45, r: f.h * .6, c: ORA, dir: Math.random() < .5 ? 1 : -1, tilt: rnd(-.4, .4) }); hit(u, f, .4 * m, { color: ORA }); hitStop(60); }
+      if (e === 'rise' && f.alive) { slam(u, f, ORA, 0); hit(u, f, .4 * m, { color: ORA }); } }); await heavyRecover(u, f); },
+  afrOath: async (u, f, m) => { await runKF(u, null, SEQ.afrakoma.afrOath, async (e) => { if (e === 'oath') { heal(u, u.max * .2); addSt(u, 'atkUp', 3); u.atkUpK = 1.2; fx('ward', 900, { unit: u, c: '#ff4a3a' }); SFX.heal(); } }); kfEnd(u); },
+  ult: async (u, f, m, T) => { let tot = 0; await runKF(u, f, SEQ.afrakoma.ult, async (e) => { const [hx, hy] = pos(u);
+      if (e === 'roar') { fx('star', 500, { x: hx, y: hy - u.h * .8, r: u.h * .8, c: ORA }); B.shake = 8; }
+      if (e === 'w' && f.alive) { slam(u, f, ORA, 0); tot += hit(u, f, .4 * m, { color: ORA }); }
+      if (e === 'leap') await impactFrames(T, u);
+      if (e === 'slam') { debris(hx + u.w * .4, hy, 18, u.h * .15); shock(u, f, ORA, 1); slam(u, f, ORA, 1); if (f.alive) tot += hit(u, f, 1.8 * m, { color: ORA, big: 1 }); }
+      if (e === 'finish' && f.alive) { slam(u, f, ORA, 1); tot += hit(u, f, .8 * m, { color: ORA, big: 1 }); } });
+    heal(u, tot * .5, true); await heavyRecover(u, f); },
 };
 // draw one clip frame with feet at (0,0) and body height bodyH
 function drawClip(g, c, fi, bodyH) {
@@ -897,7 +951,7 @@ async function impactFrames(targets, src) {
 function endUlt() { B.dimTo = 0; B.cam.tz = B.rest.z; B.cam.tx = .5; B.cam.ty = B.rest.y; }
 
 // spell icons: generated art when a hero has had an art pass, else a glyph on the class colour
-const ICONS = { kuukua: ['basic', 'kuukua1', 'kuukua2', 'kuuThrow', 'kuuWall', 'ult'], obiri: ['basic', 'obiri1', 'obiri2', 'obiVolley', 'obiKnee', 'ult'], dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'], blay: ['basic', 'blay1', 'blay2', 'blayRush', 'blayRally', 'ult'] };
+const ICONS = { gyakari: ['basic', 'gyakari1', 'gyakari2', 'gyaSweep', 'gyaFirm', 'ult'], afrakoma: ['basic', 'afrakoma1', 'afrakoma2', 'afrWhirl', 'afrOath', 'ult'], kuukua: ['basic', 'kuukua1', 'kuukua2', 'kuuThrow', 'kuuWall', 'ult'], obiri: ['basic', 'obiri1', 'obiri2', 'obiVolley', 'obiKnee', 'ult'], dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'], blay: ['basic', 'blay1', 'blay2', 'blayRush', 'blayRally', 'ult'] };
 const KIND_GLYPH = { melee: 'warrior', ranged: 'hunter', buff: 'growth', shield: 'guardian', heal: 'sage' };
 function spellIcon(id, i, eq, sidIn) {
   const H = HEROES[id], key = sidIn || (i === 0 ? 'basic' : i === 3 ? 'ult' : (eq || SAVE.heroes[id]?.eq || H.pool)[i - 1]);
@@ -970,11 +1024,11 @@ async function doHero(u, i) {
   switch (u.id) {
     case 'blay': if (CHOREO.blay.ult) { await CHOREO.blay.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#fff', dir: 1, big: 1 }); if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1 }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 3.0 * m, { big: 1 }); break; }
     case 'owureku': { await impactFrames(T, u); for (let k = 0; k < 3 && f.alive; k++) { fx('slash', 300, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .55, c: '#ffb070', dir: 1, big: 1 }); hit(u, f, 1.15 * m, { color: '#ffb070', big: 1 }); await wait(160); } break; }
-    case 'gyakari': { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .35 * m); await wait(300); await impactFrames(T, u); hit(u, f, 1.2 * m + u.shieldAmt / u.atk * .5, { color: '#6fb6ff', big: 1 }); break; }
+    case 'gyakari': if (CHOREO.gyakari.ult && KF.gyakari) { await CHOREO.gyakari.ult(u, f, m, T); break; } { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .35 * m); await wait(300); await impactFrames(T, u); hit(u, f, 1.2 * m + u.shieldAmt / u.atk * .5, { color: '#6fb6ff', big: 1 }); break; }
     case 'obiri': if (CHOREO.obiri.ult && KF.obiri) { await CHOREO.obiri.ult(u, f, m, T); break; } { await impactFrames(T, u); const [x0, y0] = pos(u), [x, y] = pos(f); fx('beam', 500, { x0, y0: y0 - u.h * .6, x1: x, y1: y - f.h * .5, c: '#ffd23c' }); hit(u, f, 3.2 * m, { color: '#ffd23c', crit: true, big: 1 }); break; }
     case 'kuukua': if (CHOREO.kuukua.ult && KF.kuukua) { await CHOREO.kuukua.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('rain', 600, { unit: f }); hit(u, f, (f.st.slow || f.st.defDown ? 3.6 : 1.8) * m, { color: '#e6edf5', big: 1 }); break; }
     case 'kome': { heal(u, u.max * .2 * m); await impactFrames(T, u); fx('boom', 800, { unit: f }); hit(u, f, (f.st.burn ? 3.4 : 1.7) * m, { color: '#ffb43c', big: 1 }); SFX.heal(); break; }
-    case 'afrakoma': { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#ff8a3c', dir: 1, big: 1 }); const d = hit(u, f, 3.0 * m, { color: '#ff8a3c', big: 1 }); heal(u, d * .5, true); break; }
+    case 'afrakoma': if (CHOREO.afrakoma.ult && KF.afrakoma) { await CHOREO.afrakoma.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#ff8a3c', dir: 1, big: 1 }); const d = hit(u, f, 3.0 * m, { color: '#ff8a3c', big: 1 }); heal(u, d * .5, true); break; }
     case 'dufie': if (CHOREO.dufie.ult) { await CHOREO.dufie.ult(u, f, m, T); break; } { await impactFrames(T, u); const [x, y] = pos(f); for (let k = 0; k < 6 && f.alive; k++) { fx('arc', 260, { x: x + rnd(-8, 8), y: y - f.h * (.35 + .3 * Math.random()), r: f.h * rnd(.45, .7), c: k % 2 ? '#ffffff' : '#c58bff', dir: k % 2 ? -1 : 1, tilt: rnd(-.6, .6) }); hit(u, f, .62 * m, { color: '#c58bff' }); await wait(110); } fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: '#c58bff' }); fx('smoke', 900, { x, y, r: f.h * .5, c: '#c58bff', n: 12 }); break; }
   }
   await wait(600); endUlt(); await wait(220);
@@ -1052,9 +1106,12 @@ function loop(now) {
   const units = [...B.heroes, ...B.foes].filter((u) => u.alive || u.dieT > 0).sort((a, b) => a.fy - b.fy);
   const portrait = r.height > r.width * .9, baseH = portrait ? Math.min(r.height * .36, r.width * .42) : Math.min(r.height * .5, r.width * .24);
   // phantom trail: a moving keyframe step flagged phantom drops blue afterimages every few frames
-  for (const u of [...(B.heroes || []), ...(B.foes || [])]) if (u.kfPh && u.kf && B.t - (u.phT || 0) > (PH_GAP[u.id] || .018)) { u.phT = B.t; const [ox, oy] = kfOff(u), d = u.side ? -1 : 1; B.ghosts.push({ u, p: u.kf, x: pos(u)[0] + d * ox, y: pos(u)[1] - oy, t0: B.t, life: PH_LIFE[u.id] || 1.6, blue: 1, hue: u.phHue ?? 185, red: u.id === 'kuukua' }); }
+  // phantom trail: exactly 9 afterimages, each fading over 0.3 s
+  for (const u of [...(B.heroes || []), ...(B.foes || [])]) if (u.kfPh && u.kf && B.t - (u.phT || 0) > .034) { u.phT = B.t; const [ox, oy] = kfOff(u), d = u.side ? -1 : 1, s = u.kfSpin, ts = s ? Math.min(1, (B.t - s.t0) / s.d) : 0;
+    B.ghosts.push({ u, p: u.kf, x: pos(u)[0] + d * ox, y: pos(u)[1] - oy, t0: B.t, life: .3, blue: 1, hue: u.phHue ?? 185, red: u.id === 'kuukua', bh: u._bh || u.h, rot: s ? s.a * (ts < .5 ? 2 * ts * ts : 1 - (-2 * ts + 2) ** 2 / 2) : 0 });
+    const mine = B.ghosts.filter((q) => q.u === u && q.blue); if (mine.length > 9) B.ghosts.splice(B.ghosts.indexOf(mine[0]), 1); }
   B.ghosts = (B.ghosts || []).filter((q) => B.t - q.t0 < (q.life || .28));
-  for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / (q.life || .28), k0 = img(poseSrc(q.u.id, 0)); if (!k0.ok) continue; g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = q.red ? 'source-over' : 'lighter'; g.globalAlpha = a * (q.red ? .5 : q.blue ? .55 : .35); g.filter = q.red ? 'brightness(0.32) sepia(1) hue-rotate(-42deg) saturate(14) brightness(1.5)' : q.blue ? `brightness(0.55) sepia(1) hue-rotate(${q.hue ?? 185}deg) saturate(6)` : 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; drawKF(g, q.u.id, q.p, q.u.h); g.restore(); }
+  for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / (q.life || .28), k0 = img(poseSrc(q.u.id, 0)); if (!k0.ok) continue; g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = q.red ? 'source-over' : 'lighter'; g.globalAlpha = a * (q.red ? .5 : q.blue ? .55 : .35); g.filter = q.red ? 'brightness(0.32) sepia(1) hue-rotate(-42deg) saturate(14) brightness(1.5)' : q.blue ? `brightness(0.55) sepia(1) hue-rotate(${q.hue ?? 185}deg) saturate(6)` : 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; if (q.rot) { g.translate(0, -q.bh * .5); g.rotate(q.rot); g.translate(0, q.bh * .5); } drawKF(g, q.u.id, q.p, q.bh || q.u.h); g.restore(); }
   for (const u of units) {
     u.h = baseH * u.size * u.depth;
     if (u.enter) u.enter = Math.max(0, u.enter - dt * 2.2);
@@ -1077,7 +1134,7 @@ function loop(now) {
     const th = ph * dpr * C.z;
     const ring = u.side && u.charging && u.alive ? '#ff3b2a' : null;
     if (ring) { const sil = silhouette(e, th, ring); if (sil) { g.save(); g.globalAlpha *= .85; for (const [ox, oy] of [[-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, 2], [-2, 2], [2, -2]]) g.drawImage(sil, -pw / 2 + ox, -ph + oy, pw, ph); g.restore(); } }
-    const AN = ANIM[u.id], bodyH = e0.el.naturalHeight * k; let drawn = false;
+    const AN = ANIM[u.id], bodyH = e0.el.naturalHeight * k; u._bh = bodyH; let drawn = false;
     if (KF[u.id]) { // keyframe heroes: move pose, else idle breathing / hurt / defeated
       const [ox, oy] = kfOff(u), p = u.kf || (!u.alive ? 'idle_2' : u.hurt > .35 ? 'idle_1' : 'idle_0');
       g.save(); g.translate((flip ? -1 : 1) * ox, -oy - (u.kf ? 0 : bob * .3)); if (!u.kf) { const br = Math.sin(B.t * 2.2) * .006; g.scale(1 - br * .4, 1 + br); } if (u.kfSpin) { const s = u.kfSpin, t = Math.min(1, (B.t - s.t0) / s.d), e = t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; g.translate(0, -bodyH * .5); g.rotate(s.a * e); g.translate(0, bodyH * .5); } drawn = drawKF(g, u.id, p, bodyH, u.kfAlpha); g.restore();
@@ -1169,7 +1226,7 @@ function drawFx(g, f) {
       g.globalAlpha = al; g.shadowColor = '#4f8dff'; g.shadowBlur = Math.max(18, h * .28); g.drawImage(im.el, X, Y, w, h); g.shadowBlur = Math.max(8, h * .1); g.shadowColor = '#bfd6ff'; g.drawImage(im.el, X, Y, w, h);
       g.shadowBlur = 0; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .55; g.drawImage(im.el, X, Y, w, h); g.globalCompositeOperation = 'source-over'; break; }
     case 'arrowP': { const im = img(A + 'kf/fx_arrow.webp' + AV); if (im.ok) { const e = Math.min(1, p / (f.hitAt || .55)), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e - Math.sin(e * Math.PI) * (f.arc || 0), a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0), al = e < 1 ? 1 : Math.max(0, 1 - (p - (f.hitAt || .55)) * 4);
-        if (al <= 0) break; const h = (f.len || 46) * .55 * (f.w || 3) / 3, w = h * im.el.naturalWidth / im.el.naturalHeight; g.globalAlpha = al; g.translate(x, y); g.rotate(a); g.shadowColor = f.c || GOLD; g.shadowBlur = 16; g.drawImage(im.el, -w * .85, -h / 2, w, h); g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .4; g.drawImage(im.el, -w * .85, -h / 2, w, h); g.globalCompositeOperation = 'source-over'; break; } }
+        if (al <= 0) break; const h = (f.len || 46) * .9 * Math.sqrt((f.w || 3) / 3), w = h * im.el.naturalWidth / im.el.naturalHeight * 1.25; g.globalAlpha = al; g.translate(x, y); g.rotate(a); g.shadowColor = f.c || GOLD; g.shadowBlur = 16; g.drawImage(im.el, -w * .85, -h / 2, w, h); g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .4; g.drawImage(im.el, -w * .85, -h / 2, w, h); g.globalCompositeOperation = 'source-over'; break; } }
     case 'arrowP_code': { // code-drawn fallback: straight or falling (rain), with a light trail
       const e = Math.min(1, p / (f.hitAt || .55)), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e - Math.sin(e * Math.PI) * (f.arc || 0), a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0), L = f.len || 46, al = e < 1 ? 1 : Math.max(0, 1 - (p - (f.hitAt || .55)) * 4);
       if (al <= 0) break; g.globalAlpha = al; g.translate(x, y); g.rotate(a); g.globalCompositeOperation = 'lighter';
@@ -1177,7 +1234,7 @@ function drawFx(g, f) {
       g.globalCompositeOperation = 'source-over'; g.shadowColor = f.c || '#ffcf5a'; g.shadowBlur = 14; g.strokeStyle = '#5a3a1c'; g.lineWidth = f.w || 3; g.beginPath(); g.moveTo(-L, 0); g.lineTo(L * .25, 0); g.stroke();
       g.fillStyle = '#fff8e0'; g.beginPath(); g.moveTo(L * .5, 0); g.lineTo(L * .2, -6); g.lineTo(L * .2, 6); g.closePath(); g.fill();
       g.fillStyle = f.c || '#ffcf5a'; g.fillRect(-L, -5, 10, 10); break; }
-    case 'spearP': { const im = img(A + 'kf/fx_spear.webp' + AV); if (im.ok) { const e = Math.min(1, p / .5), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e, a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0), w = (f.len || 120) * 1.6, h = w * im.el.naturalHeight / im.el.naturalWidth;
+    case 'spearP': { const im = img(A + 'kf/fx_spear.webp' + AV); if (im.ok) { const e = Math.min(1, p / .5), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e, a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0), w = (f.len || 120) * 3, h = w * im.el.naturalHeight / im.el.naturalWidth * 1.4;
         if (p > .75) g.globalAlpha = 1 - (p - .75) * 4; g.translate(x, y); g.rotate(a); g.shadowColor = f.c || RED; g.shadowBlur = 14; g.drawImage(im.el, -w * .9, -h / 2, w, h); break; } }
     case 'spearP_code': { const e = Math.min(1, p / .5), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e, a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0), L = f.len || 120;
       if (p > .75) g.globalAlpha = 1 - (p - .75) * 4; g.translate(x, y); g.rotate(a); g.shadowColor = f.c || '#ff3b4a'; g.shadowBlur = 18;
@@ -1188,6 +1245,11 @@ function drawFx(g, f) {
       const e = Math.min(1, p / .15), fade = p < .25 ? 1 : 1 - (p - .25) / .75, R = f.r * (.5 + .5 * e); g.translate(f.x, f.y); g.globalCompositeOperation = 'lighter'; g.globalAlpha = fade;
       const n = f.n || 8; for (let i = 0; i < n; i++) { const a = i / n * 6.283 + (f.rot || 0), l = R * (i % 2 ? .55 : 1); g.fillStyle = i % 2 ? f.c || '#ff3b4a' : '#ffffff'; g.beginPath(); g.moveTo(Math.cos(a) * l, Math.sin(a) * l); g.lineTo(Math.cos(a + .18) * R * .12, Math.sin(a + .18) * R * .12); g.lineTo(Math.cos(a - .18) * R * .12, Math.sin(a - .18) * R * .12); g.closePath(); g.fill(); }
       const rg = g.createRadialGradient(0, 0, 1, 0, 0, R * .5); rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.beginPath(); g.arc(0, 0, R * .5, 0, 6.28); g.fill(); g.globalCompositeOperation = 'source-over'; break; }
+    case 'shock': { // rolling ground shockwave: a crest of light and dust travelling along the floor
+      const e = Math.min(1, p / .7), x = f.x0 + (f.x1 - f.x0) * e, fade = p < .7 ? 1 : 1 - (p - .7) / .3, H = f.h * (.5 + .5 * Math.sin(Math.min(1, p * 1.4) * Math.PI / 2));
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = fade; const lg = g.createLinearGradient(x - H * 1.2, 0, x + H * .3, 0); lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(.8, f.c); lg.addColorStop(1, '#fff');
+      g.fillStyle = lg; g.beginPath(); g.moveTo(x - H * 1.2, f.y); g.quadraticCurveTo(x - H * .2, f.y - H * 1.1, x + H * .3, f.y); g.closePath(); g.fill();
+      g.globalCompositeOperation = 'source-over'; g.fillStyle = 'rgba(120,90,60,.55)'; for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(x - i * H * .22, f.y - H * .08 * (i % 3), H * .1 * (1 - i / 7), 0, 6.28); g.fill(); } break; }
     case 'ward': { const [x, y] = pos(f.unit), [ox, oy] = kfOff(f.unit), d = f.unit.side ? -1 : 1, H = f.unit.h * 1.15, X = x + d * (ox + f.unit.w * .45), e = Math.min(1, p / .15), fade = p < .6 ? 1 : 1 - (p - .6) / .4;
       g.globalCompositeOperation = 'lighter'; g.globalAlpha = fade * .85; const lg = g.createLinearGradient(X - 26, 0, X + 26, 0); lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(.5, f.c); lg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = lg;
       g.beginPath(); g.ellipse(X, y - oy - H * .5, 26 * e, H * .55 * e, 0, 0, 6.28); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.globalAlpha = fade * .7; g.beginPath(); g.ellipse(X, y - oy - H * .5, 10 * e, H * .52 * e, 0, 0, 6.28); g.stroke(); g.globalCompositeOperation = 'source-over'; break; }
