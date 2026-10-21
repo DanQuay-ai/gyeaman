@@ -500,3 +500,9 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .pgrid button { display: grid; justify-items: center; gap: 3px; padding: 8px 4px; border-radius: 10px; background: rgba(255,255,255,.04); text-align: center; }
 .pgrid button .sic { width: 44px; height: 44px; } .pgrid b { font: 12px/1.1 var(--display); font-weight: 400; } .pgrid span { font-size: 10px; font-weight: 800; color: var(--muted); }
 .pgrid button.eq span { color: var(--good); } .pgrid button.on { box-shadow: inset 0 0 0 1.5px var(--rc); background: color-mix(in srgb, var(--rc) 18%, transparent); }
+/* short ult splash (~1s): signature pose slides in over a speed-line burst */
+.ultcs.short .cs-art img.pose { height: 74%; animation: csSlideIn .95s cubic-bezier(.2,.8,.2,1) forwards; }
+.ultcs.short .cs-x, .ultcs.short .cs-flash { display: none; }
+.ultcs.short .cs-title { animation: csTitle .95s ease-out forwards; }
+.ultcs.short .cs-sym { animation-duration: .95s; }
+@keyframes csSlideIn { from { transform: translateX(-30%) scale(1.05); opacity: 0; } 25% { transform: translateX(0) scale(1); opacity: 1; } 85% { opacity: 1; } to { transform: translateX(4%) scale(1.02); opacity: 0; } }

@@ -83,13 +83,14 @@ function drawKF(g, id, p, bodyH, alpha = 1) {
 // a move = list of steps { p: pose, ms, x: fraction of the distance to the enemy, y: lift in body heights, lines, ghost, ev }
 const SEQ = {
   dufie: {
-    recover: [{ p: 'recover_0', ms: 70, x: 1, y: 0 }, { p: 'recover_1', ms: 110, x: .62, y: .32, ghost: 1 }, { p: 'recover_2', ms: 120, x: .25, y: .42, ghost: 1 }, { p: 'recover_3', ms: 150, x: 0, y: 0, ev: 'land' }],
+    recover: [{ p: 'recover_0', ms: 80, x: 1, y: 0 }, { p: 'recover_1', ms: 120, x: .62, y: .34, ghost: 1 }, { p: 'recover_2', ms: 130, x: .25, y: .42, ghost: 1 }, { p: 'recover_3', ms: 150, x: 0, y: 0, ev: 'land' }],
     basic: [{ p: 'basic_0', ms: 130, x: 0 }, { p: 'basic_1', ms: 170, x: 1, lines: 1, ghost: 1, ev: 'cut1' }, { p: 'basic_2', ms: 190, x: 1, ev: 'cut2' }, { p: 'basic_3', ms: 170, x: 1.04 }],
-    dufie1: [{ p: 'step_0', ms: 190, x: 0, ev: 'smoke' }, { p: 'step_1', ms: 110, x: 1, lines: 1, ghost: 1 }, { p: 'step_2', ms: 260, x: 1, ev: 'stab' }, { p: 'step_3', ms: 150, x: .75, y: .38 }],
-    dufie2: [{ p: 'vanish_0', ms: 170, x: 0 }, { p: 'vanish_1', ms: 220, x: 0, ev: 'smoke' }, { p: 'vanish_2', ms: 300, x: 0, ev: 'fade' }, { p: 'vanish_3', ms: 260, x: 0, ev: 'reform' }],
-    dufKick: [{ p: 'kick_0', ms: 140, x: .55, y: .12, ghost: 1 }, { p: 'kick_1', ms: 190, x: 1, y: .22, lines: 1, ev: 'kick1' }, { p: 'kick_2', ms: 200, x: 1, y: .3, ev: 'kick2' }, { p: 'kick_3', ms: 170, x: 1, y: 0, ev: 'land' }],
-    dufStars: [{ p: 'throw_0', ms: 200, x: 0 }, { p: 'throw_1', ms: 230, x: 0, ev: 'throw3' }, { p: 'throw_2', ms: 230, x: 0, ev: 'throw2' }, { p: 'throw_3', ms: 220, x: 0 }],
-    ult: [{ p: 'ult_0', ms: 220, x: .45, y: .55, ghost: 1 }, { p: 'ult_1', ms: 140, x: .95, y: .2, lines: 1, ghost: 1 }, { p: 'ult_2', ms: 120, x: 1, y: 0, ev: 'xslash' }, { p: 'ult_3', ms: 520, x: 1.55, y: 0, lines: 1, ev: 'finish' }],
+    dufie1: [{ p: 'step_0', ms: 170, x: 0, ev: 'smoke' }, { p: 'step_1', ms: 110, x: 1, lines: 1, ghost: 1 }, { p: 'step_2', ms: 260, x: 1, ev: 'stab' }, { p: 'step_3', ms: 150, x: .75, y: .38 }],
+    dufie2: [{ p: 'vanish_0', ms: 150, x: 0 }, { p: 'vanish_1', ms: 220, x: 0, ev: 'smoke' }, { p: 'vanish_2', ms: 300, x: 0, ev: 'fade' }, { p: 'vanish_3', ms: 260, x: 0, ev: 'reform' }],
+    dufKick: [{ p: 'kick_0', ms: 120, x: .5, y: .05, ghost: 1 }, { p: 'kick_1', ms: 190, x: 1, y: .22, lines: 1, ev: 'kick1' }, { p: 'kick_2', ms: 200, x: 1, y: .3, ev: 'kick2' }, { p: 'kick_3', ms: 170, x: 1, y: 0, ev: 'land' }],
+    dufStars: [{ p: 'throw_0', ms: 160, x: 0 }, { p: 'throw_1', ms: 230, x: 0, ev: 'throw3' }, { p: 'throw_2', ms: 230, x: 0, ev: 'throw2' }, { p: 'throw_3', ms: 220, x: 0 }],
+    ult: [{ p: 'ultA_0', ms: 160, x: 0 }, { p: 'ultA_1', ms: 260, x: .45, y: .6, ghost: 1 }, { p: 'ultA_2', ms: 150, x: .95, y: .2, lines: 1, ghost: 1 }, { p: 'ultA_3', ms: 140, x: 1, y: 0, ev: 'xslash' },
+      { p: 'ultB_0', ms: 520, x: 1, y: .25, ev: 'flurry' }, { p: 'ultB_1', ms: 300, x: 1, y: 0, ev: 'finish' }, { p: 'ultB_2', ms: 160, x: .45, y: .45, ghost: 1 }, { p: 'ultB_3', ms: 200, x: 0, y: 0, ev: 'land' }],
   },
 };
 const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .42 - u.w * .3);
@@ -132,10 +133,12 @@ CHOREO.dufie = {
     await runKF(u, null, SEQ.dufie.dufStars, async (ev) => { if (ev === 'throw3') toss(3); if (ev === 'throw2') toss(2); });
     await wait(200); kfEnd(u); if (f.alive) { addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } },
   ult: async (u, f, m, T) => { await runKF(u, f, SEQ.dufie.ult, async (ev) => { const [x, y] = pos(f);
-      if (ev === 'xslash') { await impactFrames(T, u); for (let k = 0; k < 6 && f.alive; k++) { fx('arc', 240, { x: x + rnd(-8, 8), y: y - f.h * (.35 + .3 * Math.random()), r: f.h * rnd(.45, .7), c: k % 2 ? '#ffffff' : VIO, dir: k % 2 ? -1 : 1, tilt: rnd(-.7, .7) }); hit(u, f, .62 * m, { color: VIO }); await wait(70); } }
-      if (ev === 'finish') { fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: VIO }); fx('smoke', 900, { x, y, r: f.h * .5, c: VIO, n: 12 }); } });
-    const R = reachTo(u, f); u.kfA = { x0: R * 1.55, x1: R * 1.55, y0: 0, y1: 0, t0: B.t, d: .01 };
-    await runKF(u, f, [{ p: 'step_1', ms: 160, x: .3, lines: 1, ghost: 1 }, ...SEQ.dufie.recover.slice(2)], null); kfEnd(u); },
+      const cut = (k) => { fx('arc', 240, { x: x + rnd(-8, 8), y: y - f.h * (.35 + .3 * Math.random()), r: f.h * rnd(.45, .7), c: k % 2 ? '#ffffff' : VIO, dir: k % 2 ? -1 : 1, tilt: rnd(-.7, .7) }); hit(u, f, .45 * m, { color: VIO }); };
+      if (ev === 'xslash') { await impactFrames(T, u); fx('arc', 300, { x, y: y - f.h * .5, r: f.h * .7, c: '#fff', dir: 1, tilt: .8 }); fx('arc', 300, { x, y: y - f.h * .5, r: f.h * .7, c: VIO, dir: -1, tilt: -.8 }); hit(u, f, .9 * m, { color: VIO, big: 1 }); hitStop(90); }
+      if (ev === 'flurry') { for (let k = 0; k < 5 && f.alive; k++) { cut(k); await wait(90); } }
+      if (ev === 'finish' && f.alive) { fx('star', 600, { x, y: y - f.h * .5, r: f.h, c: VIO }); fx('smoke', 900, { x, y, r: f.h * .5, c: VIO, n: 12 }); hit(u, f, .7 * m, { color: VIO, big: 1 }); hitStop(120); B.shake = 14; }
+      if (ev === 'land') { const [hx, hy] = pos(u); burst(hx, hy, ['#d8c9b0', '#fff'], 10, 3); } });
+    kfEnd(u); },
 };
 // draw one clip frame with feet at (0,0) and body height bodyH
 function drawClip(g, c, fi, bodyH) {
@@ -434,7 +437,7 @@ function heroesScreen(id) {
     const x = r.width * (sheetOpen ? .5 : .56), y = floorY;
     const AN = ANIM[heroSel];
     if (KF[heroSel]) { // keyframe hero: play the chosen move, else breathe between two idle poses
-      let p = (now / 1000) % 2.4 > 1.7 ? 'idle_1' : 'idle_0', ox = 0, oy = 0;
+      let p = 'idle_0', ox = 0, oy = 0;
       if (kseq) { let t = now - kT, i = 0, prev = { x: 0, y: 0 }; while (i < kseq.length && t > kseq[i].ms * 1.6) { t -= kseq[i].ms * 1.6; prev = kseq[i]; i++; }
         if (i >= kseq.length) kseq = null; else { const st = kseq[i], e = 1 - (1 - Math.min(1, t / (st.ms * 1.6 * .7))) ** 3, Rr = r.width * .3; p = st.p; ox = ((prev.x ?? 0) + ((st.x ?? 0) - (prev.x ?? 0)) * e) * Rr; oy = ((prev.y ?? 0) + ((st.y ?? 0) - (prev.y ?? 0)) * e) * bodyH; } }
       g.save(); g.translate(x - (kseq ? r.width * .14 : 0) + ox, y - oy); drawKF(g, heroSel, p, bodyH); g.restore();
@@ -742,16 +745,16 @@ async function ultIntro(u, sym, color) {
   await wait(900);
 }
 // fullscreen ultimate cutscene: dedicated art (or a Veo clip once generated), push-in, speed lines, X-slash, title
-const CUTS = { dufie: { img: A + 'cut_dufie.webp', video: A + 'anim/dufie_ult.mp4', rate: 1.3, len: 3400 } };
+const CUTS = {}; // optional per-hero splash art; keyframe heroes use their signature pose
 function cutscene(u, sym, color) {
-  const C = CUTS[u.id] || { img: poseSrc(u.id, 2), pose: 1 };
+  const C = CUTS[u.id] || (KF[u.id] && KF[u.id].p.ultA_1 ? { img: A + 'kf/' + KF[u.id].p.ultA_1[0], pose: 1, short: 1 } : { img: poseSrc(u.id, 2), pose: 1 });
   const media = C.video ? `<video poster="${C.img}" muted playsinline autoplay preload="auto"><source src="${C.video.replace('.mp4', '.webm')}" type="video/webm"><source src="${C.video}" type="video/mp4"></video>` : `<img src="${C.img}" alt="" class="${C.pose ? 'pose' : ''} ${C.pose && u.flip[2] ? 'flip' : ''}">`;
   const el = h(`<div class="ultcs" style="--rc:${color}"><div class="cs-bg"></div><div class="cs-art">${media}</div><div class="cs-lines"></div>
     <div class="cs-sym">${adinkraSvg(sym)}</div><i class="cs-x a"></i><i class="cs-x b"></i><div class="cs-flash"></div>
     <div class="cs-title"><span>${u.name.toUpperCase()} · ${u.d.role.toUpperCase()}</span><b>${u.d.kit[3]}</b></div></div>`);
   document.body.append(el);
   const vid = el.querySelector('video'); if (vid) { vid.playbackRate = C.rate || 1; el.classList.add('vid'); vid.play().catch(() => {}); }
-  const dur = C.video ? (C.len || 6000) / (C.rate || 1) - 100 : 1900;
+  const dur = C.video ? (C.len || 6000) / (C.rate || 1) - 100 : C.short ? 950 : 1900; if (C.short) el.classList.add('short');
   return new Promise((res) => { let done = false; const end = () => { if (done) return; done = true; el.classList.add('out'); setTimeout(() => el.remove(), 220); res(); };
     el.onclick = end; if (vid) vid.onended = end; setTimeout(() => SFX.hit && SFX.hit(), C.video ? 1600 / (C.rate || 1) : 1150); setTimeout(end, dur / (B && B.speed > 1 ? 1.5 : 1)); });
 }
@@ -946,8 +949,8 @@ function loop(now) {
     if (ring) { const sil = silhouette(e, th, ring); if (sil) { g.save(); g.globalAlpha *= .85; for (const [ox, oy] of [[-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, 2], [-2, 2], [2, -2]]) g.drawImage(sil, -pw / 2 + ox, -ph + oy, pw, ph); g.restore(); } }
     const AN = ANIM[u.id], bodyH = e0.el.naturalHeight * k; let drawn = false;
     if (KF[u.id]) { // keyframe heroes: move pose, else idle breathing / hurt / defeated
-      const [ox, oy] = kfOff(u), p = u.kf || (!u.alive ? 'idle_3' : u.hurt > .35 ? 'idle_2' : (B.t + (u.slot || 0)) % 2.4 > 1.7 ? 'idle_1' : 'idle_0');
-      g.save(); g.translate((flip ? -1 : 1) * ox, -oy - bob); if (!u.kf) g.scale(1, 1 + Math.sin(B.t * 3) * .008); drawn = drawKF(g, u.id, p, bodyH, u.kfAlpha); g.restore();
+      const [ox, oy] = kfOff(u), p = u.kf || (!u.alive ? 'idle_2' : u.hurt > .35 ? 'idle_1' : 'idle_0');
+      g.save(); g.translate((flip ? -1 : 1) * ox, -oy - (u.kf ? 0 : bob * .3)); if (!u.kf) { const br = Math.sin(B.t * 2.2) * .006; g.scale(1 - br * .4, 1 + br); } drawn = drawKF(g, u.id, p, bodyH, u.kfAlpha); g.restore();
     }
     if (AN && u.alive && u.pose === 0) { const P = AN.idle.play; drawn = drawClip(g, AN.idle, P[Math.floor(B.t * 12) % P.length], bodyH); }
     else if (AN && u.clip && AN[u.clip]) { const c = AN[u.clip], P = c.play, pr = 1 - Math.max(0, u.poseT) / (u.poseD || 1); drawn = drawClip(g, c, P[Math.min(P.length - 1, Math.floor(pr * P.length))], bodyH); }
