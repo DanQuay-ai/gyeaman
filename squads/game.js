@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261022c';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261022c';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022c';
+import { KF } from './kf.js?v=20261022d';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261022d';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022d';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261022c';
+const AV = '?v=20261022d';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -180,15 +180,17 @@ const SEQ = {
     ult: [{ p: 'idle_0', ms: 300, x: 0, ev: 'charge' }, { p: 'idle_3', ms: 170, x: .7, phantom: 1, lines: 1 }, { p: 'nA_1', ms: 100, x: .78, ev: 'f' }, { p: 'nA_2', ms: 100, x: .78, ev: 'f' }, { p: 'nA_3', ms: 140, x: .8, phantom: 1, ev: 'f' }, { p: 'nB_2', ms: 150, x: .8, phantom: 1, ev: 'f' }, { p: 'nA_1', ms: 90, x: .8, ev: 'f' }, { p: 'nA_2', ms: 90, x: .8, ev: 'f' },
       { p: 'nult_1', ms: 200, x: .8, y: .2, phantom: 1, ev: 'f' }, { p: 'nult_2', ms: 380, x: .8, y: .5, phantom: 1, ev: 'leap' }, { p: 'nult_3', ms: 440, x: .84, y: 0, ev: 'slam' }],
   },
-  bayi: { // regal life drainer: hooked claw, siphons, blood mist
+  bayi: { // regal life drainer: crimson claw slashes fly out, the enemy's life flies back to him as goop
     recover: [{ p: 'idle_3', ms: 220, x: 0, phantom: 1 }, { p: 'idle_0', ms: 110, x: 0 }],
-    basic: [{ p: 'idle_3', ms: 200, x: .7, phantom: 1, lines: 1 }, { p: 'bA_1', ms: 170, x: .74 }, { p: 'bA_2', ms: 320, x: .8, ev: 'cut' }],
-    bayi1: [{ p: 'bA_3', ms: 560, x: .04, ev: 'grasp' }, { p: 'bB_1', ms: 560, x: 0, ev: 'drink' }, { p: 'idle_0', ms: 120, x: 0 }],
-    bayi2: [{ p: 'bB_3', ms: 640, x: .03, ev: 'pact' }, { p: 'idle_0', ms: 120, x: 0 }],
-    bayMist: [{ p: 'bB_2', ms: 720, x: 0, ev: 'mist' }, { p: 'idle_0', ms: 120, x: 0 }],
-    bayCurse: [{ p: 'bB_3', ms: 560, x: .03, ev: 'curse' }, { p: 'idle_0', ms: 120, x: 0 }],
-    ult: [{ p: 'bult_1', ms: 620, x: 0, y: .12, ev: 'rise' }, { p: 'bult_2', ms: 720, x: .04, y: 0, ev: 'pull' }, { p: 'idle_3', ms: 200, x: .72, phantom: 1, lines: 1 }, { p: 'bult_3', ms: 460, x: .82, ev: 'feast' }, { p: 'bB_1', ms: 600, x: .82, ev: 'drink' }],
+    basic: [{ p: 'bA_1', ms: 170, x: 0, ev: 'w' }, { p: 'bA_2', ms: 230, x: .06, phantom: 1, ev: 's1' }, { p: 'bA_3', ms: 330, x: .08, phantom: 1, ev: 's2' }, { p: 'idle_0', ms: 140, x: 0, ev: 'sip' }],
+    bayi1: [{ p: 'bB_2', ms: 620, x: .03, ev: 'grab' }, { p: 'bB_1', ms: 760, x: 0, ev: 'drink' }, { p: 'idle_0', ms: 120, x: 0 }],
+    bayi2: [{ p: 'bA_1', ms: 160, x: 0 }, { p: 'bB_3', ms: 380, x: .05, phantom: 1, ev: 'x' }, { p: 'bB_1', ms: 640, x: 0, ev: 'steal' }, { p: 'idle_0', ms: 120, x: 0 }],
+    bayMist: [{ p: 'bA_1', ms: 180, x: 0 }, { p: 'bA_2', ms: 280, x: .05, phantom: 1, ev: 'mist' }, { p: 'bB_1', ms: 620, x: 0, ev: 'sip' }, { p: 'idle_0', ms: 120, x: 0 }],
+    bayCurse: [{ p: 'bB_2', ms: 520, x: .03, ev: 'curse' }, { p: 'bB_1', ms: 520, x: 0, ev: 'sip' }, { p: 'idle_0', ms: 120, x: 0 }],
+    ult: [{ p: 'bult_1', ms: 620, x: 0, y: .3, ev: 'rise' }, { p: 'bult_2', ms: 170, x: .04, y: .38, phantom: 1, ev: 's' }, { p: 'bA_3', ms: 170, x: .06, y: .34, phantom: 1, ev: 's' }, { p: 'bult_2', ms: 170, x: .08, y: .38, phantom: 1, ev: 's' }, { p: 'bB_3', ms: 220, x: .1, y: .3, phantom: 1, ev: 's' },
+      { p: 'idle_3', ms: 200, x: .72, y: 0, phantom: 1, lines: 1 }, { p: 'bult_3', ms: 460, x: .82, ev: 'feast' }, { p: 'bB_1', ms: 900, x: .82, ev: 'drink' }],
   },
+
 };
 const reachTo = (u, f) => Math.max(0, Math.abs(pos(f)[0] - pos(u)[0]) - f.w * .42 - u.w * .3);
 // play a step list on a battle unit; onEv(name, step) fires at each step start
@@ -208,7 +210,7 @@ async function runKF(u, f, seq, onEv) {
 function kfOff(u) { const a = u.kfA; if (!a) return [0, 0]; const t = Math.min(1, (B.t - a.t0) / (a.d || .001)), e = 1 - (1 - t) ** 3; return [a.x0 + (a.x1 - a.x0) * e, a.y0 + (a.y1 - a.y0) * e]; }
 const kfEnd = (u) => { u.kfSpin = null; u.kfPh = false; u.kf = null; u.kfA = null; u.kfAlpha = 1; };
 const VIO = '#c58bff';
-const SPL = { dufie: 'ultE_2', blay: 'ultX_2', kuukua: 'thB_2', obiri: 'oult_1', gyakari: 'gult_2', afrakoma: 'ault_2', kome: 'qult_1', owureku: 'wult_2', sekan: 'nult_2', bayi: 'bult_3' };
+const SPL = { dufie: 'ultE_2', blay: 'ultX_2', kuukua: 'thB_2', obiri: 'oult_1', gyakari: 'gult_2', afrakoma: 'ault_2', kome: 'qult_1', owureku: 'wult_2', sekan: 'nult_2', bayi: 'bult_2' };
 const PH_HUE = { sekan: 45, bayi: 350, kome: 40, owureku: 5, blay: 185, kuukua: 322, obiri: 15, gyakari: 28, afrakoma: 0 };
 const SOFT_HURT = new Set(['gyakari', 'afrakoma']);
 const PH_COL = { kome: '#ffd23c', owureku: '#d0402a', sekan: '#efe6cf', bayi: '#d01c3c', blay: '#3d7cff', kuukua: '#ff1f35', obiri: '#ffc83c', gyakari: '#ffb02e', afrakoma: '#ff6a1f', dufie: '#b070ff' }; // afterimage tint per hero
@@ -421,17 +423,30 @@ CHOREO.sekan = {
       if (e === 'slam') { debris(x, y, 16, u.h * .14); shock(u, f, SEK, 1); slam(u, f, SEK, 1); if (f.alive) { hit(u, f, 1.6 * m, { color: SEK, big: 1 }); addSt(f, 'stun', 1); } } });
     await heavyRecover(u, f); },
 };
+const redSlash = (u, f, o = {}) => { const [hx, hy] = pos(u), [x] = pos(f), [ox] = kfOff(u); fx('sproj', o.ms || 520, { k: o.k ?? ((Math.random() * 4) | 0), x0: hx + ox + u.h * .45, x1: x + f.w * .2, y: hy - u.h * (o.yy ?? .55), s: u.h * (o.s ?? .75), hue: 140, glow: '#ff1f45', glow2: '#ffc0c8', flip: o.flip, rot: o.rot }); };
+const goop = (u, f, n = 12, sz = 1) => { const [hx, hy] = pos(u), [ox, oy] = kfOff(u), [x, y] = pos(f); fx('goop', 1000, { x0: x, y0: y - f.h * .5, x1: hx + ox, y1: hy - oy - u.h * .55, r: u.h * .032 * sz, arc: u.h * .55, c: '#a00d2a', n }); };
 CHOREO.bayi = {
-  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.bayi.basic, async (e) => { if (e === 'cut') { const [x, y] = pos(f); fx('arc', 320, { x, y: y - f.h * .55, r: f.h * .65, c: BLD, dir: -1, big: 1 }); slam(u, f, BLD, 0); d = hit(u, f, m, { ...o, color: BLD }); heal(u, d * .25, 1); } }); await heavyRecover(u, f); return d; },
-  bayi1: async (u, f, m) => { let d = 0; await runKF(u, f, SEQ.bayi.bayi1, async (e) => { if (e === 'grasp' && f.alive) { drain(u, f); d = hit(u, f, 1.0 * m, { color: BLD }); } if (e === 'drink') heal(u, d); }); kfEnd(u); },
-  bayi2: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayi2, async (e) => { if (e === 'pact' && f.alive) { drain(u, f, '#7a1030'); hit(u, f, .4 * m, { color: BLD }); pushTM(f, -.35); pushTM(u, .35); float(f, 'TURN −35%', '#c58bff', .8); float(u, 'TURN +35%', '#7ee08a', .8); } }); kfEnd(u); },
-  bayMist: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayMist, async (e) => { if (e === 'mist' && f.alive) { const [x, y] = pos(f); fx('smoke', 1100, { x, y, r: f.h * .7, c: BLD, n: 18, rise: 1 }); hit(u, f, .6 * m, { color: BLD }); addSt(f, 'burn', 3, { burnPow: u.atk * .5 * m }); heal(u, u.max * .08); } }); kfEnd(u); },
-  bayCurse: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayCurse, async (e) => { if (e === 'curse' && f.alive) { fx('x', 420, { unit: f, c: BLD }); hit(u, f, .5 * m, { color: BLD }); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); addSt(u, 'atkUp', 3); u.atkUpK = 1.2; float(u, 'ATK▲', '#ffb070', .8); } }); kfEnd(u); },
+  basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.bayi.basic, async (e) => { const [x, y] = pos(f);
+      if (e === 's1' || e === 's2') { redSlash(u, f, { flip: e === 's2', rot: e === 's1' ? .35 : 0 }); await wait(260); if (f.alive) { fx('arc', 280, { x, y: y - f.h * .55, r: f.h * .6, c: BLD, dir: e === 's1' ? -1 : 1 }); slam(u, f, BLD, 0); d += hit(u, f, .5 * m, { ...o, color: BLD }); } }
+      if (e === 'sip' && d) { goop(u, f, 6, .8); await wait(500); heal(u, d * .25, 1); } });
+    kfEnd(u); return d; },
+  bayi1: async (u, f, m) => { let d = 0; await runKF(u, f, SEQ.bayi.bayi1, async (e) => { const [x, y] = pos(f);
+      if (e === 'grab' && f.alive) { fx('smoke', 700, { x, y: y - f.h * .3, r: f.h * .4, c: BLD, n: 10, rise: 1 }); d = hit(u, f, 1.0 * m, { color: BLD }); goop(u, f, 22, 1.3); }
+      if (e === 'drink') { await wait(450); const [hx, hy] = pos(u); fx('star', 520, { x: hx, y: hy - u.h * .55, r: u.h * .5, c: BLD }); heal(u, d); } }); kfEnd(u); },
+  bayi2: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayi2, async (e) => { const [x, y] = pos(f);
+      if (e === 'x') { redSlash(u, f, { rot: .5 }); redSlash(u, f, { rot: -.5, flip: 1 }); await wait(260); if (f.alive) { fx('x', 420, { unit: f, c: BLD }); hit(u, f, .4 * m, { color: BLD }); } }
+      if (e === 'steal' && f.alive) { goop(u, f, 14); pushTM(f, -.35); pushTM(u, .35); float(f, 'TURN −35%', '#c58bff', .8); float(u, 'TURN +35%', '#7ee08a', .8); } }); kfEnd(u); },
+  bayMist: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayMist, async (e) => { const [x, y] = pos(f);
+      if (e === 'mist') { redSlash(u, f, { s: .9 }); await wait(260); if (f.alive) { fx('smoke', 1300, { x, y, r: f.h * .75, c: BLD, n: 20, rise: 1 }); hit(u, f, .6 * m, { color: BLD }); addSt(f, 'burn', 3, { burnPow: u.atk * .5 * m }); } }
+      if (e === 'sip') { goop(u, f, 10); await wait(450); heal(u, u.max * .08); } }); kfEnd(u); },
+  bayCurse: async (u, f, m) => { await runKF(u, f, SEQ.bayi.bayCurse, async (e) => {
+      if (e === 'curse' && f.alive) { fx('x', 520, { unit: f, c: BLD }); fx('flash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .7, c: BLD }); hit(u, f, .5 * m, { color: BLD }); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); }
+      if (e === 'sip') { goop(u, f, 8); addSt(u, 'atkUp', 3); u.atkUpK = 1.2; float(u, 'ATK▲', '#ffb070', .8); } }); kfEnd(u); },
   ult: async (u, f, m, T) => { let d = 0; await runKF(u, f, SEQ.bayi.ult, async (e) => { const [x, y] = pos(f), [hx, hy] = pos(u);
       if (e === 'rise') { fx('smoke', 900, { x: hx, y: hy, r: u.h * .6, c: BLD, n: 16, rise: 1 }); B.shake = 6; }
-      if (e === 'pull' && f.alive) { drain(u, f); await wait(250); drain(u, f, '#7a1030'); d += hit(u, f, .4 * m, { color: BLD }); }
-      if (e === 'feast') { await impactFrames(T, u); slam(u, f, BLD, 1); fx('flash', 520, { x, y: y - f.h * .5, r: f.h, c: BLD }); if (f.alive) d += hit(u, f, 2.2 * m, { color: BLD, big: 1 }); }
-      if (e === 'drink') heal(u, d); });
+      if (e === 's') { redSlash(u, f, { ms: 420, yy: .7 + Math.random() * .2, flip: Math.random() < .5, rot: rnd(-.4, .4) }); await wait(200); if (f.alive) { fx('arc', 220, { x, y: y - f.h * (.4 + .3 * Math.random()), r: f.h * .55, c: BLD, dir: Math.random() < .5 ? 1 : -1 }); d += hit(u, f, .3 * m, { color: BLD }); goop(u, f, 5, .8); } }
+      if (e === 'feast') { await impactFrames(T, u); slam(u, f, BLD, 1); fx('flash', 520, { x, y: y - f.h * .5, r: f.h, c: BLD }); if (f.alive) d += hit(u, f, 1.6 * m, { color: BLD, big: 1 }); }
+      if (e === 'drink') { goop(u, f, 30, 1.5); await wait(600); fx('star', 600, { x: hx, y: hy - u.h * .55, r: u.h * .6, c: BLD }); heal(u, d); } });
     await heavyRecover(u, f); },
 };
 // draw one clip frame with feet at (0,0) and body height bodyH
@@ -1063,7 +1078,7 @@ async function impactFrames(targets, src) {
 function endUlt() { B.dimTo = 0; B.cam.tz = B.rest.z; B.cam.tx = .5; B.cam.ty = B.rest.y; }
 
 // spell icons: generated art when a hero has had an art pass, else a glyph on the class colour
-const ICONS = { kome: ['basic', 'kome1', 'kome2', 'komeHex', 'komeVeil', 'ult'], owureku: ['basic', 'owureku1', 'owureku2', 'owuRend', 'owuHide', 'ult'], gyakari: ['basic', 'gyakari1', 'gyakari2', 'gyaSweep', 'gyaFirm', 'ult'], afrakoma: ['basic', 'afrakoma1', 'afrakoma2', 'afrWhirl', 'afrOath', 'ult'], kuukua: ['basic', 'kuukua1', 'kuukua2', 'kuuThrow', 'kuuWall', 'ult'], obiri: ['basic', 'obiri1', 'obiri2', 'obiVolley', 'obiKnee', 'ult'], dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'], blay: ['basic', 'blay1', 'blay2', 'blayRush', 'blayRally', 'ult'] };
+const ICONS = { sekan: ['basic', 'sekan1', 'sekan2', 'sekRush', 'sekGuard', 'ult'], bayi: ['basic', 'bayi1', 'bayi2', 'bayMist', 'bayCurse', 'ult'], kome: ['basic', 'kome1', 'kome2', 'komeHex', 'komeVeil', 'ult'], owureku: ['basic', 'owureku1', 'owureku2', 'owuRend', 'owuHide', 'ult'], gyakari: ['basic', 'gyakari1', 'gyakari2', 'gyaSweep', 'gyaFirm', 'ult'], afrakoma: ['basic', 'afrakoma1', 'afrakoma2', 'afrWhirl', 'afrOath', 'ult'], kuukua: ['basic', 'kuukua1', 'kuukua2', 'kuuThrow', 'kuuWall', 'ult'], obiri: ['basic', 'obiri1', 'obiri2', 'obiVolley', 'obiKnee', 'ult'], dufie: ['basic', 'dufie1', 'dufie2', 'dufKick', 'dufStars', 'ult'], blay: ['basic', 'blay1', 'blay2', 'blayRush', 'blayRally', 'ult'] };
 const KIND_GLYPH = { melee: 'warrior', ranged: 'hunter', buff: 'growth', shield: 'guardian', heal: 'sage' };
 function spellIcon(id, i, eq, sidIn) {
   const H = HEROES[id], key = sidIn || (i === 0 ? 'basic' : i === 3 ? 'ult' : (eq || SAVE.heroes[id]?.eq || H.pool)[i - 1]);
@@ -1316,6 +1331,12 @@ function drawFx(g, f) {
   const p = Math.min(1, (B.t - f.t0) / f.dur);
   g.save(); g.lineCap = 'round';
   switch (f.type) {
+    case 'goop': { if (!f.ds) f.ds = Array.from({ length: f.n || 12 }, () => ({ d: Math.random() * .4, a: rnd(-1, 1), r: rnd(.5, 1.25), w: Math.random() * 6 }));
+      const ang = Math.atan2(f.y1 - f.y0, f.x1 - f.x0);
+      for (const q of f.ds) { const t = (p - q.d) / .6; if (t < 0 || t > 1) continue; const e = t * t * (3 - 2 * t), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e - Math.sin(e * Math.PI) * f.arc * q.a, R = f.r * q.r * (1 - .45 * e) * (1 + .2 * Math.sin(t * 22 + q.w));
+        g.globalAlpha = t > .85 ? (1 - t) / .15 : 1; g.fillStyle = '#3a0010'; g.beginPath(); g.ellipse(x - Math.cos(ang) * R, y - Math.sin(ang) * R, R * 1.9, R * .8, ang, 0, 6.283); g.fill();
+        g.fillStyle = f.c; g.beginPath(); g.ellipse(x, y, R * 1.35, R, ang, 0, 6.283); g.fill(); g.fillStyle = '#ff7a8e'; g.beginPath(); g.arc(x + R * .35, y - R * .35, R * .3, 0, 6.283); g.fill(); }
+      break; }
     case 'slash': { const e = 1 - (1 - Math.min(1, p * 1.6)) ** 3, a0 = f.dir < 0 ? -0.6 : -2.5, sw = 2.9 * (f.dir < 0 ? -1 : 1); g.globalAlpha = (p < .6 ? 1 : 1 - (p - .6) / .4) * .85; g.strokeStyle = f.c; g.lineWidth = (f.big ? 8 : 4) * (1 - p * .5);
       g.beginPath(); g.arc(f.x, f.y, f.r, a0 + sw * Math.max(0, e - .5), a0 + sw * e, sw < 0); g.stroke(); break; }
     case 'x': { const [x, y] = f.unit ? [pos(f.unit)[0], pos(f.unit)[1] - f.unit.h * .5] : [f.x, f.y], R = f.unit ? f.unit.h * .45 : f.r, L = R * Math.min(1, p * 2.2); g.globalAlpha = 1 - p; g.strokeStyle = f.c; g.lineWidth = 5; g.beginPath(); g.moveTo(x - L, y - L); g.lineTo(x + L, y + L); g.moveTo(x + L, y - L); g.lineTo(x - L, y + L); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke(); break; }
@@ -1339,7 +1360,7 @@ function drawFx(g, f) {
       g.globalCompositeOperation = 'source-over'; break; }
     case 'sproj': { const im = img(A + 'kf/' + (f.src || 'blay_fx_' + f.k) + '.webp' + AV); if (!im.ok) break; const e = p < .5 ? p * 1.25 : .625 + (p - .5) * .75, x = f.x0 + (f.x1 - f.x0) * Math.min(1, e), h = f.s * (.7 + .5 * Math.min(1, p * 1.4)), w = h * im.el.naturalWidth / im.el.naturalHeight;
       g.translate(x, f.y); if (f.mir) g.scale(-1, 1); g.rotate((f.rot || 0) + (f.spin ? p * f.spin : 0)); if (f.hue) g.filter = `hue-rotate(${f.hue}deg) saturate(1.4)`; if (f.flip) g.scale(1, -1); const al = p < .78 ? 1 : 1 - (p - .78) / .22, X = -w * .75, Y = -h / 2;
-      g.globalAlpha = al; g.shadowColor = '#4f8dff'; g.shadowBlur = Math.max(18, h * .28); g.drawImage(im.el, X, Y, w, h); g.shadowBlur = Math.max(8, h * .1); g.shadowColor = '#bfd6ff'; g.drawImage(im.el, X, Y, w, h);
+      g.globalAlpha = al; g.shadowColor = f.glow || '#4f8dff'; g.shadowBlur = Math.max(18, h * .28); g.drawImage(im.el, X, Y, w, h); g.shadowBlur = Math.max(8, h * .1); g.shadowColor = f.glow2 || '#bfd6ff'; g.drawImage(im.el, X, Y, w, h);
       g.shadowBlur = 0; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .55; g.drawImage(im.el, X, Y, w, h); g.globalCompositeOperation = 'source-over'; break; }
     case 'arrowP': { const im = img(A + 'kf/fx_arrow.webp' + AV); if (im.ok) { const e = Math.min(1, p / (f.hitAt || .55)), x = f.x0 + (f.x1 - f.x0) * e, y = f.y0 + (f.y1 - f.y0) * e - Math.sin(e * Math.PI) * (f.arc || 0), a = Math.atan2(f.y1 - f.y0, f.x1 - f.x0), al = e < 1 ? 1 : Math.max(0, 1 - (p - (f.hitAt || .55)) * 4);
         if (al <= 0) break; const h = (f.len || 46) * .9 * Math.sqrt((f.w || 3) / 3), w = h * im.el.naturalWidth / im.el.naturalHeight * 1.25; g.globalAlpha = al; g.translate(x, y); g.rotate(a); g.shadowColor = f.c || GOLD; g.shadowBlur = 16; g.drawImage(im.el, -w * .85, -h / 2, w, h); g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .4; g.drawImage(im.el, -w * .85, -h / 2, w, h); g.globalCompositeOperation = 'source-over'; break; } }

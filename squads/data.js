@@ -37,9 +37,9 @@ export const HEROES = {
     kit: ['Cleave', 'Bloodletting', 'Fury', 'Dwannimmen'], notes: ['Big cleave.', 'A cleave that heals for half the damage.', 'Hits 40% harder for 3 turns but costs 10% health.', 'Ram\'s horns: a crushing cleave that heals for half the damage.'], sym: 'dwannimen' },
   dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', kr: 'anadwo sekan', en: 'Night blade', rarity: 'SSR',   size: 0.98, hp: 800, atk: 74, def: 18, cls: 'shadow', spd: 124, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Night Cut', 'Shadow Step', 'Vanish', 'Nkyinkyim'], notes: ['Quick cut.', 'A certain critical strike, then Dufie moves 50% up the turn order.', 'Dodges the next attack completely.', 'The twisting path: six cuts in a row.'], sym: 'nkyimkyim' },
-  sekan:    { name: 'Anadwo Sekan', role: 'Ɔkofoɔ',   kr: 'ɔkofoɔ',       en: 'Kickboxer', rarity: 'SR',      size: 1.0,  hp: 860, atk: 66, def: 20, cls: 'shadow', spd: 116, cd: [2, 3], flip: [0, 0, 0],
+  sekan:    { name: 'Bediako', role: 'Ɔkofoɔ', kr: 'ɔkofoɔ',      en: 'Kickboxer', rarity: 'SR',      size: 1.0,  hp: 860, atk: 66, def: 20, cls: 'shadow', spd: 116, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Jab Cross Kick', 'Spinning Back Kick', 'Flying Knee', 'Fawohodie'], notes: ['A jab, a cross and a high kick.', 'A spinning heel: damage and the enemy loses 30% of its turn meter.', 'A leaping knee: damage and a 1-turn stun that cancels a charged attack.', 'Freedom: a storm of punches and kicks ending in a falling heel that stuns.'], sym: 'fawohodie' },
-  bayi:     { name: 'Bayibɔnsam', role: 'Ɔbayifoɔ',    kr: 'ɔbayifoɔ',     en: 'Life drainer', rarity: 'SSR',  size: 1.04, hp: 900, atk: 62, def: 22, cls: 'sage', spd: 106, cd: [2, 3], flip: [0, 0, 0],
+  bayi:     { name: 'Agyekum', role: 'Bayibɔnsam', kr: 'bayibɔnsam',    en: 'Life drainer', rarity: 'SSR',  size: 1.04, hp: 900, atk: 62, def: 22, cls: 'sage', spd: 106, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Claw', 'Siphon', 'Hollow Pact', 'Ohene Adwa'], notes: ['A hooked claw cut that heals a little.', 'Drains the enemy: damage, and heals for all of it.', 'Steals 35% of the enemy\'s turn meter.', 'The king\'s stool: drains a huge chunk of health and heals for all of it.'], sym: 'oheneAdwa' },
 };
 export const STARTERS = Object.keys(HEROES); // beta: every hero unlocked while spells and animations are built
