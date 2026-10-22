@@ -11,7 +11,7 @@ await p.goto('http://localhost:4190/squads/'); await p.clock.runFor(1500);
 const ids = only || await p.evaluate(() => Object.keys(__sq.SAVE.heroes));
 const res = {}; for (const a of ids) res[a] = { w: 0, n: 0, dealt: 0, turns: 0, hpLeft: 0 };
 for (const a of ids) for (const c of ids) { if (a === c) continue; for (let r = 0; r < N; r++) {
-  await p.evaluate(([a, c, LV, ST, SK]) => { const A = __sq.ARENA; A.length = Math.min(A.length, 6); A.push({ name: 'sim', lvl: LV, stars: ST, sk: SK, heroes: [c], region: 0 }); __sq.SAVE.arena.team = [a]; __sq.arenaBattle(A.length - 1); __sq.B.auto = true; __sq.B.speed = 6; }, [a, c, LV, ST, SK]);
+  await p.evaluate(([a, c, LV, ST, SK]) => { const A = __sq.ARENA; A.length = Math.min(A.length, 6); A.push({ name: 'sim', lvl: LV, stars: ST, sk: SK, heroes: [c], region: 0 }); __sq.SAVE.arena.team = [a]; __sq.arenaBattle(A.length - 1); __sq.B.auto = true; __sq.B.sim = 'smart'; __sq.B.speed = 6; }, [a, c, LV, ST, SK]);
   let o = null; for (let t = 0; t < 120 && !o; t++) { await p.clock.runFor(5000); o = await p.evaluate(() => { const B = __sq.B; if (!B || !B.over) return null; const [h, f] = B.all; return { win: h.alive, hd: h.tal.dealt, fd: f.tal.dealt, hm: h.tal.moves, fm: f.tal.moves, hl: h.hp / h.max, fl: f.hp / f.max }; }); }
   if (!o) { console.log('timeout', a, c); continue; }
   res[a].n++; res[c].n++; if (o.win) res[a].w++; else res[c].w++; res[a].dealt += o.hd; res[c].dealt += o.fd; res[a].turns += o.hm; res[c].turns += o.fm; res[a].hpLeft += o.hl; res[c].hpLeft += o.fl;

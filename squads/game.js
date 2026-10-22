@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261022f';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA } from './data.js?v=20261022f';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022f';
+import { KF } from './kf.js?v=20261022g';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA, MOVE_DMG } from './data.js?v=20261022g';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022g';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261022f';
+const AV = '?v=20261022g';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -294,7 +294,7 @@ CHOREO.blay = {
       if (ev === 'u3') cut(0, { s: .8, yy: .55, flip: 1 }, .25);
       if (ev === 'u4') cut(2, { s: 1.1, yy: .45 }, .25);
       if (ev === 'release') { await impactFrames(T, u); sproj(u, 3, { s: 2.2, ms: 900, yy: .6, x1: B.w * 1.6 }); await wait(80); sproj(u, 0, { s: 1.1, ms: 700, yy: .45, x1: B.w * 1.5 }); await wait(260); B.shake = 16;
-        if (!f.alive) return; if (f.hp / f.max < (f.isHero ? .2 : .3) && !f.boss) { hit(u, f, 99, { big: 1, color: BLU }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 2.0 * m, { big: 1, color: BLU }); hitStop(160); } });
+        if (!f.alive) return; if (f.hp / f.max < (f.isHero ? .2 : .3) && !f.boss) { const k = f.hp; hit(u, f, 99, { big: 1, color: BLU, exact: k }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 2.0 * m, { big: 1, color: BLU }); hitStop(160); } });
     kfEnd(u); },
 };
 // Kuukua: relentless thrusts, every jab a small flash, finishers a big crimson flash
@@ -717,7 +717,7 @@ function heroesScreen(id) {
         const M = key === 'basic' ? moveOf(heroSel, 0) : key === 'ult' ? moveOf(heroSel, 3) : SPELLS[key], lvl = lvOf(key), cost = skillCost(lvl);
         const meta = key === 'basic' ? 'No cooldown' : key === 'ult' ? '100 energy' : `Cooldown ${M.cd} turns`;
         const slot = eq.indexOf(key);
-        det.innerHTML = `<div class="skh">${spellIcon(heroSel, 0, eq, key)}<div><b>${M.name}</b><span>${tag} · ${meta}</span></div></div><p>${M.note}${lvl > 1 ? ` <em>+${Math.round(12 * (lvl - 1))}% power</em>` : ''}</p>
+        det.innerHTML = `<div class="skh">${spellIcon(heroSel, 0, eq, key)}<div><b>${M.name}</b><span>${tag} · ${meta}</span></div></div><p>${M.note}${lvl > 1 ? ` <em>+${Math.round(12 * (lvl - 1))}% power</em>` : ''}</p>${dmgHtml(dmgParts(heroSel, key, st, lvl))}
           ${own ? `<div class="skup"><span>Level <b>${lvl}</b> / ${SKILL_MAX}</span><button class="btn sm up" type="button" ${lvl >= SKILL_MAX || SAVE.gold < cost ? 'disabled' : ''}>${lvl >= SKILL_MAX ? 'Max' : `Upgrade ${COIN('gold')}${fmt(cost)}`}</button></div>` : ''}
           ${own && SPELLS[key] ? (slot >= 0 ? `<p class="eqd">Equipped in spell slot ${slot + 1}</p>` : `<div class="eqrow"><button class="btn sm ghost" data-s="0" type="button">Equip in slot 1</button><button class="btn sm ghost" data-s="1" type="button">Equip in slot 2</button></div>`) : ''}`;
         const up = $('.up', det); if (up) up.onclick = () => { SAVE.gold -= cost; if (key === 'basic') s0.sk[0]++; else if (key === 'ult') s0.sk[3]++; else s0.sl[key] = lvl + 1; SFX.heal(); store(); show1(key, tag); };
@@ -935,15 +935,16 @@ function hit(src, dst, mult, o = {}) {
   if (dst.st.evade) { delete dst.st.evade; float(dst, 'MISS', '#c58bff', 1.1); return 0; }
   const aim = src.st.aim; if (aim) delete src.st.aim;
   // heroes: atk carries basics and heavy physical moves, spirit (mag) carries magic, technique (tec) adds flat damage to every hit
-  const cx = B.ctx && B.ctx.u === src ? B.ctx : null, ty = cx ? cx.dmg : 'phys', W = DMG_W[ty] || DMG_W.phys;
+  const cx = B.ctx && B.ctx.u === src ? B.ctx : null; if (cx && !o.counter && cx.mults) cx.mults.push(mult); const ty = cx ? cx.dmg : 'phys', W = DMG_W[ty] || DMG_W.phys;
   const base = src.isHero ? (src.atk * W[0] + src.mag * W[1]) * mult + (src.tec || 0) * TEC_K * (o.counter ? .5 : 1) : src.atk * mult;
   let d = base * (B.fat || 1) * (src.st.atkUp ? (src.atkUpK || 1.3) : 1) * rnd(.92, 1.08) * 100 / (100 + (aim ? 0 : dst.def * (dst.st.defDown ? .5 : 1)));
   const crit = aim || o.crit === true || Math.random() < (o.crit || .1); if (crit) d *= 1.6;
   if (dst.st.guard) { d *= .5; }
-  d = Math.round(d);
+  d = Math.round(o.exact ?? d);
   if (dst.st.shield && dst.shieldAmt > 0) { const ab = Math.min(dst.shieldAmt, d); dst.shieldAmt -= ab; d -= ab; dst.tal._ab = ab; dst.tal.blocked = (dst.tal.blocked || 0) + ab; dst.shFlash = 1; if (dst.shieldAmt <= 0) delete dst.st.shield; }
   dst.hp -= d; dst.hurt = 1;
   if (dst.isHero) dst.en = Math.min(100, dst.en + 12);
+  if (B.hitT) B.hitT.push(+B.t.toFixed(3));
   src.tal.dealt += d + (dst.tal._ab || 0); dst.tal._ab = 0; src.tal.hits++; if (crit) src.tal.crits++; src.tal.top = Math.max(src.tal.top, d); dst.tal.taken += d;
   const [x, y] = pos(dst);
   B.floats.push({ x: x + rnd(-10, 10), y: y - dst.h * .8, t: (crit ? 'CRIT ' : '') + d, c: crit ? '#ffd23c' : dst.isHero && !dst.cpu ? '#ff6a5a' : '#fff', life: 1, size: (o.big ? 1.7 : 1.1) * (crit ? 1.2 : 1), m: !!B.mir });
@@ -962,6 +963,21 @@ function heal(u, n, quiet) { if (!u.alive) return; const cx = B.ctx && B.ctx.u =
 // damage weights [atk, spirit] per damage type; TEC_K: flat damage per hit for each technique point
 const shK = () => (B && B.arena ? .7 : 1); // arena: shields and healing are 30% weaker so duels resolve
 const DMG_W = { phys: [1, 0], mag: [.25, .75], mix: [.6, .4] }, TEC_K = .55;
+// what a move's damage is made of, for a hero's current stats: ATK part, Spirit part, Technique part (before the target's defence)
+function dmgParts(id, key, st, lvl = 1) {
+  const D = (MOVE_DMG[id] || {})[key]; if (!D) return null;
+  const ty = key === 'basic' ? 'phys' : key === 'ult' ? ULT_DMG[id] || 'phys' : (SPELLS[key] || {}).dmg || 'phys', W = DMG_W[ty], k = 1 + 0.12 * (lvl - 1);
+  const a = st.atk * W[0] * D[0] * k, m = st.mag * W[1] * D[0] * k, t = st.tec * TEC_K * D[1];
+  return { a: Math.round(a), m: Math.round(m), t: Math.round(t), tot: Math.round(a + m + t), hits: D[1], ty, note: D[2] };
+}
+const TYPE_LAB = { phys: 'Physical', mag: 'Magic', mix: 'Mixed' };
+function dmgHtml(P, compact) {
+  if (!P) return compact ? '' : '<div class="dmgb none">No direct damage</div>';
+  const pc = (x) => Math.round(100 * x / Math.max(1, P.tot));
+  return `<div class="dmgb ${compact ? 'c' : ''}"><div class="dmgt"><b>≈ ${fmt(P.tot)}</b> damage per use · ${P.hits} hit${P.hits > 1 ? 's' : ''} · ${TYPE_LAB[P.ty]}</div>
+    <div class="dmgbar"><i class="a" style="flex:${P.a}"></i><i class="m" style="flex:${P.m}"></i><i class="t" style="flex:${P.t}"></i></div>
+    <div class="dmgl"><span class="a">ATK ${fmt(P.a)} <small>${pc(P.a)}%</small></span><span class="m">Spirit ${fmt(P.m)} <small>${pc(P.m)}%</small></span><span class="t">Tec ${fmt(P.t)} <small>${pc(P.t)}%</small></span></div>${P.note && !compact ? `<small class="dmgn">${P.note}</small>` : ''}</div>`;
+}
 // ---------- moves ----------
 // 0 basic, 1 skill one, 2 skill two, 3 ultimate
 const canUse = (u, i) => i === 0 || (i < 3 && u.cd[i - 1] <= 0) || (i === 3 && u.en >= 100);
@@ -1006,7 +1022,8 @@ function renderAct(u) {
   box.classList.add('mine');
   const lab = (i) => i === 0 ? 'Basic' : i === 3 ? `${Math.floor(u.en)}%` : u.cd[i - 1] > 0 ? `${u.cd[i - 1]} turn${u.cd[i - 1] > 1 ? 's' : ''}` : 'Ready';
   btns.innerHTML = [0, 1, 2, 3].map((i) => { const M = moveOf(u.id, i, u.spells); return `<button class="ab k${i} ${B.armed === i ? 'armed' : ''}" type="button" data-i="${i}" ${canUse(u, i) ? '' : 'disabled'}>${spellIcon(u.id, i, u.spells)}<div><b>${M.name}</b><span>${lab(i)}</span></div>${i === 3 ? `<i style="transform:scaleX(${u.en / 100})"></i>` : ''}</button>`; }).join('');
-  const AM = moveOf(u.id, B.armed, u.spells); hint.innerHTML = `<b>${AM.name}</b> ${AM.note} <em>Tap again to use.</em>`;
+  const AM = moveOf(u.id, B.armed, u.spells), AK = B.armed === 0 ? 'basic' : B.armed === 3 ? 'ult' : u.spells[B.armed - 1];
+  hint.innerHTML = `<b>${AM.name}</b> ${AM.note} <em>Tap again to use.</em>${dmgHtml(dmgParts(u.id, AK, u, B.armed === 0 ? (u.sk || SAVE.heroes[u.id].sk)[0] : B.armed === 3 ? (u.sk || SAVE.heroes[u.id].sk)[3] : (u.sl ? u.sl[AK] || 1 : spLvl(u.id, AK))), true)}`;
   btns.querySelectorAll('.ab').forEach((bt) => (bt.onclick = () => {
     const i = +bt.dataset.i; if (!canUse(u, i)) return; SFX.click();
     if (B.armed === i) return commit(i);
@@ -1140,7 +1157,7 @@ async function castSpell(u, f, S, m) {
 async function doHero(u, i) {
   const f = B.foe, sk = u.sk || SAVE.heroes[u.id].sk, sid = i === 1 || i === 2 ? u.spells[i - 1] : null, S = sid && SPELLS[sid];
   const lv = S ? (u.sl ? u.sl[sid] || 1 : spLvl(u.id, sid)) : (sk[i] || 1), m = 1 + 0.12 * (lv - 1);
-  B.ctx = { u, dmg: i === 0 ? 'phys' : i === 3 ? ULT_DMG[u.id] || 'phys' : S.dmg || 'phys' }; u.tal.moves++;
+  B.ctx = { u, mv: i === 0 ? 'basic' : i === 3 ? 'ult' : sid, mults: [], dmg: i === 0 ? 'phys' : i === 3 ? ULT_DMG[u.id] || 'phys' : S.dmg || 'phys' }; u.tal.moves++; if (window.__mlog) window.__mlog.push({ h: u.id, mv: B.ctx.mv, ms: B.ctx.mults });
   if (i === 0) u.en = Math.min(100, u.en + 35);
   if (S) { u.cd[i - 1] = S.cd + 1; u.en = Math.min(100, u.en + 20); }
   if (i === 3) u.en = 0;
@@ -1310,6 +1327,19 @@ function finishArena(win) {
     app.append(v);
   }, 900);
 }
+// trailer capture: one hero, one creature, no interface, a chosen move played on demand
+function cinema(id, monId, regionIdx = 0) {
+  stopBattle(); document.body.classList.add('cine');
+  const R0 = REGIONS[Object.keys(REGIONS)[regionIdx % Object.keys(REGIONS).length]];
+  app.innerHTML = ''; app.classList.add('full');
+  const s = h(`<main><div class="battle"><div class="field"><canvas aria-label="Trailer"></canvas><div class="cutwrap"></div></div></div></main>`); app.append(s);
+  const hero = mkHero(id), foe = mkMon(monId, 30, 1); foe.hp = foe.max = 1e9; foe.enter = 0;
+  B = { cine: 1, all: [hero, foe], t: 0, waits: [], gy0: 0, gy1: 1, ground: R0.ground, hero, foe, heroes: [hero], foes: [foe], fx: [], parts: [], floats: [], ghosts: [], auto: true, speed: 1, slowT: 0, freeze: 0,
+    shake: 0, dim: 0, dimTo: 0, cam: { z: 1, x: .5, y: .6, tz: 1, tx: .5, ty: .6 }, rest: { z: 1, y: .6 }, impact: null, over: false, cur: hero, choice: null, armed: 0, cv: $('canvas', s), s, last: performance.now(), bg: img(`${A}bg_${R0.bg}.webp`), hitT: [] };
+  B.raf = requestAnimationFrame(loop);
+}
+async function cinemaMove(mv) { const u = B.hero, f = B.foe, sid = mv === 'basic' || mv === 'ult' ? null : mv; B.ctx = { u, mv, mults: [], dmg: 'phys' }; u.en = 100;
+  if (mv === 'basic') await CHOREO[u.id].basic(u, f, 1, {}); else await CHOREO[u.id][mv](u, f, 1, [f]); kfEnd(u); return B.hitT; }
 // ---------- render loop ----------
 function loop(now) {
   if (!B) return;
@@ -1323,7 +1353,7 @@ function loop(now) {
   const cv = B.cv, r = cv.getBoundingClientRect(), dpr = Math.min(2.5, devicePixelRatio || 1);
   if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
   B.w = r.width; B.hh = r.height;
-  { const port = r.height > r.width * .9, rz = port ? 1.12 : 1, ry = port ? .66 : .6; if (B.rest.z !== rz || B.rest.y !== ry) { B.rest = { z: rz, y: ry }; if (B.dimTo === 0) { B.cam.tz = rz; B.cam.ty = ry; } } }
+  { const port = r.height > r.width * .9, rz = B.cine ? 1.18 : port ? 1.12 : 1, ry = B.cine ? .64 : port ? .66 : .6; if (B.rest.z !== rz || B.rest.y !== ry) { B.rest = { z: rz, y: ry }; if (B.dimTo === 0) { B.cam.tz = rz; B.cam.ty = ry; } } }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingQuality = 'high';
   // camera
   const C = B.cam, ease = 1 - Math.pow(.002, real); C.z += (C.tz - C.z) * ease; C.x += (C.tx - C.x) * ease; C.y += (C.ty - C.y) * ease;
@@ -1388,11 +1418,12 @@ function loop(now) {
     if (u.alive) ovl.push([u, B.mir ? B.w - x : x, y]);
   }
   if (B.mir) g.restore();
-  for (const [u, x, y] of ovl) drawOverlay(g, u, x, y);
+  if (!B.cine) for (const [u, x, y] of ovl) drawOverlay(g, u, x, y);
   B.fx = B.fx.filter((f) => f.type === 'ink' || drawFxF(g, f));
   for (const p of B.parts) { p.x += p.vx * dt * 60; p.y += p.vy * dt * 60; p.vy += p.g * dt * 60; p.life -= dt * 1.8; g.globalAlpha = Math.max(0, p.life); g.fillStyle = p.c; g.fillRect((p.m ? B.w - p.x : p.x) - p.sz / 2, p.y - p.sz / 2, p.sz, p.sz); }
   g.globalAlpha = 1; B.parts = B.parts.filter((p) => p.life > 0);
   g.textAlign = 'center';
+  if (B.cine) B.floats = [];
   for (const f of B.floats) { f.y -= 34 * dt; f.life -= dt * .8; g.globalAlpha = Math.max(0, Math.min(1, f.life * 2)); g.font = `${Math.round(19 * f.size)}px Bangers, Impact, sans-serif`; g.lineWidth = 4; g.strokeStyle = '#120c10'; g.strokeText(f.t, f.m ? B.w - f.x : f.x, f.y); g.fillStyle = f.c; g.fillText(f.t, f.m ? B.w - f.x : f.x, f.y); }
   g.globalAlpha = 1; B.floats = B.floats.filter((f) => f.life > 0);
   g.restore();
@@ -1541,4 +1572,4 @@ function drawFx(g, f) {
 
 // ---------------- boot ----------------
 route();
-window.__sq = { get B() { return B; }, get SAVE() { return SAVE; }, battle, route, arenaBattle, ARENA, MM, renderAct: () => B && B.cur && renderAct(B.cur), ratio: (i, d) => heroPower(SAVE.squad[0]) / enemyPower(STAGES[i], DIFF.find((x) => x.id === d)) };
+window.__sq = { cinema, cinemaMove, pool: (h) => HEROES[h].pool, get B() { return B; }, get SAVE() { return SAVE; }, battle, route, arenaBattle, ARENA, MM, renderAct: () => B && B.cur && renderAct(B.cur), ratio: (i, d) => heroPower(SAVE.squad[0]) / enemyPower(STAGES[i], DIFF.find((x) => x.id === d)) };

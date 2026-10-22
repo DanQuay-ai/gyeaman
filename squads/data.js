@@ -53,6 +53,8 @@ export const ARENA = [
   { name: 'Spirit Circle', lvl: 15, stars: 3, sk: 4, heroes: ['kome', 'bayi', 'obiri'], region: 1 },
   { name: 'Ahenfo Guard', lvl: 20, stars: 4, sk: 5, heroes: ['blay', 'dufie', 'sekan'], region: 0 },
 ];
+// measured per use at spell level 1: [total damage multiplier, hits, note]; feeds the damage breakdown shown to players
+export const MOVE_DMG = {"blay":{"blay1":[1.6,2],"ult":[3,5,"Kills outright below 30% health (20% against heroes)"],"basic":[1,1],"blayRush":[1.4,3]},"gyakari":{"gyakari1":[0.9,1],"basic":[1,1],"ult":[4.13,3,"The final thrust grows with his shield"],"gyaSweep":[0.9,2]},"owureku":{"owureku1":[1.1,1],"basic":[1,1],"ult":[3.45,4,"Last hit is the heaviest"],"owuRend":[1.2,1]},"kome":{"kome2":[0.7,1],"basic":[1,2],"ult":[1.7,2,"Doubles on a burning enemy"],"komeHex":[0.9,1]},"obiri":{"obiri1":[1,1],"ult":[3.35,9],"basic":[1,1],"obiVolley":[1.35,3],"obiKnee":[0.9,1]},"kuukua":{"kuukua1":[1.42,7],"kuukua2":[1.1,2],"ult":[2.4,12,"x1.5 on a slowed or weakened enemy"],"basic":[1.01,4],"kuuThrow":[1.3,1]},"afrakoma":{"afrakoma1":[1.25,1],"ult":[3,3],"afrWhirl":[1.6,4],"basic":[1,1]},"dufie":{"dufie1":[1.4,1],"basic":[1,2],"ult":[2.3,7],"dufKick":[1,2],"dufStars":[1.3,5]},"sekan":{"sekan1":[1.15,1],"sekan2":[1,1],"basic":[1.15,3],"ult":[3.14,8],"sekRush":[1.35,3]},"bayi":{"bayi1":[1,1],"bayi2":[0.4,1],"basic":[1,2],"ult":[2.8,5],"bayMist":[0.6,1],"bayCurse":[0.5,1]}};
 export const STARTERS = Object.keys(HEROES); // beta: every hero unlocked while spells and animations are built
 export const SKILL_MAX = 10;
 export const skillCost = (lvl) => Math.round(120 * Math.pow(lvl, 1.6));
