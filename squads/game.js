@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261022j';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA, MOVE_DMG, TALENTS } from './data.js?v=20261022j';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022j';
+import { KF } from './kf.js?v=20261022k';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA, MOVE_DMG, TALENTS } from './data.js?v=20261022k';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022k';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261022j';
+const AV = '?v=20261022k';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -1175,12 +1175,20 @@ const BONUS_SHOT = { obiri: 'arrow', kuukua: 'spear', kome: 'fire', dufie: 'dagg
 async function bonusHits(u, f, m) {
   const tecHit = Math.random() < (u.tec || 0) / ((u.tec || 0) + 250) ? 1 : 0, n = (u.fz || 0) + tecHit; if (!n || !f.alive) return;
   if (u.fz) float(u, `FRENZY ×${u.fz}`, '#ffd23c', .9);
+  // strike poses from the hero's own basic attack, alternated, each with its own projectile or slash
+  const poses = KF[u.id] && SEQ[u.id] && SEQ[u.id].basic ? SEQ[u.id].basic.filter((s) => s.ev && KF[u.id].p[s.p]).map((s) => s.p) : [];
   for (let k = 0; k < n && f.alive; k++) {
     const [x0, y0] = pos(u), [x, y] = pos(f), kind = BONUS_SHOT[u.id], yy = y - f.h * (.35 + .3 * Math.random());
-    if (kind) { fx('shot', 180, { x0: x0 + u.w * .3, y0: y0 - u.h * .6, x1: x, y1: yy, kind }); await wait(150); }
-    else { fx('arc', 220, { x, y: yy, r: f.h * .5, c: PH_COL[u.id] || '#fff', dir: k % 2 ? 1 : -1 }); await wait(110); }
-    hit(u, f, .3 * m, { color: PH_COL[u.id] }); await wait(90);
+    if (poses.length) { u.kf = poses[k % poses.length]; u.kfA = null; u.kfPh = true; u.phHue = PH_HUE[u.id] ?? 185; }
+    if (kind) fx('shot', 180, { x0: x0 + u.w * .3, y0: y0 - u.h * .6, x1: x, y1: yy, kind });
+    else if (u.id === 'bayi') redSlash(u, f, { ms: 300, flip: k % 2, rot: k % 2 ? -.3 : .3 });
+    else if (u.id === 'blay') sproj(u, k % 4, { s: .8, ms: 300 });
+    else if (u.id === 'owureku') axeThrow(u, f, { ms: 300 });
+    else fx('arc', 240, { x, y: yy, r: f.h * .65, c: PH_COL[u.id] || '#fff', dir: k % 2 ? 1 : -1, big: 1 });
+    await wait(kind || ['bayi', 'blay', 'owureku'].includes(u.id) ? 180 : 110);
+    fx('star', 200, { x, y: yy, r: f.h * .35, c: PH_COL[u.id] || '#fff' }); hit(u, f, .3 * m, { color: PH_COL[u.id] }); await wait(110);
   }
+  kfEnd(u);
 }
 async function doHero(u, i) {
   const f = B.foe, sk = u.sk || SAVE.heroes[u.id].sk, sid = i === 1 || i === 2 ? u.spells[i - 1] : null, S = sid && SPELLS[sid];
@@ -1602,4 +1610,4 @@ function drawFx(g, f) {
 
 // ---------------- boot ----------------
 route();
-window.__sq = { cinema, cinemaMove, pool: (h) => HEROES[h].pool, get B() { return B; }, get SAVE() { return SAVE; }, battle, route, arenaBattle, ARENA, MM, renderAct: () => B && B.cur && renderAct(B.cur), ratio: (i, d) => heroPower(SAVE.squad[0]) / enemyPower(STAGES[i], DIFF.find((x) => x.id === d)) };
+window.__sq = { bonus: (u, f, m) => bonusHits(u, f, m), cinema, cinemaMove, pool: (h) => HEROES[h].pool, get B() { return B; }, get SAVE() { return SAVE; }, battle, route, arenaBattle, ARENA, MM, renderAct: () => B && B.cur && renderAct(B.cur), ratio: (i, d) => heroPower(SAVE.squad[0]) / enemyPower(STAGES[i], DIFF.find((x) => x.id === d)) };
