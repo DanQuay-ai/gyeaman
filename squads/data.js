@@ -12,36 +12,47 @@ export const RARITY = {
 // role is standard Twi spelling; kr is the same word in Kɔradin spelling (vowel inserted in CrV clusters), used only with the Kɔradin font.
 // Locked archetypes: base speed is fixed by class, never by the individual hero.
 export const CLASSES = {
-  guardian: { name: 'Guardian', spd: 84,  desc: 'Holds the line. Slowest, toughest.' },
+  guardian: { name: 'Guardian', spd: 90,  desc: 'Holds the line. Slowest, toughest.' },
   warrior:  { name: 'Warrior',  spd: 100, desc: 'Steady melee damage.' },
-  sage:     { name: 'Sage',     spd: 104, desc: 'Heals, cleanses and burns with spirit power.' },
-  hunter:   { name: 'Hunter',   spd: 108, desc: 'Strikes from reach.' },
-  shadow:   { name: 'Shadow',   spd: 124, desc: 'Fastest class. Acts often, breaks easily.' },
+  sage:     { name: 'Sage',     spd: 102, desc: 'Heals, cleanses and burns with spirit power.' },
+  hunter:   { name: 'Hunter',   spd: 106, desc: 'Strikes from reach.' },
+  shadow:   { name: 'Shadow',   spd: 116, desc: 'Fastest class. Acts often, breaks easily.' },
 };
 // Growth: one point per level. Speed points cost 2 and cap at SPD_CAP points.
-export const GROWTH = { hp: 0.05, atk: 0.05, mag: 0.05, spd: 2, spdCost: 2, spdCap: 5 };
+export const GROWTH = { hp: 0.05, atk: 0.05, mag: 0.05, tec: 0.05, spd: 2, spdCost: 2, spdCap: 5 };
 export const HEROES = {
-  blay:     { name: 'Blay',     role: 'Asafo',        kr: 'asafo',        en: 'Sword fighter', rarity: 'R',   size: 1.28, hp: 1050, atk: 66, def: 26, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
+  blay:     { name: 'Blay',     role: 'Asafo',        kr: 'asafo',        en: 'Sword fighter', rarity: 'R',   size: 1.28, hp: 1100, atk: 66, mag: 40, tec: 14, def: 26, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Slash', 'Twin Cut', 'Parry', 'Gyawu Atiko'], notes: ['One afena cut.', 'Two cuts and the enemy\'s defence drops for 2 turns.', 'Guard: the next hit is halved and Blay strikes back.', 'Valour of Gyawu: a huge cut. Kills outright below 30% health.'], sym: 'gyawuAtiko' },
-  owureku:  { name: 'Owureku',  role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Twin-axe bruiser', rarity: 'R', size: 0.94, hp: 1080, atk: 60, def: 30, cls: 'warrior', spd: 100, cd: [3, 3], flip: [0, 0, 0],
+  owureku:  { name: 'Owureku',  role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Twin-axe bruiser', rarity: 'R', size: 0.94, hp: 1080, atk: 60, mag: 30, tec: 12, def: 30, cls: 'warrior', spd: 100, cd: [3, 3], flip: [0, 0, 0],
     kit: ['Axe Chop', 'Axe Toss', 'War Cry', 'Ese Ne Tekrema'], notes: ['Heavy axe chop.', 'Hurls an axe: damage and a 1-turn stun that cancels a charged attack.', 'Hits 30% harder for 3 turns and heals 10%.', 'Teeth and tongue: three heavy blows in a row.'], sym: 'eseNeTekrema' },
-  gyakari:  { name: 'Gyakari',  role: 'Banbɔfo',      kr: 'banbɔfo',      en: 'Shield tank', rarity: 'R',     size: 1.14, hp: 1250, atk: 42, def: 46, cls: 'guardian', spd: 84, cd: [3, 3], flip: [0, 0, 0],
+  gyakari:  { name: 'Gyakari',  role: 'Banbɔfo',      kr: 'banbɔfo',      en: 'Shield tank', rarity: 'R',     size: 1.14, hp: 940, atk: 42, mag: 42, tec: 10, def: 32, cls: 'guardian', spd: 84, cd: [3, 3], flip: [0, 0, 0],
     kit: ['Spear Jab', 'Shield Bash', 'Brace', 'Eban'], notes: ['Spear jab.', 'Bash: damage and a 1-turn stun that cancels a charged attack.', 'Raises his shield: absorbs 30% of his health for 2 turns.', 'The fence: a huge shield, then a counter-thrust that grows with the shield.'], sym: 'eban' },
-  obiri:    { name: 'Obiri',    role: 'Toprefo',      kr: 'toperefo',     en: 'Marksman', rarity: 'SR',       size: 1.0,  hp: 760, atk: 70, def: 16, cls: 'hunter', spd: 108, cd: [2, 3], flip: [0, 0, 0],
+  obiri:    { name: 'Obiri',    role: 'Toprefo',      kr: 'toperefo',     en: 'Marksman', rarity: 'SR',       size: 1.0,  hp: 840, atk: 68, mag: 46, tec: 22, def: 20, cls: 'hunter', spd: 108, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Arrow', 'Pinning Shot', 'Steady Aim', 'Hwemudua'], notes: ['An arrow.', 'Pins the enemy: damage and slowed for 2 turns.', 'The next attack is a critical hit that ignores defence.', 'The measuring stick: one exact shot for massive damage. Always critical.'], sym: 'hwemuDua' },
-  kuukua:   { name: 'Kuukua',   role: 'Asafo',        kr: 'asafo',        en: 'Spear lancer', rarity: 'SR',   size: 1.08, hp: 820, atk: 64, def: 20, cls: 'hunter', spd: 108, cd: [2, 3], flip: [0, 0, 0],
+  kuukua:   { name: 'Kuukua',   role: 'Asafo',        kr: 'asafo',        en: 'Spear lancer', rarity: 'SR',   size: 1.08, hp: 1000, atk: 66, mag: 40, tec: 22, def: 28, cls: 'hunter', spd: 108, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Thrust', 'Pierce', 'Sweep', 'Epa'], notes: ['Spear thrust.', 'Pierces armour: lowers defence for 2 turns.', 'Sweeps the legs: the enemy loses 40% of its turn meter.', 'No one escapes justice: a rain of spears, double damage on a slowed or weakened enemy.'], sym: 'epa' },
-  kome:     { name: 'Kome',     role: 'Ɔkɔmfo',       kr: 'ɔkɔmfo',       en: 'Spirit priestess', rarity: 'SR', size: 0.92, hp: 760, atk: 52, def: 16, cls: 'sage', spd: 104, cd: [3, 2], flip: [0, 0, 0],
+  kome:     { name: 'Kome',     role: 'Ɔkɔmfo',       kr: 'ɔkɔmfo',       en: 'Spirit priestess', rarity: 'SR', size: 0.92, hp: 800, atk: 40, mag: 80, tec: 10, def: 16, cls: 'sage', spd: 104, cd: [3, 2], flip: [0, 0, 0],
     kit: ['Spirit Bolt', 'Nyame Dua', 'Spirit Fire', 'Hye Won Hye'], notes: ['Fire bolt.', 'Heals 22% and clears stun and burn.', 'Sets the enemy burning for 3 turns.', 'That which does not burn: heals 20% and a blast that doubles on a burning enemy.'], sym: 'hyeWonhye', sym2: 'nyameDua' },
-  afrakoma: { name: 'Afrakoma', role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Axe berserker', rarity: 'SSR', size: 0.88,  hp: 980, atk: 72, def: 24, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
+  afrakoma: { name: 'Afrakoma', role: 'Ɔbrafo',       kr: 'ɔberafo',      en: 'Axe berserker', rarity: 'SSR', size: 0.88,  hp: 1020, atk: 74, mag: 30, tec: 10, def: 24, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Cleave', 'Bloodletting', 'Fury', 'Dwannimmen'], notes: ['Big cleave.', 'A cleave that heals for half the damage.', 'Hits 40% harder for 3 turns but costs 10% health.', 'Ram\'s horns: a crushing cleave that heals for half the damage.'], sym: 'dwannimen' },
-  dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', kr: 'anadwo sekan', en: 'Night blade', rarity: 'SSR',   size: 0.98, hp: 800, atk: 74, def: 18, cls: 'shadow', spd: 124, cd: [2, 3], flip: [0, 0, 0],
+  dufie:    { name: 'Dufie',    role: 'Anadwo Sekan', kr: 'anadwo sekan', en: 'Night blade', rarity: 'SSR',   size: 0.98, hp: 1000, atk: 62, mag: 50, tec: 34, def: 26, cls: 'shadow', spd: 124, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Night Cut', 'Shadow Step', 'Vanish', 'Nkyinkyim'], notes: ['Quick cut.', 'A certain critical strike, then Dufie moves 50% up the turn order.', 'Dodges the next attack completely.', 'The twisting path: six cuts in a row.'], sym: 'nkyimkyim' },
-  sekan:    { name: 'Bediako', role: 'Ɔkofoɔ', kr: 'ɔkofoɔ',      en: 'Kickboxer', rarity: 'SR',      size: 1.0,  hp: 860, atk: 66, def: 20, cls: 'shadow', spd: 116, cd: [2, 3], flip: [0, 0, 0],
+  sekan:    { name: 'Bediako', role: 'Ɔkofoɔ', kr: 'ɔkofoɔ',      en: 'Kickboxer', rarity: 'SR',      size: 1.0,  hp: 860, atk: 54, mag: 32, tec: 26, def: 20, cls: 'shadow', spd: 116, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Jab Cross Kick', 'Spinning Back Kick', 'Flying Knee', 'Fawohodie'], notes: ['A jab, a cross and a high kick.', 'A spinning heel: damage and the enemy loses 30% of its turn meter.', 'A leaping knee: damage and a 1-turn stun that cancels a charged attack.', 'Freedom: a storm of punches and kicks ending in a falling heel that stuns.'], sym: 'fawohodie' },
-  bayi:     { name: 'Agyekum', role: 'Bayibɔnsam', kr: 'bayibɔnsam',    en: 'Life drainer', rarity: 'SSR',  size: 1.04, hp: 900, atk: 62, def: 22, cls: 'sage', spd: 106, cd: [2, 3], flip: [0, 0, 0],
+  bayi:     { name: 'Agyekum', role: 'Bayibɔnsam', kr: 'bayibɔnsam',    en: 'Life drainer', rarity: 'SSR',  size: 1.04, hp: 860, atk: 46, mag: 64, tec: 16, def: 22, cls: 'sage', spd: 106, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Claw', 'Siphon', 'Hollow Pact', 'Ohene Adwa'], notes: ['A hooked claw cut that heals a little.', 'Drains the enemy: damage, and heals for all of it.', 'Steals 35% of the enemy\'s turn meter.', 'The king\'s stool: drains a huge chunk of health and heals for all of it.'], sym: 'oheneAdwa' },
 };
+// ultimate damage type per hero
+export const ULT_DMG = { kome: 'mag', bayi: 'mag', dufie: 'mix', obiri: 'phys', kuukua: 'phys', blay: 'phys', owureku: 'phys', gyakari: 'phys', afrakoma: 'phys', sekan: 'phys' };
+// Arena: CPU hero teams fought 3 v 3 as a tag battle (one duel at a time, the next fighter steps in on a KO). PvP prototype.
+export const ARENA = [
+  { name: 'Asafo Patrol', lvl: 3, stars: 1, sk: 1, heroes: ['blay', 'gyakari', 'kome'], region: 0 },
+  { name: 'Night Court', lvl: 6, stars: 2, sk: 2, heroes: ['dufie', 'bayi', 'sekan'], region: 1 },
+  { name: 'Hunters of Bono', lvl: 9, stars: 2, sk: 2, heroes: ['obiri', 'kuukua', 'afrakoma'], region: 2 },
+  { name: 'Iron Brothers', lvl: 12, stars: 3, sk: 3, heroes: ['owureku', 'gyakari', 'afrakoma'], region: 3 },
+  { name: 'Spirit Circle', lvl: 15, stars: 3, sk: 4, heroes: ['kome', 'bayi', 'obiri'], region: 1 },
+  { name: 'Ahenfo Guard', lvl: 20, stars: 4, sk: 5, heroes: ['blay', 'dufie', 'sekan'], region: 0 },
+];
 export const STARTERS = Object.keys(HEROES); // beta: every hero unlocked while spells and animations are built
 export const SKILL_MAX = 10;
 export const skillCost = (lvl) => Math.round(120 * Math.pow(lvl, 1.6));
@@ -149,4 +160,5 @@ export const SPELLS = {
   dufKick: { hero: 'dufie', name: 'Crescent Kick', note: 'A spinning kick and a falling heel: 1-turn stun that cancels a charged attack.', cd: 3, t: 'melee', mult: 1.0, foe: [['stun', 1]], kind: 'melee' },
   dufStars: { hero: 'dufie', name: 'Star Daggers', note: 'Five thrown knives: defence down for 2 turns.', cd: 2, t: 'ranged', mult: .26, hits: 5, foe: [['defDown', 2]], proj: 'dagger', kind: 'ranged' },
 };
-for (const [id, s] of Object.entries(SPELLS)) { s.id = id; (HEROES[s.hero].pool ||= []).push(id); }
+const MAGIC = ['kome1', 'kome2', 'komeHex', 'komeVeil', 'bayi1', 'bayi2', 'bayMist', 'bayCurse'], MIXED = ['dufie2', 'dufStars', 'obiri2', 'gyaFirm', 'afrOath', 'kuuWall'];
+for (const [id, s] of Object.entries(SPELLS)) { s.dmg = MAGIC.includes(id) ? 'mag' : MIXED.includes(id) ? 'mix' : 'phys'; s.id = id; (HEROES[s.hero].pool ||= []).push(id); }

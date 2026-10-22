@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261022e';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS } from './data.js?v=20261022e';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022e';
+import { KF } from './kf.js?v=20261022f';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA } from './data.js?v=20261022f';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022f';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -21,7 +21,7 @@ const fmt = (n) => (n >= 10000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round
 const kr = (s) => s.toLowerCase(); // Kɔradin font: lowercase Latin input, ligatures and nasal marks come from the font
 
 // ---------------- icons ----------------
-const ICON = { map: adinkraSvg('nkyimkyim'), heroes: adinkraSvg('gyawuAtiko'), summon: adinkraSvg('nyameDua') };
+const ICON = { arena: adinkraSvg('dwannimen'), map: adinkraSvg('nkyimkyim'), heroes: adinkraSvg('gyawuAtiko'), summon: adinkraSvg('nyameDua') };
 const CHEV = (r) => `<svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(${r}deg)"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const COIN = (k, cls = '') => `<i class="coin ${k} ${cls}"></i>`;
 const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261022e';
+const AV = '?v=20261022f';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -200,7 +200,7 @@ async function runKF(u, f, seq, onEv) {
     const cur = kfOff(u), x1 = st.hold ? cur[0] : (st.x ?? 0) * R, y1 = st.hold ? cur[1] : (st.y ?? 0) * u.h;
     u.kf = st.p; u.kfA = st.snap ? { x0: x1, x1, y0: y1, y1, t0: B.t, d: .001 } : { x0: cur[0], x1, y0: cur[1], y1, t0: B.t, d: st.ms / 1000 * .7 };
     if (st.lines) { const [hx, hy] = pos(u); fx('lines', 260, { x0: hx + cur[0], x1: hx + x1, y: hy - u.h * .5, h: u.h * .7 }); }
-    if (st.ghost) B.ghosts.push({ u, p: st.p, x: pos(u)[0] + cur[0], y: pos(u)[1] - cur[1], t0: B.t });
+    if (st.ghost) B.ghosts.push({ u, p: st.p, x: pos(u)[0] + cur[0], y: pos(u)[1] - cur[1], t0: B.t, m: !!B.mir });
     u.kfSpin = st.spin ? { t0: B.t, d: st.ms / 1000 * .9, a: st.spin } : null;
     u.kfPh = !!st.phantom; if (st.phantom) u.phHue = PH_HUE[u.id] ?? 185;
     if (st.ev && onEv) await onEv(st.ev, st);
@@ -294,7 +294,7 @@ CHOREO.blay = {
       if (ev === 'u3') cut(0, { s: .8, yy: .55, flip: 1 }, .25);
       if (ev === 'u4') cut(2, { s: 1.1, yy: .45 }, .25);
       if (ev === 'release') { await impactFrames(T, u); sproj(u, 3, { s: 2.2, ms: 900, yy: .6, x1: B.w * 1.6 }); await wait(80); sproj(u, 0, { s: 1.1, ms: 700, yy: .45, x1: B.w * 1.5 }); await wait(260); B.shake = 16;
-        if (!f.alive) return; if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1, color: BLU }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 2.0 * m, { big: 1, color: BLU }); hitStop(160); } });
+        if (!f.alive) return; if (f.hp / f.max < (f.isHero ? .2 : .3) && !f.boss) { hit(u, f, 99, { big: 1, color: BLU }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 2.0 * m, { big: 1, color: BLU }); hitStop(160); } });
     kfEnd(u); },
 };
 // Kuukua: relentless thrusts, every jab a small flash, finishers a big crimson flash
@@ -350,12 +350,12 @@ CHOREO.gyakari = {
   basic: async (u, f, m, o) => { let d = 0; await runKF(u, f, SEQ.gyakari.basic, async (e) => { if (e === 'jab') { shock(u, f, AMB, 0); slam(u, f, AMB, 1); d = hit(u, f, m, { ...o, color: AMB }); } }); await heavyRecover(u, f); return d; },
   gyakari1: async (u, f, m) => { await runKF(u, f, SEQ.gyakari.gyakari1, async (e) => { const [hx, hy] = pos(u); if (e === 'charge') fx('star', 300, { x: hx, y: hy - u.h * .5, r: u.h * .5, c: AMB });
       if (e === 'bash') { shock(u, f, AMB, 0); slam(u, f, AMB, 1); hit(u, f, .9 * m, { color: AMB, big: 1 }); addSt(f, 'stun', 1); if (f.charging) { f.charging = false; float(f, 'INTERRUPTED', AMB, .9); } } }); await heavyRecover(u, f); },
-  gyakari2: async (u, f, m) => { await runKF(u, null, SEQ.gyakari.gyakari2, async (e) => { if (e === 'brace') { const [x, y] = pos(u); debris(x + u.w * .4, y, 6, u.h * .1); addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .3 * m); fx('ward', 900, { unit: u, c: AMB }); float(u, 'BRACE', AMB, .9); B.shake = 6; } }); kfEnd(u); },
+  gyakari2: async (u, f, m) => { await runKF(u, null, SEQ.gyakari.gyakari2, async (e) => { if (e === 'brace') { const [x, y] = pos(u); debris(x + u.w * .4, y, 6, u.h * .1); addSt(u, 'shield', 2); u.shieldAmt = shK() * Math.round(u.max * .22 * m); fx('ward', 900, { unit: u, c: AMB }); float(u, 'BRACE', AMB, .9); B.shake = 6; } }); kfEnd(u); },
   gyaSweep: async (u, f, m) => { await runKF(u, f, SEQ.gyakari.gyaSweep, async (e) => { if (e === 'spin' && f.alive) { slam(u, f, AMB, 0); hit(u, f, .4 * m, { color: AMB }); }
       if (e === 'sweep' && f.alive) { shock(u, f, AMB, 0); hit(u, f, .5 * m, { color: AMB }); addSt(f, 'slow', 2); pushTM(f, -.25); float(f, 'TURN −25%', '#c58bff', .8); } }); await heavyRecover(u, f); },
   gyaFirm: async (u, f, m) => { await runKF(u, null, SEQ.gyakari.gyaFirm, async (e) => { if (e === 'firm') { heal(u, u.max * .15); u.st.guard = 1; fx('ward', 900, { unit: u, c: '#7ee08a' }); SFX.heal(); } }); kfEnd(u); },
   ult: async (u, f, m, T) => { await runKF(u, f, SEQ.gyakari.ult, async (e) => {
-      if (e === 'wall') { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .35 * m); fx('ward', 900, { unit: u, c: AMB }); }
+      if (e === 'wall') { addSt(u, 'shield', 2); u.shieldAmt = shK() * Math.round(u.max * .35 * m); fx('ward', 900, { unit: u, c: AMB }); }
       if (e === 'leap') await impactFrames(T, u);
       if (e === 'slam') { const [hx, hy] = pos(u); debris(hx + u.w * .4, hy, 16, u.h * .14); shock(u, f, AMB, 1); slam(u, f, AMB, 1); if (f.alive) hit(u, f, .5 * m, { color: AMB, big: 1 }); }
       if (e === 'spin' && f.alive) { slam(u, f, AMB, 0); hit(u, f, .3 * m, { color: AMB }); }
@@ -388,7 +388,7 @@ CHOREO.kome = {
   kome1: async (u, f, m) => { await runKF(u, null, SEQ.kome.kome1, async (e) => { if (e === 'heal') { const [x, y] = pos(u); fx('ink', 900, { x, y: y - u.h * .55, s: u.h * .55, sym: 'nyameDua', c: '#7ee08a', small: 1 }); fx('ward', 900, { unit: u, c: '#7ee08a' }); heal(u, u.max * .22 * m); delete u.st.stun; delete u.st.burn; SFX.heal(); } }); kfEnd(u); },
   kome2: async (u, f, m) => { await runKF(u, f, SEQ.kome.kome2, async (e) => { const [x, y] = pos(f); if (e === 'ring') { const [hx, hy] = pos(u); fx('star', 300, { x: hx - u.h * .1, y: hy - u.h * .9, r: u.h * .3, c: SPIRIT }); }
       if (e === 'fire') { fireball(u, f); await wait(300); fx('sproj', 500, { src: 'fx_burst', x0: x, x1: x, y: y - f.h * .5, s: f.h * 1.1 }); pillar(x, y, f.h * 1.3); hit(u, f, .7 * m, { color: FIRE }); addSt(f, 'burn', 3, { burnPow: u.atk * .7 * m }); hitStop(90); B.shake = 7; } }); kfEnd(u); },
-  komeVeil: async (u, f, m) => { await runKF(u, null, SEQ.kome.komeVeil, async (e) => { if (e === 'veil') { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .2); delete u.st.stun; delete u.st.burn; fx('ward', 900, { unit: u, c: SPIRIT }); float(u, 'SPIRIT VEIL', SPIRIT, .9); } }); kfEnd(u); },
+  komeVeil: async (u, f, m) => { await runKF(u, null, SEQ.kome.komeVeil, async (e) => { if (e === 'veil') { addSt(u, 'shield', 2); u.shieldAmt = shK() * Math.round(u.max * .2); delete u.st.stun; delete u.st.burn; fx('ward', 900, { unit: u, c: SPIRIT }); float(u, 'SPIRIT VEIL', SPIRIT, .9); } }); kfEnd(u); },
   komeHex: async (u, f, m) => { await runKF(u, f, SEQ.kome.komeHex, async (e) => { if (e === 'hex') { fireball(u, f, { hue: 250 }); await wait(300); const [x, y] = pos(f); fx('flash', 420, { x, y: y - f.h * .5, r: f.h * .7, c: HEX }); hit(u, f, .9 * m, { color: HEX }); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } }); kfEnd(u); },
   ult: async (u, f, m, T) => { const burning = !!f.st.burn; await runKF(u, f, SEQ.kome.ult, async (e) => { const [x, y] = pos(f), [hx, hy] = pos(u);
       if (e === 'summon') { fx('star', 600, { x: hx, y: hy - u.h * 1.1, r: u.h * .7, c: SPIRIT }); heal(u, u.max * .2 * m); SFX.heal(); }
@@ -402,7 +402,7 @@ CHOREO.owureku = {
   owureku1: async (u, f, m) => { await runKF(u, f, SEQ.owureku.owureku1, async (e) => { if (e === 'throw') { axeThrow(u, f); await wait(250); slam(u, f, RUST, 0); hit(u, f, 1.1 * m, { color: RUST }); addSt(f, 'stun', 1); } }); kfEnd(u); },
   owureku2: async (u, f, m) => { await runKF(u, null, SEQ.owureku.owureku2, async (e) => { if (e === 'roar') { const [x, y] = pos(u); fx('star', 600, { x, y: y - u.h * .8, r: u.h * .8, c: RUST }); B.shake = 8; addSt(u, 'atkUp', 3); u.atkUpK = 1.3 + .03 * (m - 1) * 10; heal(u, u.max * .1); float(u, 'RAGE', RUST, 1); } }); kfEnd(u); },
   owuRend: async (u, f, m) => { await runKF(u, f, SEQ.owureku.owuRend, async (e) => { if (e === 'rend' && f.alive) { const [x, y] = pos(f); fx('x', 420, { unit: f, c: RUST }); slam(u, f, RUST, 1); hit(u, f, 1.2 * m, { color: RUST, big: 1 }); addSt(f, 'defDown', 2); float(f, 'DEF▼', '#ff5a4a', .8); } }); await heavyRecover(u, f); },
-  owuHide: async (u, f, m) => { await runKF(u, null, SEQ.owureku.owuHide, async (e) => { if (e === 'hide') { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .25); fx('ward', 900, { unit: u, c: '#c9873a' }); float(u, 'IRON HIDE', '#e0b070', .9); } }); kfEnd(u); },
+  owuHide: async (u, f, m) => { await runKF(u, null, SEQ.owureku.owuHide, async (e) => { if (e === 'hide') { addSt(u, 'shield', 2); u.shieldAmt = shK() * Math.round(u.max * .25); fx('ward', 900, { unit: u, c: '#c9873a' }); float(u, 'IRON HIDE', '#e0b070', .9); } }); kfEnd(u); },
   ult: async (u, f, m, T) => { await runKF(u, f, SEQ.owureku.ult, async (e) => { const [hx, hy] = pos(u);
       if (e === 'roar') { fx('star', 500, { x: hx, y: hy - u.h * .8, r: u.h * .8, c: RUST }); B.shake = 8; for (let k = 0; k < 2; k++) { axeThrow(u, f, { yy: .5 + k * .3, ms: 380 }); await wait(120); } }
       if (e === 'c' && f.alive) { slam(u, f, RUST, 0); hit(u, f, .5 * m, { color: RUST }); }
@@ -525,14 +525,15 @@ function inkSymbol(sym, color) {
 
 // ---------------- hero stats ----------------
 const SPD_STAR = 2; // speed per star above base
-const ptsOf = (id) => { const s = SAVE.heroes[id]; if (!s.pts) s.pts = { hp: 0, atk: 0, spd: 0, mag: 0 }; return s.pts; };
-const freePts = (id) => { const p = ptsOf(id); return SAVE.heroes[id].lvl - 1 - (p.hp + p.atk + p.mag + p.spd * GROWTH.spdCost); };
-function statsOf(id) {
-  const H = HEROES[id], s = SAVE.heroes[id], p = ptsOf(id), k = (1 + 0.06 * (s.lvl - 1)) * (1 + 0.15 * (s.stars - 1));
-  return { hp: Math.round(H.hp * k * (1 + GROWTH.hp * p.hp)), atk: Math.round(H.atk * k * (1 + GROWTH.atk * p.atk)), def: Math.round(H.def * k),
-    spd: CLASSES[H.cls].spd + SPD_STAR * (s.stars - RARITY[H.rarity].stars) + GROWTH.spd * p.spd, mag: Math.round(100 * (1 + GROWTH.mag * p.mag)) };
+const ptsOf = (id) => { const s = SAVE.heroes[id]; if (!s.pts) s.pts = { hp: 0, atk: 0, spd: 0, mag: 0, tec: 0 }; s.pts.tec ||= 0; return s.pts; };
+const freePts = (id) => { const p = ptsOf(id); return SAVE.heroes[id].lvl - 1 - (p.hp + p.atk + p.mag + p.tec + p.spd * GROWTH.spdCost); };
+function statsFor(id, lvl, stars, p) { // shared by player heroes and CPU teams
+  const H = HEROES[id], k = (1 + 0.06 * (lvl - 1)) * (1 + 0.15 * (stars - 1)), g = (x) => 1 + (GROWTH[x] || 0) * (p[x] || 0);
+  return { hp: Math.round(H.hp * k * g('hp')), atk: Math.round(H.atk * k * g('atk')), mag: Math.round(H.mag * k * g('mag')), tec: Math.round(H.tec * k * g('tec')), def: Math.round(H.def * k),
+    spd: CLASSES[H.cls].spd + SPD_STAR * (stars - RARITY[H.rarity].stars) + GROWTH.spd * (p.spd || 0) };
 }
-const power = (id) => { const st = statsOf(id), s = SAVE.heroes[id]; return Math.round(st.hp * 0.5 + st.atk * 6 + st.def * 4 + st.spd * 2 + (st.mag - 100) * 4 + (s.sk[0] + s.sk[1] + s.sk[2]) * 30); };
+function statsOf(id) { const s = SAVE.heroes[id]; return statsFor(id, s.lvl, s.stars, ptsOf(id)); }
+const power = (id) => { const st = statsOf(id), s = SAVE.heroes[id]; return Math.round(st.hp * 0.5 + st.atk * 4 + st.mag * 2.5 + st.tec * 5 + st.def * 4 + st.spd * 2 + (s.sk[0] + s.sk[1] + s.sk[2]) * 30); };
 const skMult = (id, i) => 1 + 0.12 * (SAVE.heroes[id].sk[i] - 1);
 const spLvl = (id, sid) => (SAVE.heroes[id].sl || {})[sid] || 1;
 // name / note / level of the move in slot i (0 basic, 1-2 equipped spells, 3 ultimate) for a hero id
@@ -547,14 +548,14 @@ function shell(active, content) {
   app.innerHTML = '';
   const top = h(`<header class="topbar"><div class="logo"><img src="star.svg" alt="Gyeaman"></div>
     <span class="res" title="Gold dust">${COIN('gold')}<b class="num">${fmt(SAVE.gold)}</b></span><span class="res" title="Cowries">${COIN('cowrie')}<b class="num">${fmt(SAVE.cowries)}</b></span></header>`);
-  const nav = h(`<nav class="nav">${[['map', 'Journey'], ['heroes', 'Heroes'], ['summon', 'Shrine']].map(([k, l]) => `<button class="tab ${k === active ? 'on' : ''}" data-k="${k}" type="button">${ICON[k]}<span>${l}</span></button>`).join('')}</nav>`);
+  const nav = h(`<nav class="nav">${[['map', 'Journey'], ['arena', 'Arena'], ['heroes', 'Heroes'], ['summon', 'Shrine']].map(([k, l]) => `<button class="tab ${k === active ? 'on' : ''}" data-k="${k}" type="button">${ICON[k]}<span>${l}</span></button>`).join('')}</nav>`);
   if (anyUpgrade()) $('[data-k=heroes]', nav).append(h('<i class="dot"></i>'));
   if (SAVE.lastFree !== today()) $('[data-k=summon]', nav).append(h('<i class="dot"></i>'));
   nav.querySelectorAll('.tab').forEach((b) => (b.onclick = () => { unlock(); SFX.click(); tab = b.dataset.k; heroSel = null; route(); }));
   const main = h('<main></main>'); main.append(content);
   app.append(top, main, nav);
 }
-function route() { stopBattle(); if (mapKeys) { removeEventListener('keydown', mapKeys); mapKeys = null; } ({ map: mapScreen, heroes: () => heroesScreen(), summon: summonScreen })[tab](); }
+function route() { stopBattle(); if (mapKeys) { removeEventListener('keydown', mapKeys); mapKeys = null; } ({ map: mapScreen, arena: arenaScreen, heroes: () => heroesScreen(), summon: summonScreen })[tab](); }
 function toast(msg) { app.querySelectorAll('.toast').forEach((t) => t.remove()); const t = h(`<div class="toast">${msg}</div>`); app.append(t); setTimeout(() => t.remove(), 2200); }
 const stars3 = (n) => `<span class="st3">${[0, 1, 2].map((i) => `<i class="${i < n ? 'on' : ''}">★</i>`).join('')}</span>`;
 
@@ -666,14 +667,14 @@ function heroesScreen(id) {
     return;
   }
   const H = HEROES[heroSel], s0 = SAVE.heroes[heroSel], own = !!s0, R = RARITY[H.rarity], C = CLASSES[H.cls], AD = ADINKRA[H.sym];
-  const st = own ? statsOf(heroSel) : { hp: H.hp, atk: H.atk, def: H.def, spd: C.spd, mag: 100 };
+  const st = own ? statsOf(heroSel) : { hp: H.hp, atk: H.atk, mag: H.mag, tec: H.tec, def: H.def, spd: C.spd };
   const order = heroList(), idx = order.indexOf(heroSel);
   const s = h(`<div class="hdet" style="--rc:${R.color}">
     <canvas class="hart" aria-label="${H.name}"></canvas><div class="hshade"></div>
     <div class="htop"><button class="back" type="button" aria-label="Back">${CHEV(180)}</button>
       <div class="hname"><span class="rar">${R.name}</span><h2>${H.name}</h2><span class="hcls">${icon(H.cls)}${C.name}<i>·</i><span class="kr" title="${H.role}">${H.kr}</span></span></div></div>
     <div class="hstats">${own ? `<div class="pw"><span>Power</span><b>${fmt(power(heroSel))}</b></div><div class="lv">Lv <b>${s0.lvl}</b> <span>${'★'.repeat(s0.stars)}</span></div>` : '<div class="lv locked">Not recruited</div>'}
-      <ul><li><span>HP</span><b>${fmt(st.hp)}</b></li><li><span>ATK</span><b>${st.atk}</b></li><li><span>SPD</span><b>${st.spd}</b></li></ul></div>
+      <ul><li><span>HP</span><b>${fmt(st.hp)}</b></li><li><span>ATK</span><b>${st.atk}</b></li><li><span>MAG</span><b>${st.mag}</b></li><li><span>TEC</span><b>${st.tec}</b></li><li><span>DEF</span><b>${st.def}</b></li><li><span>SPD</span><b>${st.spd}</b></li></ul></div>
     <nav class="hrail">${[['skills', 'Skills'], ['growth', 'Growth'], ['stars', 'Stars'], ['lore', 'Symbol']].map(([k, l]) => `<button type="button" data-t="${k}" aria-label="${l}">${icon(k)}<span>${l}</span>${(k === 'growth' && own && freePts(heroSel) > 0) || (k === 'stars' && own && canPromote(heroSel)) ? '<i class="dot"></i>' : ''}</button>`).join('')}
       <button type="button" class="play" aria-label="Preview moves">${icon('play')}<span>Moves</span></button></nav>
     <div class="hnav"><button type="button" class="prevh" aria-label="Previous hero">${CHEV(180)}</button><span>${idx + 1} / ${order.length}</span><button type="button" class="nexth" aria-label="Next hero">${CHEV(0)}</button></div>
@@ -690,15 +691,15 @@ function heroesScreen(id) {
     s.querySelectorAll('.hrail button[data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
     $('.hs-head b', s).textContent = { skills: 'Skills', growth: 'Growth', stars: 'Stars', lore: 'Symbol' }[t];
     if (t === 'growth') {
-      const p = own ? ptsOf(heroSel) : { hp: 0, atk: 0, spd: 0, mag: 0 }, free = own ? freePts(heroSel) : 0;
-      const G = [['hp', 'Health', st.hp, '+5% health'], ['atk', 'Attack', st.atk, '+5% damage'], ['mag', 'Magic', st.mag + '%', '+5% skills, ultimate, healing'], ['spd', 'Speed', st.spd, `+${GROWTH.spd} · costs ${GROWTH.spdCost} · max ${GROWTH.spdCap}`]];
+      const p = own ? ptsOf(heroSel) : { hp: 0, atk: 0, spd: 0, mag: 0, tec: 0 }, free = own ? freePts(heroSel) : 0;
+      const G = [['hp', 'Health', st.hp, '+5% health'], ['atk', 'Attack', st.atk, '+5% · basics and heavy single hits'], ['mag', 'Spirit', st.mag, '+5% · magic spells, magic ultimates, healing'], ['tec', 'Technique', st.tec, '+5% · flat damage on every hit, best for combos'], ['spd', 'Speed', st.spd, `+${GROWTH.spd} · costs ${GROWTH.spdCost} · max ${GROWTH.spdCap}`]];
       body.innerHTML = `${own ? `<div class="lvrow"><b>Lv ${s0.lvl}</b><div class="bar"><i style="transform:scaleX(${s0.xp / xpNeed(s0.lvl)})"></i></div><span>${s0.xp}/${xpNeed(s0.lvl)} XP</span></div>
           <div class="gpts"><b>${free}</b> point${free === 1 ? '' : 's'} to spend<small>One per level. ${C.name}s start at speed ${C.spd}. Free reset in beta.</small></div>` : `<p class="note">${C.name} · base speed ${C.spd}. Recruit at the Shrine to grow.</p>`}
         <div class="growth">${G.map(([k, l, v, n]) => { const can = own && (k === 'spd' ? free >= GROWTH.spdCost && p.spd < GROWTH.spdCap : free >= 1);
           return `<div class="gr"><div><span>${l}</span><b>${v}</b><small>${n}</small></div><em>${p[k] || 0}${k === 'spd' ? '/' + GROWTH.spdCap : ''}</em>${own ? `<button class="btn sm" type="button" data-g="${k}" ${can ? '' : 'disabled'} aria-label="Add a point to ${l}">+</button>` : ''}</div>`; }).join('')}</div>
-        ${own && p.hp + p.atk + p.mag + p.spd ? '<button class="btn ghost sm" id="respec" type="button">Reset points</button>' : ''}`;
+        ${own && p.hp + p.atk + p.mag + p.tec + p.spd ? '<button class="btn ghost sm" id="respec" type="button">Reset points</button>' : ''}`;
       body.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { ptsOf(heroSel)[b.dataset.g]++; SFX.heal(); store(); heroesScreen(heroSel); heroTab = 'growth'; reopen(); }));
-      const rs = $('#respec', body); if (rs) rs.onclick = () => { s0.pts = { hp: 0, atk: 0, spd: 0, mag: 0 }; SFX.click(); store(); heroesScreen(heroSel); heroTab = 'growth'; reopen(); };
+      const rs = $('#respec', body); if (rs) rs.onclick = () => { s0.pts = { hp: 0, atk: 0, spd: 0, mag: 0, tec: 0 }; SFX.click(); store(); heroesScreen(heroSel); heroTab = 'growth'; reopen(); };
     } else if (t === 'stars') {
       body.innerHTML = own ? `<div class="starbig">${'★'.repeat(s0.stars)}<i>${'★'.repeat(5 - s0.stars)}</i></div>
         <div class="row card"><div>${COIN('shard')} <b>${s0.shards} / ${s0.stars < 5 ? STAR_SHARDS[s0.stars + 1] : 'max'} shards</b><small>Duplicates from the Shrine give shards. Each star adds 15% to all stats and +${SPD_STAR} speed.</small></div>
@@ -827,22 +828,33 @@ function doPulls(n) {
 let B = null;
 function stopBattle() { if (B) { cancelAnimationFrame(B.raf); B.dead = true; B = null; } if (poseLoop) { cancelAnimationFrame(poseLoop); poseLoop = null; } }
 const ST_LABEL = { stun: ['STUN', '#ffd23c'], burn: ['BURN', '#ff8a3c'], shield: ['SHIELD', '#6fb6ff'], atkUp: ['ATK▲', '#ffb070'], defDown: ['DEF▼', '#ff5a4a'], slow: ['SLOW', '#c58bff'], guard: ['GUARD', '#9fd0ff'], evade: ['VANISH', '#c58bff'], aim: ['AIM', '#ffd23c'] };
-function unitBase(o) { return { kfAlpha: 1, st: {}, tm: 0, en: 0, pose: 0, poseT: 0, dash: 0, reach: 0, hurt: 0, h: 100, w: 60, alive: true, cd: [0, 0], shFlash: 0, shieldAmt: 0, ...o }; }
+function unitBase(o) { return { tal: { dealt: 0, taken: 0, healed: 0, hits: 0, crits: 0, top: 0, moves: 0 }, kfAlpha: 1, st: {}, tm: 0, en: 0, pose: 0, poseT: 0, dash: 0, reach: 0, hurt: 0, h: 100, w: 60, alive: true, cd: [0, 0], shFlash: 0, shieldAmt: 0, ...o }; }
 function mkHero(id) {
   const H = HEROES[id], st = statsOf(id);
-  return unitBase({ side: 0, id, d: H, spells: SAVE.heroes[id].eq.slice(), name: H.name, hp: st.hp, max: st.hp, atk: st.atk, def: st.def, spd: st.spd, size: H.size, flip: H.flip, en: 25, fx: .3, fy: .7, depth: 1 });
+  return unitBase({ side: 0, isHero: 1, id, d: H, spells: SAVE.heroes[id].eq.slice(), name: H.name, hp: st.hp, max: st.hp, atk: st.atk, mag: st.mag, tec: st.tec, def: st.def, spd: st.spd, size: H.size, flip: H.flip, en: 25, fx: .3, fy: .7, depth: 1 });
+}
+// a CPU-controlled hero on the right: same kit and choreography, played in a mirrored frame (see swapPersp)
+function mkCpu(id, lvl, stars, sk = 1) {
+  const H = HEROES[id], st = statsFor(id, lvl, stars, {});
+  return unitBase({ side: 1, isHero: 1, cpu: 1, id, d: H, spells: H.pool.slice(0, 2), sk: [sk, sk, sk, sk], sl: {}, name: H.name, hp: st.hp, max: st.hp, atk: st.atk, mag: st.mag, tec: st.tec, def: st.def, spd: st.spd, size: H.size, flip: [1, 1, 1], en: 25, fx: .7, fy: .7, depth: 1, enter: 1 });
+}
+// While a CPU hero acts the whole battle is seen from its side: it becomes "the hero" on the left, its target "the foe".
+// Everything created in that frame is tagged (m) and drawn mirrored, so all hero choreography works unchanged.
+function swapPersp() {
+  const a = B.hero, b = B.foe; [a.side, b.side] = [b.side, a.side]; [a.fx, b.fx] = [b.fx, a.fx]; [a.flip, b.flip] = [b.flip, a.flip];
+  B.hero = b; B.foe = a; [B.heroes, B.foes] = [B.foes, B.heroes]; B.mir = !B.mir;
 }
 function mkMon(id, lvl, mult) {
   const M = MONS[id], k = (1 + (lvl - 1) * MON_LVL) * mult;
-  return unitBase({ side: 1, id, d: M, name: M.name, hp: Math.round(M.hp * k * MM.hp), max: Math.round(M.hp * k * MM.hp), atk: M.atk * k * MM.atk, def: M.def * k, spd: M.spd, range: M.range, size: M.size, flip: M.flip, boss: M.boss, enter: 1, fx: .7, fy: .7, depth: 1 });
+  return unitBase({ side: 1, id, d: M, name: M.name, hp: Math.round(M.hp * k * MM.hp), max: Math.round(M.hp * k * MM.hp), atk: M.atk * k * MM.atk, mag: M.atk * k * MM.atk, tec: 0, def: M.def * k, spd: M.spd, range: M.range, size: M.size, flip: M.flip, boss: M.boss, enter: 1, fx: .7, fy: .7, depth: 1 });
 }
 const spdOf = (u) => u.spd * (u.st.slow ? .7 : 1);
 function pos(u) { const W = B.w; const dir = u.side ? -1 : 1; return [u.fx * W + dir * u.dash * u.reach + (u.enter || 0) * (u.side ? 1 : -1) * W * .5, B.gy0 + u.fy * (B.gy1 - B.gy0)]; }
 const wait = (ms) => new Promise((res) => { const b = B; if (!b || b.dead) return; b.waits.push({ t: b.t + ms / 1000, res }); });
-function fx(type, dur, o) { B.fx.push({ type, t0: B.t, dur: dur / 1000, ...o }); }
+function fx(type, dur, o) { B.fx.push({ type, t0: B.t, dur: dur / 1000, m: !!B.mir, ...o }); }
 function setPose(u, p, ms, clipName = null) { u.pose = p; u.poseT = ms / 1000; u.poseD = ms / 1000; u.clip = clipName; }
-function float(u, t, c, size = 1) { const [x, y] = pos(u); B.floats.push({ x: x + rnd(-10, 10), y: y - u.h * .85, t, c, life: 1, size }); }
-function burst(x, y, cols, n, sp) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = sp * rnd(.4, 1.2); B.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: .15, life: 1, c: cols[i % cols.length], sz: rnd(2, 4) }); } }
+function float(u, t, c, size = 1) { const [x, y] = pos(u); B.floats.push({ x: x + rnd(-10, 10), y: y - u.h * .85, t, c, life: 1, size, m: !!B.mir }); }
+function burst(x, y, cols, n, sp) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = sp * rnd(.4, 1.2); B.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: .15, life: 1, c: cols[i % cols.length], sz: rnd(2, 4), m: !!B.mir }); } }
 const foeOf = (u) => (u.side ? B.hero : B.foe);
 
 function battle(stageIdx, diffId) {
@@ -856,7 +868,7 @@ function battle(stageIdx, diffId) {
     <div class="act"><div class="hintl"></div><div class="abtns"></div></div></div></main>`);
   app.append(s);
   const hero = mkHero(SAVE.squad[0]);
-  B = { t: 0, waits: [], gy0: 0, gy1: 1, ground: REGIONS[t.region].ground, stage: t, stageIdx, D, duels, duel: 0, hero, foe: null, heroes: [hero], foes: [], fx: [], parts: [], floats: [], auto: false, speed: 1, slowT: 0, freeze: 0,
+  B = { all: [hero], t: 0, waits: [], gy0: 0, gy1: 1, ground: REGIONS[t.region].ground, stage: t, stageIdx, D, duels, duel: 0, hero, foe: null, heroes: [hero], foes: [], fx: [], parts: [], floats: [], auto: false, speed: 1, slowT: 0, freeze: 0,
     shake: 0, dim: 0, dimTo: 0, cam: { z: 1, x: .5, y: .6, tz: 1, tx: .5, ty: .6 }, rest: { z: 1, y: .6 }, impact: null, over: false, cur: null, choice: null, armed: 0, cv: $('canvas', s), s, last: performance.now(), bg: img(`${A}bg_${REGIONS[t.region].bg}.webp`) };
   $('#leave', s).onclick = () => { stopBattle(); mapScreen(); };
   $('#auto', s).onclick = (e) => { B.auto = !B.auto; e.currentTarget.setAttribute('aria-pressed', B.auto); SFX.click(); if (B.auto && B.choice) { const c = B.choice; B.choice = null; c(aiHero(B.hero)); } };
@@ -881,7 +893,7 @@ async function run(b) {
 }
 function nextDuel() {
   const id = B.duels[B.duel];
-  B.foe = mkMon(id, B.stage.lvl, B.D.mult * B.stage.pow); B.foes = [B.foe];
+  B.foe = mkMon(id, B.stage.lvl, B.D.mult * B.stage.pow); B.foes = [B.foe]; B.all.push(B.foe);
   B.hero.tm = 0; B.foe.tm = 0; B.hero.st = Object.fromEntries(Object.entries(B.hero.st).filter(([k]) => k === 'atkUp'));
   planIntent(B.foe);
   $('#wave', B.s).textContent = `${B.D.name} · duel ${B.duel + 1} of ${B.duels.length}`;
@@ -904,7 +916,7 @@ function previewOrder(n = 6) {
 function drawOrder() {
   if (!B) return; const el = $('.order', B.s); if (!el) return;
   const q = [B.cur, ...previewOrder(6)].filter(Boolean);
-  el.innerHTML = q.map((u, i) => `<span class="oi ${u.side ? 'foe' : 'ally'} ${i === 0 ? 'now' : ''}"><img src="${u.side ? poseSrc(u.id, 0) : faceSrc(u.id)}" alt="${u.name}" class="${u.side ? 'mface' : ''}"></span>`).join('') + '<span class="olab">Next turns</span>';
+  el.innerHTML = q.map((u, i) => `<span class="oi ${u.isHero && !u.cpu ? 'ally' : 'foe'} ${i === 0 ? 'now' : ''}"><img src="${u.isHero ? faceSrc(u.id) : poseSrc(u.id, 0)}" alt="${u.name}" class="${u.isHero ? '' : 'mface'}"></span>`).join('') + '<span class="olab">Next turns</span>';
 }
 const pushTM = (u, f) => { u.tm = clamp(u.tm + 1000 * f, 0, 999); };
 
@@ -922,15 +934,19 @@ function hit(src, dst, mult, o = {}) {
   if (!dst || !dst.alive || !B) return 0;
   if (dst.st.evade) { delete dst.st.evade; float(dst, 'MISS', '#c58bff', 1.1); return 0; }
   const aim = src.st.aim; if (aim) delete src.st.aim;
-  let d = src.atk * mult * (src.st.atkUp ? (src.atkUpK || 1.3) : 1) * rnd(.92, 1.08) * 100 / (100 + (aim ? 0 : dst.def * (dst.st.defDown ? .5 : 1)));
+  // heroes: atk carries basics and heavy physical moves, spirit (mag) carries magic, technique (tec) adds flat damage to every hit
+  const cx = B.ctx && B.ctx.u === src ? B.ctx : null, ty = cx ? cx.dmg : 'phys', W = DMG_W[ty] || DMG_W.phys;
+  const base = src.isHero ? (src.atk * W[0] + src.mag * W[1]) * mult + (src.tec || 0) * TEC_K * (o.counter ? .5 : 1) : src.atk * mult;
+  let d = base * (B.fat || 1) * (src.st.atkUp ? (src.atkUpK || 1.3) : 1) * rnd(.92, 1.08) * 100 / (100 + (aim ? 0 : dst.def * (dst.st.defDown ? .5 : 1)));
   const crit = aim || o.crit === true || Math.random() < (o.crit || .1); if (crit) d *= 1.6;
   if (dst.st.guard) { d *= .5; }
   d = Math.round(d);
-  if (dst.st.shield && dst.shieldAmt > 0) { const ab = Math.min(dst.shieldAmt, d); dst.shieldAmt -= ab; d -= ab; dst.shFlash = 1; if (dst.shieldAmt <= 0) delete dst.st.shield; }
+  if (dst.st.shield && dst.shieldAmt > 0) { const ab = Math.min(dst.shieldAmt, d); dst.shieldAmt -= ab; d -= ab; dst.tal._ab = ab; dst.tal.blocked = (dst.tal.blocked || 0) + ab; dst.shFlash = 1; if (dst.shieldAmt <= 0) delete dst.st.shield; }
   dst.hp -= d; dst.hurt = 1;
-  if (!dst.side) dst.en = Math.min(100, dst.en + 12);
+  if (dst.isHero) dst.en = Math.min(100, dst.en + 12);
+  src.tal.dealt += d + (dst.tal._ab || 0); dst.tal._ab = 0; src.tal.hits++; if (crit) src.tal.crits++; src.tal.top = Math.max(src.tal.top, d); dst.tal.taken += d;
   const [x, y] = pos(dst);
-  B.floats.push({ x: x + rnd(-10, 10), y: y - dst.h * .8, t: (crit ? 'CRIT ' : '') + d, c: crit ? '#ffd23c' : dst.side ? '#fff' : '#ff6a5a', life: 1, size: (o.big ? 1.7 : 1.1) * (crit ? 1.2 : 1) });
+  B.floats.push({ x: x + rnd(-10, 10), y: y - dst.h * .8, t: (crit ? 'CRIT ' : '') + d, c: crit ? '#ffd23c' : dst.isHero && !dst.cpu ? '#ff6a5a' : '#fff', life: 1, size: (o.big ? 1.7 : 1.1) * (crit ? 1.2 : 1), m: !!B.mir });
   burst(x, y - dst.h * .45, [o.color || '#fff', '#fff'], crit ? 8 : 4, crit ? 4 : 2.5);
   B.shake = Math.max(B.shake, crit ? 7 : 3); (crit ? SFX.crit : SFX.hit)();
   if (src.d.on === 'defDown' && Math.random() < .35) addSt(dst, 'defDown', 1);
@@ -941,8 +957,11 @@ function hit(src, dst, mult, o = {}) {
   } else if (dst.st.guard && !o.counter) { delete dst.st.guard; float(dst, 'COUNTER', '#9fd0ff', .9); if (dst.id === 'blay' && KF.blay) { dst.kf = 'parry_2'; sproj(dst, 0, { s: .5, ms: 380 }); setTimeout(() => { if (dst.kf === 'parry_2') kfEnd(dst); }, 450); } hit(dst, src, .8, { counter: 1, color: '#9fd0ff' }); }
   return d;
 }
-function heal(u, n, quiet) { if (!u.alive) return; const v = Math.round(n); u.hp = Math.min(u.max, u.hp + v); float(u, '+' + v, '#7ee08a'); if (!quiet) fx('spr', 750, { k: 'heal', unit: u, hs: .95, a: .7 }); }
+function heal(u, n, quiet) { if (!u.alive) return; const cx = B.ctx && B.ctx.u === u; const v = Math.round(n * (cx && u.isHero ? .6 + .4 * u.mag / 60 : 1) * (B.arena ? .7 : 1)); u.tal.healed += Math.min(v, u.max - u.hp); u.hp = Math.min(u.max, u.hp + v); float(u, '+' + v, '#7ee08a'); if (!quiet) fx('spr', 750, { k: 'heal', unit: u, hs: .95, a: .7 }); }
 
+// damage weights [atk, spirit] per damage type; TEC_K: flat damage per hit for each technique point
+const shK = () => (B && B.arena ? .7 : 1); // arena: shields and healing are 30% weaker so duels resolve
+const DMG_W = { phys: [1, 0], mag: [.25, .75], mix: [.6, .4] }, TEC_K = .55;
 // ---------- moves ----------
 // 0 basic, 1 skill one, 2 skill two, 3 ultimate
 const canUse = (u, i) => i === 0 || (i < 3 && u.cd[i - 1] <= 0) || (i === 3 && u.en >= 100);
@@ -959,16 +978,19 @@ function aiSmart(u) { // models a player for the balance sim: break charges, hea
 
 async function takeTurn(u) {
   const b = B; SFX.turn();
-  if (u.st.burn) { const d = Math.round(Math.min(u.max * .07, (u.burnPow || 30))); u.hp -= d; u.hurt = .7; float(u, '' + d, '#ff8a3c'); fx('spr', 600, { k: 'fire', unit: u, hs: .6, a: .5 }); if (u.hp <= 0) { u.hp = 0; u.alive = false; u.dieT = 1; SFX.die(); await wait(500); return; } await wait(320); }
+  if (u.st.burn) { const d = Math.round(Math.min(u.max * .07, (u.burnPow || 30))); u.hp -= d; u.tal.taken += d; { const o = foeOf(u); if (o) o.tal.dealt += d; } u.hurt = .7; float(u, '' + d, '#ff8a3c'); fx('spr', 600, { k: 'fire', unit: u, hs: .6, a: .5 }); if (u.hp <= 0) { u.hp = 0; u.alive = false; u.dieT = 1; SFX.die(); await wait(500); return; } await wait(320); }
   const stunned = u.st.stun; delete u.st.stun; tickSt(u);
   for (let k = 0; k < 2; k++) if (u.cd[k] > 0) u.cd[k]--;
-  if (stunned) { float(u, 'STUNNED', '#ffd23c'); await wait(600); if (u.side) planIntent(u); return; }
+  if (stunned) { float(u, 'STUNNED', '#ffd23c'); await wait(600); if (u.side && !u.cpu) planIntent(u); return; }
   if (u.side === 0) {
     let act;
     if (b.auto) { await wait(220); act = (b.sim === 'smart' ? aiSmart : aiHero)(u); }
     else act = await choose(u);
     if (B !== b) return;
     await doHero(u, act.i);
+  } else if (u.cpu) {
+    await wait(240); swapPersp();
+    try { await doHero(u, aiSmart(u).i); } finally { if (B === b && b.mir) swapPersp(); }
   } else {
     await wait(240);
     await doMonster(u);
@@ -1108,7 +1130,7 @@ async function castSpell(u, f, S, m) {
   }
   if (S.cleanse) { delete u.st.stun; delete u.st.burn; }
   if (S.heal) heal(u, u.max * S.heal * m);
-  if (S.shield) { addSt(u, 'shield', S.turns || 2); u.shieldAmt = Math.round(u.max * S.shield * m); fx('spr', 600, { k: 'shield', unit: u, hs: .9, a: .45 }); }
+  if (S.shield) { addSt(u, 'shield', S.turns || 2); u.shieldAmt = shK() * Math.round(u.max * S.shield * m); fx('spr', 600, { k: 'shield', unit: u, hs: .9, a: .45 }); }
   if (S.guard) { u.st.guard = 1; float(u, 'GUARD', '#9fd0ff', .8); }
   if (S.atkUp) { addSt(u, 'atkUp', (S.turns || 2) + 1); u.atkUpK = S.atkUp; float(u, 'ATK▲', '#ffb070', .8); }
   for (const [k, n] of S.self || []) addSt(u, k, n);
@@ -1116,8 +1138,9 @@ async function castSpell(u, f, S, m) {
   if (S.t === 'self') await wait(420);
 }
 async function doHero(u, i) {
-  const f = B.foe, sk = SAVE.heroes[u.id].sk, sid = i === 1 || i === 2 ? u.spells[i - 1] : null, S = sid && SPELLS[sid];
-  const lv = S ? spLvl(u.id, sid) : (sk[i] || 1), m = (1 + 0.12 * (lv - 1)) * (i > 0 ? 1 + GROWTH.mag * ptsOf(u.id).mag : 1);
+  const f = B.foe, sk = u.sk || SAVE.heroes[u.id].sk, sid = i === 1 || i === 2 ? u.spells[i - 1] : null, S = sid && SPELLS[sid];
+  const lv = S ? (u.sl ? u.sl[sid] || 1 : spLvl(u.id, sid)) : (sk[i] || 1), m = 1 + 0.12 * (lv - 1);
+  B.ctx = { u, dmg: i === 0 ? 'phys' : i === 3 ? ULT_DMG[u.id] || 'phys' : S.dmg || 'phys' }; u.tal.moves++;
   if (i === 0) u.en = Math.min(100, u.en + 35);
   if (S) { u.cd[i - 1] = S.cd + 1; u.en = Math.min(100, u.en + 20); }
   if (i === 3) u.en = 0;
@@ -1136,7 +1159,7 @@ async function doHero(u, i) {
       case 'owureku1': { const [x0, y0] = pos(u), [x1, y1] = pos(f); fx('shot', 360, { x0, y0: y0 - u.h * .6, x1, y1: y1 - f.h * .5, kind: 'axe' }); await wait(360); hitStop(110); hit(u, f, 1.1 * m, { color: '#ffb070' }); addSt(f, 'stun', 1); break; }
       case 'owureku2': addSt(u, 'atkUp', 3); u.atkUpK = 1.3 + .03 * (m - 1) * 10; heal(u, u.max * .1); await wait(400); break;
       case 'gyakari1': await basicStrike(u, f, .9 * m, { color: '#6fb6ff' }); hitStop(120); addSt(f, 'stun', 1); break;
-      case 'gyakari2': addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .3 * m); await wait(450); break;
+      case 'gyakari2': addSt(u, 'shield', 2); u.shieldAmt = shK() * Math.round(u.max * .3 * m); await wait(450); break;
       case 'obiri1': await basicStrike(u, f, 1.2 * m, { color: '#e6edf5' }); hitStop(90); addSt(f, 'slow', 2); break;
       case 'obiri2': u.st.aim = 1; float(u, 'AIM', '#ffd23c'); await wait(400); break;
       case 'kuukua1': await basicStrike(u, f, 1.15 * m, { color: '#e6edf5' }); hitStop(90); addSt(f, 'defDown', 2); break;
@@ -1158,7 +1181,7 @@ async function doHero(u, i) {
   switch (u.id) {
     case 'blay': if (CHOREO.blay.ult) { await CHOREO.blay.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('slash', 420, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .6, c: '#fff', dir: 1, big: 1 }); if (f.hp / f.max < .3 && !f.boss) { hit(u, f, 99, { big: 1 }); float(f, 'EXECUTED', '#ffd23c', 1.3); } else hit(u, f, 3.0 * m, { big: 1 }); break; }
     case 'owureku': if (CHOREO.owureku.ult && KF.owureku) { await CHOREO.owureku.ult(u, f, m, T); break; } { await impactFrames(T, u); for (let k = 0; k < 3 && f.alive; k++) { fx('slash', 300, { x: pos(f)[0], y: pos(f)[1] - f.h * .5, r: f.h * .55, c: '#ffb070', dir: 1, big: 1 }); hit(u, f, 1.15 * m, { color: '#ffb070', big: 1 }); await wait(160); } break; }
-    case 'gyakari': if (CHOREO.gyakari.ult && KF.gyakari) { await CHOREO.gyakari.ult(u, f, m, T); break; } { addSt(u, 'shield', 2); u.shieldAmt = Math.round(u.max * .35 * m); await wait(300); await impactFrames(T, u); hit(u, f, 1.2 * m + u.shieldAmt / u.atk * .5, { color: '#6fb6ff', big: 1 }); break; }
+    case 'gyakari': if (CHOREO.gyakari.ult && KF.gyakari) { await CHOREO.gyakari.ult(u, f, m, T); break; } { addSt(u, 'shield', 2); u.shieldAmt = shK() * Math.round(u.max * .35 * m); await wait(300); await impactFrames(T, u); hit(u, f, 1.2 * m + u.shieldAmt / u.atk * .5, { color: '#6fb6ff', big: 1 }); break; }
     case 'obiri': if (CHOREO.obiri.ult && KF.obiri) { await CHOREO.obiri.ult(u, f, m, T); break; } { await impactFrames(T, u); const [x0, y0] = pos(u), [x, y] = pos(f); fx('beam', 500, { x0, y0: y0 - u.h * .6, x1: x, y1: y - f.h * .5, c: '#ffd23c' }); hit(u, f, 3.2 * m, { color: '#ffd23c', crit: true, big: 1 }); break; }
     case 'kuukua': if (CHOREO.kuukua.ult && KF.kuukua) { await CHOREO.kuukua.ult(u, f, m, T); break; } { await impactFrames(T, u); fx('rain', 600, { unit: f }); hit(u, f, (f.st.slow || f.st.defDown ? 3.6 : 1.8) * m, { color: '#e6edf5', big: 1 }); break; }
     case 'kome': if (CHOREO.kome.ult && KF.kome) { await CHOREO.kome.ult(u, f, m, T); break; } { heal(u, u.max * .2 * m); await impactFrames(T, u); fx('boom', 800, { unit: f }); hit(u, f, (f.st.burn ? 3.4 : 1.7) * m, { color: '#ffb43c', big: 1 }); SFX.heal(); break; }
@@ -1201,10 +1224,89 @@ function finish(win) {
         <div class="chips">${chips.map(([ic, n, l]) => `<div class="chip">${ic}<b>${n}</b><span>${l}</span></div>`).join('')}</div>`
         : `<p>Hye won hye: what does not burn comes back stronger. Break charged attacks with a stun, guard before big hits, level up or try Easy.</p>`}
       <div class="rheroes"><div class="rh ${u.alive ? '' : 'ko'}"><img src="${faceSrc(u.id)}" alt=""><b>${up ? 'Lv ' + up + ' ▲' : 'Lv ' + SAVE.heroes[u.id].lvl}</b></div>${up ? `<span class="gnote">+${freePts(u.id)} growth point${freePts(u.id) === 1 ? '' : 's'}: spend them in Heroes · Growth</span>` : ''}</div>
+      ${rundown(b.all)}
       <div class="row2"><button class="btn ghost" type="button">${win ? 'Replay' : 'Retry'}</button><button class="btn" type="button">${win && idx < STAGES.length - 1 ? 'Next stage' : 'Journey'}</button></div></div></div>`);
     const [retry, next] = v.querySelectorAll('.btn');
     retry.onclick = () => battle(idx, dId);
     next.onclick = () => { stopBattle(); if (win && idx < STAGES.length - 1) sel = idx + 1; tab = 'map'; mapScreen(); };
+    app.append(v);
+  }, 900);
+}
+// fight rundown: damage dealt, taken, healed, biggest hit, per fighter
+function rundown(list) {
+  list = [...list.filter((u) => u.isHero && !u.cpu), ...list.filter((u) => !(u.isHero && !u.cpu))];
+  const top = Math.max(1, ...list.map((u) => u.tal.dealt)), mine = (u) => u.isHero && !u.cpu;
+  return `<details class="rundown" open><summary>Fight rundown</summary><table><thead><tr><th></th><th>Dealt</th><th>Taken</th><th>Healed</th><th>Best hit</th><th>Hits</th></tr></thead><tbody>
+    ${list.map((u) => `<tr class="${mine(u) ? 'me' : 'them'} ${u.alive ? '' : 'ko'}"><td><img src="${u.isHero ? faceSrc(u.id) : poseSrc(u.id, 0)}" alt="" class="${u.isHero ? '' : 'mface'}"><span>${u.name}</span><i style="transform:scaleX(${u.tal.dealt / top})"></i></td>
+      <td><b>${fmt(Math.round(u.tal.dealt))}</b></td><td>${fmt(Math.round(u.tal.taken))}</td><td>${fmt(Math.round(u.tal.healed))}</td><td>${fmt(u.tal.top)}</td><td>${u.tal.hits}${u.tal.crits ? ` <small>${u.tal.crits} crit</small>` : ''}</td></tr>`).join('')}</tbody></table></details>`;
+}
+
+// ---------------- arena: 3 v 3 tag battles against CPU hero teams ----------------
+function arenaScreen() {
+  const A0 = SAVE.arena ||= { team: [], won: {} }; A0.team = A0.team.filter((x) => SAVE.heroes[x]);
+  const s = h(`<div class="screen arena"><div class="head"><div><h2>Arena</h2><span class="sub">Three against three. When a fighter falls, the next steps in.</span></div></div>
+    <div class="ateam"></div><div class="grid roster"></div><div class="alist"></div></div>`);
+  shell('arena', s);
+  const draw = () => {
+    const team = A0.team;
+    $('.ateam', s).innerHTML = `<b>Your team</b><div>${[0, 1, 2].map((i) => team[i] ? `<img src="${faceSrc(team[i])}" alt="${HEROES[team[i]].name}">` : '<span class="slot">?</span>').join('')}</div><small>${team.length < 3 ? `Pick ${3 - team.length} more below` : 'Tap a hero to swap'}</small>`;
+    $('.roster', s).innerHTML = Object.keys(HEROES).filter((x) => SAVE.heroes[x]).sort((a, b) => power(b) - power(a)).map((x) => heroCard(x, team.includes(x) ? 'on' : '')).join('');
+    s.querySelectorAll('.roster .hc').forEach((c) => (c.onclick = () => { const id = c.dataset.id, k = team.indexOf(id); if (k >= 0) team.splice(k, 1); else if (team.length < 3) team.push(id); else { team.shift(); team.push(id); } SFX.click(); store(); draw(); }));
+    $('.alist', s).innerHTML = ARENA.map((t, i) => { const pw = t.heroes.reduce((a, x) => { const st = statsFor(x, t.lvl, t.stars, {}); return a + st.hp * .5 + st.atk * 4 + st.mag * 2.5 + st.tec * 5 + st.def * 4 + st.spd * 2; }, 0), my = team.reduce((a, x) => a + power(x), 0);
+      return `<div class="aopp ${A0.won[i] ? 'won' : ''}"><div class="af">${t.heroes.map((x) => `<img src="${faceSrc(x)}" alt="${HEROES[x].name}">`).join('')}</div><div class="ai"><b>${t.name}</b><span>Level ${t.lvl} · ${'★'.repeat(t.stars)} · power ${fmt(Math.round(pw))}${team.length === 3 ? ` <em class="${my >= pw ? 'up' : 'dn'}">you ${fmt(my)}</em>` : ''}</span></div>
+        <button class="btn sm" type="button" data-i="${i}" ${team.length === 3 ? '' : 'disabled'}>${A0.won[i] ? 'Rematch' : 'Fight'}</button></div>`; }).join('');
+    s.querySelectorAll('.alist [data-i]').forEach((b) => (b.onclick = () => { unlock(); SFX.click(); arenaBattle(+b.dataset.i); }));
+  };
+  draw();
+}
+function arenaBattle(ti) {
+  stopBattle();
+  const t = ARENA[ti], R0 = REGIONS[Object.keys(REGIONS)[t.region % Object.keys(REGIONS).length]], mine = SAVE.arena.team.slice();
+  app.innerHTML = ''; app.classList.add('full');
+  const s = h(`<main><div class="battle"><div class="btop"><button class="back" type="button" id="leave" aria-label="Leave">${CHEV(180)}</button><div class="t"><b>${t.name}</b><span id="wave"></span></div>
+    <button class="tog" type="button" id="auto" aria-pressed="false">Auto</button><button class="tog" type="button" id="spd" aria-pressed="false">×2</button></div>
+    <div class="order" aria-label="Turn order"></div>
+    <div class="field"><canvas aria-label="Arena"></canvas><div class="cutwrap"></div></div>
+    <div class="act"><div class="hintl"></div><div class="abtns"></div></div></div></main>`);
+  app.append(s);
+  const hero = mkHero(mine[0]), foe = mkCpu(t.heroes[0], t.lvl, t.stars, t.sk);
+  B = { arena: { ti, t, mine, mi: 0, fi: 0 }, all: [hero, foe], t: 0, waits: [], gy0: 0, gy1: 1, ground: R0.ground, hero, foe, heroes: [hero], foes: [foe], fx: [], parts: [], floats: [], ghosts: [], auto: false, speed: 1, slowT: 0, freeze: 0,
+    shake: 0, dim: 0, dimTo: 0, cam: { z: 1, x: .5, y: .6, tz: 1, tx: .5, ty: .6 }, rest: { z: 1, y: .6 }, impact: null, over: false, cur: null, choice: null, armed: 0, cv: $('canvas', s), s, last: performance.now(), bg: img(`${A}bg_${R0.bg}.webp`) };
+  $('#leave', s).onclick = () => { stopBattle(); tab = 'arena'; arenaScreen(); };
+  $('#auto', s).onclick = (e) => { B.auto = !B.auto; e.currentTarget.setAttribute('aria-pressed', B.auto); SFX.click(); if (B.auto && B.choice) { const c = B.choice; B.choice = null; c(aiSmart(B.hero)); } };
+  $('#spd', s).onclick = (e) => { B.speed = B.speed === 1 ? 2 : 1; e.currentTarget.setAttribute('aria-pressed', B.speed === 2); SFX.click(); };
+  B.raf = requestAnimationFrame(loop);
+  runArena(B);
+}
+const arenaLabel = () => { const a = B.arena; $('#wave', B.s).textContent = `${a.mine.length - a.mi} v ${a.t.heroes.length - a.fi} · level ${a.t.lvl}`; };
+async function runArena(b) {
+  arenaLabel(); SFX.drum(); drawOrder(); await wait(1000);
+  while (B === b && !b.over) {
+    const u = nextActor();
+    b.cur = u; drawOrder(); { const box = $('.act', b.s); if (box) box.dataset.msg = u.isHero && !u.cpu && !b.auto ? '' : `${u.name} acts`; }
+    await takeTurn(u);
+    if (B !== b) return;
+    const a = b.arena; b.n = (b.n || 0) + 1; if (b.n > 30) { if (!b.fat) { const box = $('#wave', b.s); if (box) box.textContent += ' · sudden death'; } b.fat = 1 + .1 * (b.n - 30); }
+    if (!b.hero.alive) { if (a.mi < a.mine.length - 1) { await wait(800); a.mi++; const n = mkHero(a.mine[a.mi]); n.enter = 1; b.hero = n; b.heroes = [n]; b.all.push(n); b.foe.tm = 0; arenaLabel(); SFX.drum(); drawOrder(); await wait(900); } else { finishArena(false); break; } }
+    if (!b.foe.alive) { if (a.fi < a.t.heroes.length - 1) { await wait(800); a.fi++; const n = mkCpu(a.t.heroes[a.fi], a.t.lvl, a.t.stars, a.t.sk); b.foe = n; b.foes = [n]; b.all.push(n); b.hero.tm = 0; arenaLabel(); SFX.drum(); drawOrder(); await wait(900); } else { finishArena(true); break; } }
+  }
+}
+function finishArena(win) {
+  if (B.over) return; B.over = true; renderAct(null);
+  const a = B.arena, t = a.t, first = win && !SAVE.arena.won[a.ti], chips = [];
+  if (win) { const gold = 150 + t.lvl * 30; SAVE.gold += gold; chips.push([COIN('gold', 'big'), '+' + gold, 'Gold dust']); if (first) { SAVE.cowries += 50; chips.push([COIN('cowrie', 'big'), '+50', 'First win']); } SAVE.arena.won[a.ti] = 1;
+    const xp = 30 + t.lvl * 10; chips.push([COIN('xp', 'big'), '+' + xp, 'XP each']); for (const id of a.mine) { const s = SAVE.heroes[id]; s.xp += xp; while (s.xp >= xpNeed(s.lvl)) { s.xp -= xpNeed(s.lvl); s.lvl++; } } SFX.win(); } else SFX.lose();
+  store();
+  const b = B;
+  setTimeout(() => {
+    if (B !== b) return;
+    const v = h(`<div class="veil"><div class="result ${win ? 'win' : 'lose'}"><span class="sub">Arena · ${t.name}</span>
+      <div class="rtitle">${adinkraSvg(win ? 'fawohodie' : 'hyeWonhye')}<h2>${win ? 'Victory' : 'Defeat'}</h2></div>
+      ${win ? `<div class="chips">${chips.map(([ic, n, l]) => `<div class="chip">${ic}<b>${n}</b><span>${l}</span></div>`).join('')}</div>` : '<p>Order matters: lead with a fighter who can take hits, keep the damage dealer for last.</p>'}
+      ${rundown(b.all)}
+      <div class="row2"><button class="btn ghost" type="button">Rematch</button><button class="btn" type="button">Arena</button></div></div></div>`);
+    const [re, back] = v.querySelectorAll('.btn');
+    re.onclick = () => arenaBattle(a.ti); back.onclick = () => { stopBattle(); tab = 'arena'; arenaScreen(); };
     app.append(v);
   }, 900);
 }
@@ -1229,7 +1331,7 @@ function loop(now) {
   B.dim += (B.dimTo - B.dim) * ease;
   const sh = B.shake; B.shake = Math.max(0, sh - 40 * real);
   g.save();
-  g.translate(r.width * .5, r.height * .6); g.scale(C.z, C.z); g.translate(-r.width * C.x, -r.height * C.y);
+  g.translate(r.width * .5, r.height * .6); g.scale(C.z, C.z); g.translate(-r.width * (B.mir ? 1 - C.x : C.x), -r.height * C.y);
   g.translate(rnd(-1, 1) * sh, rnd(-1, 1) * sh);
   // background, anchored to the bottom so the painted floor stays under the fighters
   let bgTop = 0, bgH = r.height;
@@ -1237,18 +1339,19 @@ function loop(now) {
   else { g.fillStyle = '#1a1216'; g.fillRect(-50, -50, r.width + 100, r.height + 100); }
   B.gy0 = bgTop + B.ground[0] * bgH; B.gy1 = Math.min(r.height - 8, bgTop + B.ground[1] * bgH);
   if (B.dim > .01) { g.fillStyle = `rgba(6,3,8,${B.dim})`; g.fillRect(-r.width, -r.height, r.width * 3, r.height * 3); }
-  B.fx = B.fx.filter((f) => f.type !== 'ink' || drawFx(g, f)); // ink symbols sit behind the fighters
+  B.fx = B.fx.filter((f) => f.type !== 'ink' || drawFxF(g, f)); // ink symbols sit behind the fighters
   const units = [...B.heroes, ...B.foes].filter((u) => u.alive || u.dieT > 0).sort((a, b) => a.fy - b.fy);
   const portrait = r.height > r.width * .9, baseH = portrait ? Math.min(r.height * .36, r.width * .42) : Math.min(r.height * .5, r.width * .24);
   // phantom trail: a moving keyframe step flagged phantom drops blue afterimages every few frames
   // phantom trail: exactly 9 afterimages, each fading over 0.3 s
   for (const u of [...(B.heroes || []), ...(B.foes || [])]) if (u.kfPh && u.kf && B.t - (u.phT || 0) > .034) { u.phT = B.t; const [ox, oy] = kfOff(u), d = u.side ? -1 : 1, s = u.kfSpin, ts = s ? Math.min(1, (B.t - s.t0) / s.d) : 0;
-    B.ghosts.push({ u, p: u.kf, x: pos(u)[0] + d * ox, y: pos(u)[1] - oy, t0: B.t, life: .3, blue: 1, hue: u.phHue ?? 185, red: u.id === 'kuukua', bh: u._bh || u.h, rot: s ? s.a * (ts < .5 ? 2 * ts * ts : 1 - (-2 * ts + 2) ** 2 / 2) : 0 });
+    B.ghosts.push({ u, p: u.kf, x: pos(u)[0] + d * ox, y: pos(u)[1] - oy, t0: B.t, m: !!B.mir, life: .3, blue: 1, hue: u.phHue ?? 185, red: u.id === 'kuukua', bh: u._bh || u.h, rot: s ? s.a * (ts < .5 ? 2 * ts * ts : 1 - (-2 * ts + 2) ** 2 / 2) : 0 });
     const mine = B.ghosts.filter((q) => q.u === u && q.blue); if (mine.length > 9) B.ghosts.splice(B.ghosts.indexOf(mine[0]), 1); }
   B.ghosts = (B.ghosts || []).filter((q) => B.t - q.t0 < (q.life || .28));
   for (const q of B.ghosts) { const a = 1 - (B.t - q.t0) / (q.life || .28); if (!img(poseSrc(q.u.id, 0)).ok) continue;
-    if (q.blue) { drawTinted(g, q, PH_COL[q.u.id] || '#7fb2ff', a * .6); continue; }
+    if (q.blue) { if (q.m) { g.save(); mirror(g); } drawTinted(g, q, PH_COL[q.u.id] || '#7fb2ff', a * .6); if (q.m) g.restore(); continue; }
     g.save(); g.translate(q.x, q.y); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * .35; g.filter = 'brightness(0.6) sepia(1) hue-rotate(230deg) saturate(3)'; drawKF(g, q.u.id, q.p, q.u.h); g.restore(); }
+  const ovl = []; if (B.mir) { g.save(); mirror(g); }
   for (const u of units) {
     u.h = baseH * u.size * u.depth;
     if (u.enter) u.enter = Math.max(0, u.enter - dt * 2.2);
@@ -1282,13 +1385,15 @@ function loop(now) {
     if (!drawn) { const sc = scaled(e, th); if (sc) g.drawImage(sc, -pw / 2, -ph, pw, ph); }
     if (u.hurt > .45 && !KF[u.id]) { const sil = silhouette(e, th, '#ffffff'); if (sil) { g.globalAlpha = (u.hurt - .45) * 1.4; g.drawImage(sil, -pw / 2, -ph, pw, ph); } }
     g.restore();
-    if (u.alive) drawOverlay(g, u, x, y);
+    if (u.alive) ovl.push([u, B.mir ? B.w - x : x, y]);
   }
-  B.fx = B.fx.filter((f) => f.type === 'ink' || drawFx(g, f));
-  for (const p of B.parts) { p.x += p.vx * dt * 60; p.y += p.vy * dt * 60; p.vy += p.g * dt * 60; p.life -= dt * 1.8; g.globalAlpha = Math.max(0, p.life); g.fillStyle = p.c; g.fillRect(p.x - p.sz / 2, p.y - p.sz / 2, p.sz, p.sz); }
+  if (B.mir) g.restore();
+  for (const [u, x, y] of ovl) drawOverlay(g, u, x, y);
+  B.fx = B.fx.filter((f) => f.type === 'ink' || drawFxF(g, f));
+  for (const p of B.parts) { p.x += p.vx * dt * 60; p.y += p.vy * dt * 60; p.vy += p.g * dt * 60; p.life -= dt * 1.8; g.globalAlpha = Math.max(0, p.life); g.fillStyle = p.c; g.fillRect((p.m ? B.w - p.x : p.x) - p.sz / 2, p.y - p.sz / 2, p.sz, p.sz); }
   g.globalAlpha = 1; B.parts = B.parts.filter((p) => p.life > 0);
   g.textAlign = 'center';
-  for (const f of B.floats) { f.y -= 34 * dt; f.life -= dt * .8; g.globalAlpha = Math.max(0, Math.min(1, f.life * 2)); g.font = `${Math.round(19 * f.size)}px Bangers, Impact, sans-serif`; g.lineWidth = 4; g.strokeStyle = '#120c10'; g.strokeText(f.t, f.x, f.y); g.fillStyle = f.c; g.fillText(f.t, f.x, f.y); }
+  for (const f of B.floats) { f.y -= 34 * dt; f.life -= dt * .8; g.globalAlpha = Math.max(0, Math.min(1, f.life * 2)); g.font = `${Math.round(19 * f.size)}px Bangers, Impact, sans-serif`; g.lineWidth = 4; g.strokeStyle = '#120c10'; g.strokeText(f.t, f.m ? B.w - f.x : f.x, f.y); g.fillStyle = f.c; g.fillText(f.t, f.m ? B.w - f.x : f.x, f.y); }
   g.globalAlpha = 1; B.floats = B.floats.filter((f) => f.life > 0);
   g.restore();
   // impact frames are drawn flat over everything
@@ -1303,15 +1408,15 @@ function drawOverlay(g, u, x, y) {
   }
   const bw = Math.max(40, Math.min(90, u.w * .75)), by = y - u.h * 1.02 - 10;
   g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x - bw / 2 - 1, by - 1, bw + 2, 7);
-  g.fillStyle = u.side ? (u.boss ? '#ff3b2a' : '#d23b31') : '#5fd07a'; g.fillRect(x - bw / 2, by, bw * u.hp / u.max, 5);
+  g.fillStyle = u.isHero && !u.cpu ? '#5fd07a' : u.boss ? '#ff3b2a' : '#d23b31'; g.fillRect(x - bw / 2, by, bw * u.hp / u.max, 5);
   if (u.st.shield && u.shieldAmt) { g.fillStyle = 'rgba(160,210,255,.9)'; g.fillRect(x - bw / 2, by, Math.min(bw, bw * u.shieldAmt / u.max), 2); }
-  if (!u.side || u.d.ult) { g.fillStyle = '#e3b448'; g.fillRect(x - bw / 2, by + 6, bw * u.en / 100, 2); }
+  if (u.isHero || u.d.ult) { g.fillStyle = '#e3b448'; g.fillRect(x - bw / 2, by + 6, bw * u.en / 100, 2); }
   // statuses as small labelled chips with turns left
   const keys = Object.keys(u.st); let cx = x - bw / 2;
   g.font = '700 9px Karla, system-ui, sans-serif'; g.textAlign = 'left';
   for (const k of keys) { const [lab, col] = ST_LABEL[k] || [k, '#fff'], txt = `${lab} ${u.st[k]}`, w = g.measureText(txt).width + 6; g.fillStyle = 'rgba(0,0,0,.72)'; g.fillRect(cx, by - 13, w, 11); g.fillStyle = col; g.fillText(txt, cx + 3, by - 4.5); cx += w + 2; }
   // enemy intent badge
-  if (u.side && u.intent && !B.over) {
+  if (u.side && !u.isHero && u.intent && !B.over) {
     const it = u.intent, txt = it.k === 'atk' ? '⚔ Attack' : `✸ ${it.label}`;
     g.font = '700 11px Karla, system-ui, sans-serif'; const w = g.measureText(txt).width + 10, iy = by - (keys.length ? 28 : 16);
     g.fillStyle = it.k === 'atk' ? 'rgba(20,10,14,.85)' : 'rgba(120,18,14,.92)'; g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, iy - 10, w, 15, 7) : g.rect(x - w / 2, iy - 10, w, 15); g.fill();
@@ -1322,7 +1427,7 @@ function drawOverlay(g, u, x, y) {
 function drawImpact(g, r, dpr) {
   const I = B.impact, dark = I.k === 0;
   g.save(); g.fillStyle = dark ? '#000' : '#fff'; g.fillRect(0, 0, r.width, r.height);
-  const C = B.cam; g.translate(r.width * .5, r.height * .6); g.scale(C.z, C.z); g.translate(-r.width * C.x, -r.height * C.y);
+  const C = B.cam; g.translate(r.width * .5, r.height * .6); g.scale(C.z, C.z); g.translate(-r.width * (B.mir ? 1 - C.x : C.x), -r.height * C.y); if (B.mir) mirror(g);
   for (const u of [...I.list, I.src].filter(Boolean)) {
     const e0 = img(poseSrc(u.id, 0)), e = img(poseSrc(u.id, u.pose)); if (!e.ok || !e0.ok) continue;
     const k = u.h / e0.el.naturalHeight, ph = e.el.naturalHeight * k, pw = e.el.naturalWidth * k, [x, y] = pos(u);
@@ -1334,6 +1439,9 @@ function drawImpact(g, r, dpr) {
   const cx = r.width / 2, cy = r.height * .55; for (let i = 0; i < 28; i++) { const a = i / 28 * 6.28 + rnd(-.05, .05), r0 = Math.max(r.width, r.height) * rnd(.3, .45); g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * r0 * 2, cy + Math.sin(a) * r0 * 2); g.stroke(); }
   g.restore();
 }
+const mirror = (g) => { g.translate(B.w, 0); g.scale(-1, 1); };
+// draw an effect in the frame it was made in (a CPU hero's mirrored frame or the normal one)
+function drawFxF(g, f) { const sw = !!f.m !== !!B.mir; if (sw) swapPersp(); g.save(); if (f.m) mirror(g); let r; try { r = drawFx(g, f); } finally { g.restore(); if (sw) swapPersp(); } return r; }
 function drawFx(g, f) {
   const p = Math.min(1, (B.t - f.t0) / f.dur);
   g.save(); g.lineCap = 'round';
@@ -1433,4 +1541,4 @@ function drawFx(g, f) {
 
 // ---------------- boot ----------------
 route();
-window.__sq = { get B() { return B; }, get SAVE() { return SAVE; }, battle, route, MM, renderAct: () => B && B.cur && renderAct(B.cur), ratio: (i, d) => heroPower(SAVE.squad[0]) / enemyPower(STAGES[i], DIFF.find((x) => x.id === d)) };
+window.__sq = { get B() { return B; }, get SAVE() { return SAVE; }, battle, route, arenaBattle, ARENA, MM, renderAct: () => B && B.cur && renderAct(B.cur), ratio: (i, d) => heroPower(SAVE.squad[0]) / enemyPower(STAGES[i], DIFF.find((x) => x.id === d)) };
