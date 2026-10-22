@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261022k';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA, MOVE_DMG, TALENTS } from './data.js?v=20261022k';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022k';
+import { KF } from './kf.js?v=20261022l';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, BASE, SPELLS, ULT_DMG, ARENA, MOVE_DMG, TALENTS } from './data.js?v=20261022l';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022l';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -29,7 +29,7 @@ const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M
 // ---------------- save ----------------
 const KEY = 'gyeaman.squads.v2';
 const fresh = () => ({ v: 2, gold: 1500, cowries: 400, heroes: Object.fromEntries(STARTERS.map((id) => [id, newHero(id)])), squad: ['dufie'], stars: {}, pity: 0, lastFree: '', seenIntro: false });
-function newHero(id) { return { lvl: 1, xp: 0, stars: RARITY[HEROES[id].rarity].stars, shards: 0, sk: [1, 1, 1, 1], pts: { hp: 0, atk: 0, spd: 0, mag: 0 }, eq: HEROES[id].pool.slice(0, 2), sl: {} }; }
+function newHero(id) { return { lvl: 1, xp: 0, stars: RARITY[HEROES[id].rarity].stars, shards: 0, sk: [1, 1, 1, 1], pts: { hp: 0, atk: 0, mag: 0, tec: 0, def: 0, spd: 0 }, pv2: 1, eq: HEROES[id].pool.slice(0, 2), sl: {} }; }
 let SAVE;
 try { SAVE = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { SAVE = null; }
 if (!SAVE || SAVE.v !== 2) SAVE = fresh();
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261022k';
+const AV = '?v=20261022l';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -524,18 +524,32 @@ function inkSymbol(sym, color) {
 }
 
 // ---------------- hero stats ----------------
-const SPD_STAR = 2; // speed per star above base
-const ptsOf = (id) => { const s = SAVE.heroes[id]; if (!s.pts) s.pts = { hp: 0, atk: 0, spd: 0, mag: 0, tec: 0 }; s.pts.tec ||= 0; return s.pts; };
-const freePts = (id) => { const p = ptsOf(id); return SAVE.heroes[id].lvl - 1 - (p.hp + p.atk + p.mag + p.tec + p.spd * GROWTH.spdCost); };
-function statsFor(id, lvl, stars, p) { // shared by player heroes and CPU teams
-  const H = HEROES[id], k = (1 + 0.06 * (lvl - 1)) * (1 + 0.15 * (stars - 1)), g = (x) => 1 + (GROWTH[x] || 0) * (p[x] || 0);
-  return { hp: Math.round(H.hp * k * g('hp')), atk: Math.round(H.atk * k * g('atk')), mag: Math.round(H.mag * k * g('mag')), tec: Math.round(H.tec * k * g('tec')), def: Math.round(H.def * k),
-    spd: CLASSES[H.cls].spd + SPD_STAR * (stars - RARITY[H.rarity].stars) + GROWTH.spd * (p.spd || 0) };
+const SPD_STAR = 2; // speed per star above the hero's starting stars
+const STATS = ['hp', 'atk', 'mag', 'tec', 'def', 'spd'];
+const zeroPts = () => ({ hp: 0, atk: 0, mag: 0, tec: 0, def: 0, spd: 0 });
+const ptsOf = (id) => { const s = SAVE.heroes[id]; if (!s.pts || !s.pv2) { s.pts = zeroPts(); s.pv2 = 1; } for (const k of STATS) s.pts[k] ||= 0; return s.pts; };
+const spent = (p) => STATS.reduce((a, k) => a + (p[k] || 0), 0);
+const betaCap = () => (SAVE.beta && SAVE.beta.cap) || 0;
+const effLvl = (id) => Math.max(SAVE.heroes[id].lvl, betaCap());
+const effStars = (id) => betaCap() ? 5 : SAVE.heroes[id].stars;
+const freePts = (id) => (effLvl(id) - 1) * GROWTH.per + (SAVE.heroes[id].bp || 0) - spent(ptsOf(id));
+function statsFor(id, lvl, stars, p) { // shared by player heroes and CPU teams; identical base for every hero
+  const H = HEROES[id], k = (1 + 0.04 * (lvl - 1)) * (1 + 0.15 * Math.max(0, stars - RARITY[H.rarity].stars)), v = (x) => BASE[x] * k + GROWTH[x] * (p[x] || 0);
+  return { hp: Math.round(v('hp')), atk: Math.round(v('atk')), mag: Math.round(v('mag')), tec: Math.round(v('tec')), def: Math.round(v('def')),
+    spd: Math.round(BASE.spd + SPD_STAR * Math.max(0, stars - RARITY[H.rarity].stars) + GROWTH.spd * Math.min(GROWTH.spdCap, p.spd || 0)) };
 }
-function statsOf(id) { const s = SAVE.heroes[id]; return statsFor(id, s.lvl, s.stars, ptsOf(id)); }
+// the build a CPU (or the Auto button) gives a hero: spread n points by the hero's preferred shape
+function autoPts(id, n) {
+  const H = HEROES[id], w = { hp: H.hp / BASE.hp, atk: (H.atk / BASE.atk) ** 2, mag: (H.mag / BASE.mag) ** 2, tec: H.tec / 20, def: H.def / BASE.def, spd: Math.max(.05, CLASSES[H.cls].spd / 100 - .85) * 2 };
+  const tot = STATS.reduce((a, k) => a + w[k], 0), p = zeroPts(); let left = n;
+  for (const k of STATS) { p[k] = Math.floor(n * w[k] / tot); if (k === 'spd') p[k] = Math.min(GROWTH.spdCap, p[k]); left -= p[k]; }
+  p.atk += H.atk >= H.mag ? left : 0; p.mag += H.atk >= H.mag ? 0 : left; return p;
+}
+const cpuStats = (id, lvl, stars) => statsFor(id, lvl, stars, autoPts(id, (lvl - 1) * GROWTH.per));
+function statsOf(id) { return statsFor(id, effLvl(id), effStars(id), ptsOf(id)); }
 const power = (id) => { const st = statsOf(id), s = SAVE.heroes[id]; return Math.round(st.hp * 0.5 + st.atk * 4 + st.mag * 2.5 + st.tec * 5 + st.def * 4 + st.spd * 2 + (s.sk[0] + s.sk[1] + s.sk[2]) * 30); };
-const skMult = (id, i) => 1 + 0.12 * (SAVE.heroes[id].sk[i] - 1);
-const spLvl = (id, sid) => (SAVE.heroes[id].sl || {})[sid] || 1;
+const skMult = (id, i) => 1 + 0.12 * ((betaCap() ? SKILL_MAX : SAVE.heroes[id].sk[i]) - 1);
+const spLvl = (id, sid) => betaCap() ? SKILL_MAX : (SAVE.heroes[id].sl || {})[sid] || 1;
 // name / note / level of the move in slot i (0 basic, 1-2 equipped spells, 3 ultimate) for a hero id
 const moveOf = (id, i, eq) => { const H = HEROES[id]; if (i === 0 || i === 3) return { name: H.kit[i], note: H.notes[i], cd: 0 }; const sid = (eq || SAVE.heroes[id]?.eq || H.pool)[i - 1]; return { ...SPELLS[sid], sid }; };
 const canPromote = (id) => { const s = SAVE.heroes[id]; return s.stars < 5 && s.shards >= STAR_SHARDS[s.stars + 1]; };
@@ -691,15 +705,20 @@ function heroesScreen(id) {
     s.querySelectorAll('.hrail button[data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
     $('.hs-head b', s).textContent = { skills: 'Skills', growth: 'Growth', stars: 'Stars', lore: 'Symbol' }[t];
     if (t === 'growth') {
-      const p = own ? ptsOf(heroSel) : { hp: 0, atk: 0, spd: 0, mag: 0, tec: 0 }, free = own ? freePts(heroSel) : 0;
-      const G = [['hp', 'Health', st.hp, '+5% health'], ['atk', 'Attack', st.atk, '+5% · basics and heavy single hits'], ['mag', 'Spirit', st.mag, '+5% · magic spells, magic ultimates, healing'], ['tec', 'Technique', st.tec, `+5% · flat damage on every hit, and ${Math.round(100 * dodgeOf(st))}% dodge`], ['spd', 'Speed', st.spd, `+${GROWTH.spd} · costs ${GROWTH.spdCost} · max ${GROWTH.spdCap}`]];
-      body.innerHTML = `${own ? `<div class="lvrow"><b>Lv ${s0.lvl}</b><div class="bar"><i style="transform:scaleX(${s0.xp / xpNeed(s0.lvl)})"></i></div><span>${s0.xp}/${xpNeed(s0.lvl)} XP</span></div>
-          <div class="gpts"><b>${free}</b> point${free === 1 ? '' : 's'} to spend<small>One per level. ${C.name}s start at speed ${C.spd}. Free reset in beta.</small></div>` : `<p class="note">${C.name} · base speed ${C.spd}. Recruit at the Shrine to grow.</p>`}
-        <div class="growth">${G.map(([k, l, v, n]) => { const can = own && (k === 'spd' ? free >= GROWTH.spdCost && p.spd < GROWTH.spdCap : free >= 1);
-          return `<div class="gr"><div><span>${l}</span><b>${v}</b><small>${n}</small></div><em>${p[k] || 0}${k === 'spd' ? '/' + GROWTH.spdCap : ''}</em>${own ? `<button class="btn sm" type="button" data-g="${k}" ${can ? '' : 'disabled'} aria-label="Add a point to ${l}">+</button>` : ''}</div>`; }).join('')}</div>
-        ${own && p.hp + p.atk + p.mag + p.tec + p.spd ? '<button class="btn ghost sm" id="respec" type="button">Reset points</button>' : ''}`;
-      body.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { ptsOf(heroSel)[b.dataset.g]++; SFX.heal(); store(); heroesScreen(heroSel); heroTab = 'growth'; reopen(); }));
-      const rs = $('#respec', body); if (rs) rs.onclick = () => { s0.pts = { hp: 0, atk: 0, spd: 0, mag: 0, tec: 0 }; SFX.click(); store(); heroesScreen(heroSel); heroTab = 'growth'; reopen(); };
+      const p = own ? ptsOf(heroSel) : zeroPts(), free = own ? freePts(heroSel) : 0, cap = betaCap();
+      const G = [['hp', 'Health', st.hp, `+${GROWTH.hp} per point`], ['atk', 'Attack', st.atk, `+${GROWTH.atk} · basics and heavy single hits`], ['mag', 'Spirit', st.mag, `+${GROWTH.mag} · magic spells, magic ultimates, healing`],
+        ['tec', 'Technique', st.tec, `+${GROWTH.tec} · flat damage on every hit, ${Math.round(100 * dodgeOf(st))}% dodge, frenzy extra hits`], ['def', 'Defence', st.def, `+${GROWTH.def} · less damage taken`], ['spd', 'Speed', st.spd, `+${GROWTH.spd} · max ${GROWTH.spdCap} points`]];
+      body.innerHTML = `${own ? `<div class="lvrow"><b>Lv ${effLvl(heroSel)}${cap && cap > s0.lvl ? ' <small>beta</small>' : ''}</b><div class="bar"><i style="transform:scaleX(${s0.xp / xpNeed(s0.lvl)})"></i></div><span>${s0.xp}/${xpNeed(s0.lvl)} XP</span></div>
+          <div class="gpts"><b>${free}</b> point${free === 1 ? '' : 's'} to spend<small>${GROWTH.per} per level, +${GROWTH.arenaWin} for each Arena win. Every hero starts from the same stats; free reset in beta.</small></div>` : `<p class="note">${C.name}. Recruit at the Shrine to grow.</p>`}
+        <div class="growth">${G.map(([k, l, v, n]) => { const room = k === 'spd' ? GROWTH.spdCap - p.spd : 1e9, can = own && free >= 1 && room > 0;
+          return `<div class="gr"><div><span>${l}</span><b>${v}</b><small>${n}</small></div><em>${p[k] || 0}</em>${own ? `<span class="gb"><button class="btn sm" type="button" data-g="${k}" data-n="1" ${can ? '' : 'disabled'} aria-label="Add a point to ${l}">+1</button><button class="btn sm" type="button" data-g="${k}" data-n="10" ${can && free >= 2 ? '' : 'disabled'} aria-label="Add ten points to ${l}">+10</button></span>` : ''}</div>`; }).join('')}</div>
+        ${own ? `<div class="gact">${spent(p) ? '<button class="btn ghost sm" id="respec" type="button">Reset points</button>' : ''}${free ? '<button class="btn ghost sm" id="autog" type="button">Auto spend</button>' : ''}</div>` : ''}
+        <div class="beta"><span>Beta · test at level</span>${GROWTH.betaCaps.map((c) => `<button class="tog ${c === cap ? 'on' : ''}" type="button" data-cap="${c}" aria-pressed="${c === cap}">${c ? c : 'Off'}</button>`).join('')}<small>Sets every hero to this level with 5 stars and maxed skills. Off returns to real progress.</small></div>`;
+      const again = () => { store(); heroesScreen(heroSel); heroTab = 'growth'; reopen(); };
+      body.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { const k = b.dataset.g, P = ptsOf(heroSel); P[k] += Math.min(+b.dataset.n, freePts(heroSel), k === 'spd' ? GROWTH.spdCap - P.spd : 1e9); SFX.heal(); again(); }));
+      body.querySelectorAll('[data-cap]').forEach((b) => (b.onclick = () => { (SAVE.beta ||= {}).cap = +b.dataset.cap; for (const id of Object.keys(SAVE.heroes)) { const P = ptsOf(id); if (freePts(id) < 0) Object.assign(P, zeroPts()); } SFX.click(); again(); }));
+      const rs = $('#respec', body); if (rs) rs.onclick = () => { s0.pts = zeroPts(); SFX.click(); again(); };
+      const ag = $('#autog', body); if (ag) ag.onclick = () => { const P = ptsOf(heroSel), add = autoPts(heroSel, freePts(heroSel)); for (const k of STATS) P[k] += k === 'spd' ? Math.min(add[k], GROWTH.spdCap - P.spd) : add[k]; const r = freePts(heroSel); if (r > 0) P[HEROES[heroSel].atk >= HEROES[heroSel].mag ? 'atk' : 'mag'] += r; SFX.heal(); again(); };
     } else if (t === 'stars') {
       body.innerHTML = own ? `<div class="starbig">${'★'.repeat(s0.stars)}<i>${'★'.repeat(5 - s0.stars)}</i></div>
         <div class="row card"><div>${COIN('shard')} <b>${s0.shards} / ${s0.stars < 5 ? STAR_SHARDS[s0.stars + 1] : 'max'} shards</b><small>Duplicates from the Shrine give shards. Each star adds 15% to all stats and +${SPD_STAR} speed.</small></div>
@@ -835,7 +854,7 @@ function mkHero(id) {
 }
 // a CPU-controlled hero on the right: same kit and choreography, played in a mirrored frame (see swapPersp)
 function mkCpu(id, lvl, stars, sk = 1) {
-  const H = HEROES[id], st = statsFor(id, lvl, stars, {});
+  const H = HEROES[id], st = cpuStats(id, lvl, stars);
   return unitBase({ side: 1, isHero: 1, cpu: 1, id, d: H, spells: H.pool.slice(0, 2), sk: [sk, sk, sk, sk], sl: {}, name: H.name, hp: st.hp, max: st.hp, atk: st.atk, mag: st.mag, tec: st.tec, def: st.def, spd: st.spd, size: H.size, flip: [1, 1, 1], en: 25, fx: .7, fy: .7, depth: 1, enter: 1 });
 }
 // While a CPU hero acts the whole battle is seen from its side: it becomes "the hero" on the left, its target "the foe".
@@ -850,6 +869,7 @@ function mkMon(id, lvl, mult) {
 }
 const spdOf = (u) => u.spd * (u.st.slow ? .7 : 1);
 function pos(u) { const W = B.w; const dir = u.side ? -1 : 1; return [u.fx * W + dir * u.dash * u.reach + (u.enter || 0) * (u.side ? 1 : -1) * W * .5, B.gy0 + u.fy * (B.gy1 - B.gy0)]; }
+const SP = 1.5; // base game speed: every move plays 1.5x faster; the ×2 toggle doubles it
 const wait = (ms) => new Promise((res) => { const b = B; if (!b || b.dead) return; b.waits.push({ t: b.t + ms / 1000, res }); });
 function fx(type, dur, o) { B.fx.push({ type, t0: B.t, dur: dur / 1000, m: !!B.mir, ...o }); }
 function setPose(u, p, ms, clipName = null) { u.pose = p; u.poseT = ms / 1000; u.poseD = ms / 1000; u.clip = clipName; }
@@ -868,11 +888,11 @@ function battle(stageIdx, diffId) {
     <div class="act"><div class="hintl"></div><div class="abtns"></div></div></div></main>`);
   app.append(s);
   const hero = mkHero(SAVE.squad[0]);
-  B = { all: [hero], t: 0, waits: [], gy0: 0, gy1: 1, ground: REGIONS[t.region].ground, stage: t, stageIdx, D, duels, duel: 0, hero, foe: null, heroes: [hero], foes: [], fx: [], parts: [], floats: [], auto: false, speed: 1, slowT: 0, freeze: 0,
+  B = { all: [hero], t: 0, waits: [], gy0: 0, gy1: 1, ground: REGIONS[t.region].ground, stage: t, stageIdx, D, duels, duel: 0, hero, foe: null, heroes: [hero], foes: [], fx: [], parts: [], floats: [], auto: false, speed: SP, slowT: 0, freeze: 0,
     shake: 0, dim: 0, dimTo: 0, cam: { z: 1, x: .5, y: .6, tz: 1, tx: .5, ty: .6 }, rest: { z: 1, y: .6 }, impact: null, over: false, cur: null, choice: null, armed: 0, cv: $('canvas', s), s, last: performance.now(), bg: img(`${A}bg_${REGIONS[t.region].bg}.webp`) };
   $('#leave', s).onclick = () => { stopBattle(); mapScreen(); };
   $('#auto', s).onclick = (e) => { B.auto = !B.auto; e.currentTarget.setAttribute('aria-pressed', B.auto); SFX.click(); if (B.auto && B.choice) { const c = B.choice; B.choice = null; c(aiHero(B.hero)); } };
-  $('#spd', s).onclick = (e) => { B.speed = B.speed === 1 ? 2 : 1; e.currentTarget.setAttribute('aria-pressed', B.speed === 2); SFX.click(); };
+  $('#spd', s).onclick = (e) => { B.speed = B.speed > SP ? SP : SP * 2; e.currentTarget.setAttribute('aria-pressed', B.speed > SP); SFX.click(); };
   B.raf = requestAnimationFrame(loop);
   run(B);
 }
@@ -950,7 +970,7 @@ function hit(src, dst, mult, o = {}) {
   const [x, y] = pos(dst);
   B.floats.push({ x: x + rnd(-10, 10), y: y - dst.h * .8, t: (crit ? 'CRIT ' : '') + d, c: crit ? '#ffd23c' : dst.isHero && !dst.cpu ? '#ff6a5a' : '#fff', life: 1, size: (o.big ? 1.7 : 1.1) * (crit ? 1.2 : 1), m: !!B.mir });
   burst(x, y - dst.h * .45, [o.color || '#fff', '#fff'], crit ? 8 : 4, crit ? 4 : 2.5);
-  B.shake = Math.max(B.shake, crit ? 7 : 3); (crit ? SFX.crit : SFX.hit)();
+  impactOf(d / Math.max(1, dst.max) * (crit ? 1.35 : 1) * (o.big ? 1.25 : 1), o.color); (crit ? SFX.crit : SFX.hit)();
   if (src.d.on === 'defDown' && Math.random() < .35) addSt(dst, 'defDown', 1);
   if (src.d.on === 'drain') heal(src, d * .3, true);
   if (dst.hp <= 0) {
@@ -1091,7 +1111,17 @@ async function basicStrike(u, tg, mult, o = {}) {
   await wait(220);
   return dealt;
 }
-const hitStop = (ms) => { B.freeze = ms / 1000; };
+const hitStop = (ms) => { B.freeze = Math.max(B.freeze, ms / 1000); };
+// impact feedback scales with hit strength s (damage as a share of the target's max health, boosted for crits/big moves):
+// light taps just shake; heavier hits add a coloured screen flash, a darkened frame, a zoom punch and a short hit-stop
+function impactOf(s, c) {
+  if (B.cine === 2) return; const k = Math.min(1, s / .3);
+  B.shake = Math.max(B.shake, 3 + 19 * k);
+  if (k < .2) return;
+  B.sfl = Math.max(B.sfl || 0, .08 + .4 * k); B.sflC = k > .7 ? '#ffffff' : c || '#fff4dc';
+  B.dk = Math.max(B.dk || 0, .1 + .45 * k); B.punch = Math.max(B.punch || 0, .02 + .09 * k);
+  if (k > .45) hitStop(40 + 90 * k);
+}
 // animated basic: lunge clip with two hand-drawn slash arcs (forehand then backhand)
 async function animStrike(u, tg, mult, o, AC) {
   const dur = AC.play.length / 14 * 1000; setPose(u, 1, dur, 'atk');
@@ -1127,7 +1157,7 @@ function cutscene(u, sym, color) {
   const vid = el.querySelector('video'); if (vid) { vid.playbackRate = C.rate || 1; el.classList.add('vid'); vid.play().catch(() => {}); }
   const dur = C.video ? (C.len || 6000) / (C.rate || 1) - 100 : C.short ? 950 : 1900; if (C.short) el.classList.add('short');
   return new Promise((res) => { let done = false; const end = () => { if (done) return; done = true; el.classList.add('out'); setTimeout(() => el.remove(), 220); res(); };
-    el.onclick = end; if (vid) vid.onended = end; setTimeout(() => SFX.hit && SFX.hit(), C.video ? 1600 / (C.rate || 1) : 1150); setTimeout(end, dur / (B && B.speed > 1 ? 1.5 : 1)); });
+    el.onclick = end; if (vid) vid.onended = end; setTimeout(() => SFX.hit && SFX.hit(), C.video ? 1600 / (C.rate || 1) : 1150); setTimeout(end, dur / (B && B.speed > SP ? 1.5 : 1)); });
 }
 async function impactFrames(targets, src) {
   B.cam.tx = targets.reduce((a, t) => a + pos(t)[0], 0) / targets.length / B.w; B.cam.ty = B.rest.y;
@@ -1192,7 +1222,7 @@ async function bonusHits(u, f, m) {
 }
 async function doHero(u, i) {
   const f = B.foe, sk = u.sk || SAVE.heroes[u.id].sk, sid = i === 1 || i === 2 ? u.spells[i - 1] : null, S = sid && SPELLS[sid];
-  const lv = S ? (u.sl ? u.sl[sid] || 1 : spLvl(u.id, sid)) : (sk[i] || 1), m = 1 + 0.12 * (lv - 1);
+  const lv = S ? (u.sl ? u.sl[sid] || 1 : spLvl(u.id, sid)) : (!u.cpu && betaCap() ? SKILL_MAX : sk[i] || 1), m = 1 + 0.12 * (lv - 1);
   B.ctx = { u, mv: i === 0 ? 'basic' : i === 3 ? 'ult' : sid, mults: [], dmg: i === 0 ? 'phys' : i === 3 ? ULT_DMG[u.id] || 'phys' : S.dmg || 'phys' }; u.tal.moves++; if (window.__mlog) window.__mlog.push({ h: u.id, mv: B.ctx.mv, ms: B.ctx.mults });
   if (i === 0) { if (u.en >= 100) u.fz = Math.min(4, (u.fz || 0) + 1); u.en = Math.min(100, u.en + 35); }
   if (S) { u.cd[i - 1] = S.cd + 1; u.en = Math.min(100, u.en + 20); }
@@ -1307,7 +1337,7 @@ function arenaScreen() {
     $('.ateam', s).innerHTML = `<b>Your team</b><div>${[0, 1, 2].map((i) => team[i] ? `<img src="${faceSrc(team[i])}" alt="${HEROES[team[i]].name}">` : '<span class="slot">?</span>').join('')}</div><small>${team.length < 3 ? `Pick ${3 - team.length} more below` : 'Tap a hero to swap'}</small>`;
     $('.roster', s).innerHTML = Object.keys(HEROES).filter((x) => SAVE.heroes[x]).sort((a, b) => power(b) - power(a)).map((x) => heroCard(x, team.includes(x) ? 'on' : '')).join('');
     s.querySelectorAll('.roster .hc').forEach((c) => (c.onclick = () => { const id = c.dataset.id, k = team.indexOf(id); if (k >= 0) team.splice(k, 1); else if (team.length < 3) team.push(id); else { team.shift(); team.push(id); } SFX.click(); store(); draw(); }));
-    $('.alist', s).innerHTML = ARENA.map((t, i) => { const pw = t.heroes.reduce((a, x) => { const st = statsFor(x, t.lvl, t.stars, {}); return a + st.hp * .5 + st.atk * 4 + st.mag * 2.5 + st.tec * 5 + st.def * 4 + st.spd * 2; }, 0), my = team.reduce((a, x) => a + power(x), 0);
+    $('.alist', s).innerHTML = ARENA.map((t, i) => { const pw = t.heroes.reduce((a, x) => { const st = cpuStats(x, t.lvl, t.stars); return a + st.hp * .5 + st.atk * 4 + st.mag * 2.5 + st.tec * 5 + st.def * 4 + st.spd * 2; }, 0), my = team.reduce((a, x) => a + power(x), 0);
       return `<div class="aopp ${A0.won[i] ? 'won' : ''}"><div class="af">${t.heroes.map((x) => `<img src="${faceSrc(x)}" alt="${HEROES[x].name}">`).join('')}</div><div class="ai"><b>${t.name}</b><span>Level ${t.lvl} · ${'★'.repeat(t.stars)} · power ${fmt(Math.round(pw))}${team.length === 3 ? ` <em class="${my >= pw ? 'up' : 'dn'}">you ${fmt(my)}</em>` : ''}</span></div>
         <button class="btn sm" type="button" data-i="${i}" ${team.length === 3 ? '' : 'disabled'}>${A0.won[i] ? 'Rematch' : 'Fight'}</button></div>`; }).join('');
     s.querySelectorAll('.alist [data-i]').forEach((b) => (b.onclick = () => { unlock(); SFX.click(); arenaBattle(+b.dataset.i); }));
@@ -1325,11 +1355,11 @@ function arenaBattle(ti) {
     <div class="act"><div class="hintl"></div><div class="abtns"></div></div></div></main>`);
   app.append(s);
   const hero = mkHero(mine[0]), foe = mkCpu(t.heroes[0], t.lvl, t.stars, t.sk);
-  B = { arena: { ti, t, mine, mi: 0, fi: 0 }, all: [hero, foe], t: 0, waits: [], gy0: 0, gy1: 1, ground: R0.ground, hero, foe, heroes: [hero], foes: [foe], fx: [], parts: [], floats: [], ghosts: [], auto: false, speed: 1, slowT: 0, freeze: 0,
+  B = { arena: { ti, t, mine, mi: 0, fi: 0 }, all: [hero, foe], t: 0, waits: [], gy0: 0, gy1: 1, ground: R0.ground, hero, foe, heroes: [hero], foes: [foe], fx: [], parts: [], floats: [], ghosts: [], auto: false, speed: SP, slowT: 0, freeze: 0,
     shake: 0, dim: 0, dimTo: 0, cam: { z: 1, x: .5, y: .6, tz: 1, tx: .5, ty: .6 }, rest: { z: 1, y: .6 }, impact: null, over: false, cur: null, choice: null, armed: 0, cv: $('canvas', s), s, last: performance.now(), bg: img(`${A}bg_${R0.bg}.webp`) };
   $('#leave', s).onclick = () => { stopBattle(); tab = 'arena'; arenaScreen(); };
   $('#auto', s).onclick = (e) => { B.auto = !B.auto; e.currentTarget.setAttribute('aria-pressed', B.auto); SFX.click(); if (B.auto && B.choice) { const c = B.choice; B.choice = null; c(aiSmart(B.hero)); } };
-  $('#spd', s).onclick = (e) => { B.speed = B.speed === 1 ? 2 : 1; e.currentTarget.setAttribute('aria-pressed', B.speed === 2); SFX.click(); };
+  $('#spd', s).onclick = (e) => { B.speed = B.speed > SP ? SP : SP * 2; e.currentTarget.setAttribute('aria-pressed', B.speed > SP); SFX.click(); };
   B.raf = requestAnimationFrame(loop);
   runArena(B);
 }
@@ -1350,7 +1380,7 @@ function finishArena(win) {
   if (B.over) return; B.over = true; renderAct(null);
   const a = B.arena, t = a.t, first = win && !SAVE.arena.won[a.ti], chips = [];
   if (win) { const gold = 150 + t.lvl * 30; SAVE.gold += gold; chips.push([COIN('gold', 'big'), '+' + gold, 'Gold dust']); if (first) { SAVE.cowries += 50; chips.push([COIN('cowrie', 'big'), '+50', 'First win']); } SAVE.arena.won[a.ti] = 1;
-    const xp = 30 + t.lvl * 10; chips.push([COIN('xp', 'big'), '+' + xp, 'XP each']); for (const id of a.mine) { const s = SAVE.heroes[id]; s.xp += xp; while (s.xp >= xpNeed(s.lvl)) { s.xp -= xpNeed(s.lvl); s.lvl++; } } SFX.win(); } else SFX.lose();
+    const xp = 30 + t.lvl * 10; chips.push([COIN('xp', 'big'), '+' + xp, 'XP each']); for (const id of a.mine) { const s = SAVE.heroes[id]; s.xp += xp; s.bp = (s.bp || 0) + GROWTH.arenaWin; while (s.xp >= xpNeed(s.lvl)) { s.xp -= xpNeed(s.lvl); s.lvl++; } } chips.push([COIN('xp', 'big'), '+' + GROWTH.arenaWin, 'Stat points each']); SFX.win(); } else SFX.lose();
   store();
   const b = B;
   setTimeout(() => {
@@ -1397,9 +1427,9 @@ function loop(now) {
   const C = B.cam, ease = 1 - Math.pow(.002, real); C.z += (C.tz - C.z) * ease; C.x += (C.tx - C.x) * ease; C.y += (C.ty - C.y) * ease;
   { const mx = (1 - 1 / C.z) / 2; C.x = clamp(C.x, .5 - mx, .5 + mx); C.y = clamp(C.y, .6 - .6 * (1 - 1 / C.z), .6 + .4 * (1 - 1 / C.z)); } // never show past the painted background
   B.dim += (B.dimTo - B.dim) * ease;
-  const sh = B.shake; B.shake = Math.max(0, sh - 40 * real);
+  const sh = B.shake; B.shake = Math.max(0, sh - 40 * real); const pz = 1 + (B.punch || 0); B.punch = Math.max(0, (B.punch || 0) - real * .5);
   g.save();
-  g.translate(r.width * .5, r.height * .6); g.scale(C.z, C.z); g.translate(-r.width * (B.mir ? 1 - C.x : C.x), -r.height * C.y);
+  g.translate(r.width * .5, r.height * .6); g.scale(C.z * pz, C.z * pz); g.translate(-r.width * (B.mir ? 1 - C.x : C.x), -r.height * C.y);
   g.translate(rnd(-1, 1) * sh, rnd(-1, 1) * sh);
   // background, anchored to the bottom so the painted floor stays under the fighters
   let bgTop = 0, bgH = r.height;
@@ -1465,6 +1495,9 @@ function loop(now) {
   for (const f of B.floats) { f.y -= 34 * dt; f.life -= dt * .8; g.globalAlpha = Math.max(0, Math.min(1, f.life * 2)); g.font = `${Math.round(19 * f.size)}px Bangers, Impact, sans-serif`; g.lineWidth = 4; g.strokeStyle = '#120c10'; g.strokeText(f.t, f.m ? B.w - f.x : f.x, f.y); g.fillStyle = f.c; g.fillText(f.t, f.m ? B.w - f.x : f.x, f.y); }
   g.globalAlpha = 1; B.floats = B.floats.filter((f) => f.life > 0);
   g.restore();
+  // hit-strength flash and darkening, flat over the frame
+  if (B.dk > .01) { const v = g.createRadialGradient(r.width / 2, r.height * .55, r.height * .15, r.width / 2, r.height * .55, r.width * .8); v.addColorStop(0, `rgba(0,0,0,${B.dk * .35})`); v.addColorStop(1, `rgba(0,0,0,${B.dk})`); g.fillStyle = v; g.fillRect(0, 0, r.width, r.height); B.dk = Math.max(0, B.dk - real * 2.2); }
+  if (B.sfl > .01) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = B.sfl; g.fillStyle = B.sflC || '#fff'; g.fillRect(0, 0, r.width, r.height); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; B.sfl = Math.max(0, B.sfl - real * 4); }
   // impact frames are drawn flat over everything
   if (B.impact) drawImpact(g, r, dpr);
   B.raf = requestAnimationFrame(loop);

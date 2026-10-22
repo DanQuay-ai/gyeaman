@@ -349,7 +349,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .gr span { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: block; }
 .gr b { font: 22px var(--display); font-weight: 400; } .gr small { display: block; color: var(--muted); font-size: 12px; }
 .gr em { font: 18px var(--display); font-style: normal; color: var(--gold); min-width: 28px; text-align: right; }
-.gr .btn { min-width: 44px; font-size: 22px; padding: 4px 0; }
+.gr .btn { min-width: 44px; font-size: 15px; padding: 6px 4px; }
+.gb { display: flex; gap: 6px; }
+.gact { display: flex; gap: 8px; flex-wrap: wrap; }
+.beta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; border-radius: 12px; border: 1px dashed rgba(143,224,213,.4); }
+.beta > span { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #8fe0d5; width: 100%; }
+.beta .tog { min-width: 44px; } .beta .tog.on { background: #8fe0d5; color: #0b0a0d; }
+.beta small { width: 100%; color: var(--muted); font-size: 12px; }
 .gpts { padding: 10px 12px; border-radius: 12px; background: linear-gradient(90deg, rgba(227,180,72,.18), transparent); }
 .gpts b { font: 24px var(--display); color: var(--gold); margin-right: 4px; } .gpts small { display: block; color: var(--muted); }
 .gnote { display: block; margin-top: 6px; color: var(--gold); font-weight: 700; font-size: 13px; }
@@ -565,3 +571,9 @@ body.cine .battle { grid-template-rows: 1fr; } body.cine .btop, body.cine .order
 .dmgn { color: var(--gold); }
 .dmgb.c { padding: 5px 8px; margin-top: 4px; gap: 3px; font-size: 11px; } .dmgb.c .dmgt b { font-size: 15px; }
 .dmgtal { color: var(--muted); } .dmgtal.on { color: #8fe0d5; font-weight: 700; }
+/* journey pick: the whole screen scrolls (no squeezed inner scroller); the fight button stays docked */
+.screen.pick { overflow-y: auto; scrollbar-width: thin; }
+.pick .roster { flex: none; overflow: visible; }
+.pick .duelcard { flex: none; padding: 10px; gap: 10px; }
+.pick .dc-h img { width: 60px; height: 60px; }
+.pick .dc-m img { height: 64px; }

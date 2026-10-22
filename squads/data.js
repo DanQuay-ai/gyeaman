@@ -18,8 +18,11 @@ export const CLASSES = {
   hunter:   { name: 'Hunter',   spd: 106, desc: 'Strikes from reach.' },
   shadow:   { name: 'Shadow',   spd: 116, desc: 'Fastest class. Acts often, breaks easily.' },
 };
-// Growth: one point per level. Speed points cost 2 and cap at SPD_CAP points.
-export const GROWTH = { hp: 0.05, atk: 0.05, mag: 0.05, tec: 0.05, spd: 2, spdCost: 2, spdCap: 5 };
+// Stats: every hero starts from the same BASE. Each level grants GROWTH.per points; each point adds the listed amount.
+// A hero's edge lives in its kit, class and talents, not in numbers. Hero hp/atk/mag/tec/def below are only the
+// CPU's preferred build shape (how an Arena opponent spends its points).
+export const BASE = { hp: 900, atk: 48, mag: 48, tec: 12, def: 22, spd: 100 };
+export const GROWTH = { per: 10, hp: 9, atk: 0.6, mag: 0.6, tec: 0.5, def: 0.45, spd: 0.3, spdCap: 60, arenaWin: 5, betaCaps: [0, 20, 40, 60, 99] };
 export const HEROES = {
   blay:     { name: 'Blay',     role: 'Asafo',        kr: 'asafo',        en: 'Sword fighter', rarity: 'R',   size: 1.28, hp: 1180, atk: 72, mag: 40, tec: 18, def: 26, cls: 'warrior', spd: 100, cd: [2, 3], flip: [0, 0, 0],
     kit: ['Slash', 'Twin Cut', 'Parry', 'Gyawu Atiko'], notes: ['One afena cut.', 'Two cuts and the enemy\'s defence drops for 2 turns.', 'Guard: the next hit is halved and Blay strikes back.', 'Valour of Gyawu: a huge cut. Kills outright below 30% health.'], sym: 'gyawuAtiko' },
