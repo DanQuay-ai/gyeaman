@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261022i';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA, MOVE_DMG, TALENTS } from './data.js?v=20261022i';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022i';
+import { KF } from './kf.js?v=20261022j';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA, MOVE_DMG, TALENTS } from './data.js?v=20261022j';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022j';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261022i';
+const AV = '?v=20261022j';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -1001,7 +1001,7 @@ function aiHero(u) { return { i: u.en >= 100 ? 3 : 0 }; } // auto: basics and ul
 function aiSmart(u) { // models a player for the balance sim: break charges, heal when low, otherwise skills on cooldown
   const f = B.foe, low = u.hp / u.max < .45;
   if (f.charging && canUse(u, 1) && ['owureku', 'gyakari'].includes(u.id)) return { i: 1 };
-  if (u.en >= 100) return { i: 3 };
+  if (u.en >= 100 && !(u.hold && (u.fz || 0) < 4)) return { i: 3 };
   if (low && u.id === 'kome' && canUse(u, 1)) return { i: 1 };
   if (f.charging && canUse(u, 2) && ['blay', 'gyakari', 'dufie'].includes(u.id)) return { i: 2 };
   for (const i of [1, 2]) if (canUse(u, i) && !(u.id === 'kome' && i === 1 && !low)) return { i };
@@ -1170,15 +1170,28 @@ async function castSpell(u, f, S, m) {
   if (S.tmSelf) { pushTM(u, S.tmSelf); float(u, `TURN +${Math.round(S.tmSelf * 100)}%`, '#7ee08a', .8); }
   if (S.t === 'self') await wait(420);
 }
+// extra basic hits: Frenzy (each basic made with a full ultimate gauge adds a hit, up to 4) and Technique (a chance of one more)
+const BONUS_SHOT = { obiri: 'arrow', kuukua: 'spear', kome: 'fire', dufie: 'dagger' };
+async function bonusHits(u, f, m) {
+  const tecHit = Math.random() < (u.tec || 0) / ((u.tec || 0) + 250) ? 1 : 0, n = (u.fz || 0) + tecHit; if (!n || !f.alive) return;
+  if (u.fz) float(u, `FRENZY ×${u.fz}`, '#ffd23c', .9);
+  for (let k = 0; k < n && f.alive; k++) {
+    const [x0, y0] = pos(u), [x, y] = pos(f), kind = BONUS_SHOT[u.id], yy = y - f.h * (.35 + .3 * Math.random());
+    if (kind) { fx('shot', 180, { x0: x0 + u.w * .3, y0: y0 - u.h * .6, x1: x, y1: yy, kind }); await wait(150); }
+    else { fx('arc', 220, { x, y: yy, r: f.h * .5, c: PH_COL[u.id] || '#fff', dir: k % 2 ? 1 : -1 }); await wait(110); }
+    hit(u, f, .3 * m, { color: PH_COL[u.id] }); await wait(90);
+  }
+}
 async function doHero(u, i) {
   const f = B.foe, sk = u.sk || SAVE.heroes[u.id].sk, sid = i === 1 || i === 2 ? u.spells[i - 1] : null, S = sid && SPELLS[sid];
   const lv = S ? (u.sl ? u.sl[sid] || 1 : spLvl(u.id, sid)) : (sk[i] || 1), m = 1 + 0.12 * (lv - 1);
   B.ctx = { u, mv: i === 0 ? 'basic' : i === 3 ? 'ult' : sid, mults: [], dmg: i === 0 ? 'phys' : i === 3 ? ULT_DMG[u.id] || 'phys' : S.dmg || 'phys' }; u.tal.moves++; if (window.__mlog) window.__mlog.push({ h: u.id, mv: B.ctx.mv, ms: B.ctx.mults });
-  if (i === 0) u.en = Math.min(100, u.en + 35);
+  if (i === 0) { if (u.en >= 100) u.fz = Math.min(4, (u.fz || 0) + 1); u.en = Math.min(100, u.en + 35); }
   if (S) { u.cd[i - 1] = S.cd + 1; u.en = Math.min(100, u.en + 20); }
-  if (i === 3) u.en = 0;
+  if (i === 3) { u.en = 0; u.fz = 0; }
   if (i === 0) {
     const d = await basicStrike(u, f, 1 * m, { color: u.id === 'kome' ? '#ffb43c' : u.id === 'dufie' ? '#c58bff' : '#fff' });
+    await bonusHits(u, f, m);
     return;
   }
   if (i === 1 || i === 2) {

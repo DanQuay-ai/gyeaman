@@ -35,3 +35,11 @@ Lessons from Dufie and Blay. Read before writing any hero's sheets.
 - Validate every sheet with check2.py-style component separation before extracting; regenerate only the failing sheet.
 - Extract by connected components, never by column cuts (column cuts slice limbs).
 - Left-facing poses are fixed by mirroring in code, not by regenerating.
+
+## Prompting lesson (Oct 2026): short prompts, strong references
+- Long descriptive prompts waste credits; Firefly follows references better than paragraphs.
+- Use Nano Banana Pro (Gemini 3) for character art, portrait format, and give 2 refs:
+  ref 1 = the character (likeness/outfit), ref 2 = a sheet in the target Bleach style.
+- Write the instruction as an edit of the refs, e.g. "Draw the character from ref 1 in the exact style of ref 2",
+  "replace the clothes on ref 1 with the clothes of the character on ref 2", "use likeness and outfit in ref 1".
+- Add only what the refs cannot say (pose, layout, green background). One or two sentences.
