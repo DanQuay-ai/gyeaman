@@ -1,9 +1,9 @@
 // Gyeaman Squads: Akan squad battler, chapter 1.
 // Battles are turn based on a speed turn order (Dislyte style): every hero picks Basic, Skill (cooldown) or Ultimate (energy)
 // and a target; enemies show their next move. Big moves get impact frames, small ones stay quiet.
-import { KF } from './kf.js?v=20261022h';
-import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA, MOVE_DMG } from './data.js?v=20261022h';
-import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022h';
+import { KF } from './kf.js?v=20261022i';
+import { HEROES, MONS, STAGES, REGIONS, DIFF, RARITY, STARTERS, SKILL_MAX, skillCost, xpNeed, STAR_SHARDS, LOCKED_CHAPTERS, PULL_COST, PULL10_COST, PITY, PULL_RATES, CLASSES, GROWTH, SPELLS, ULT_DMG, ARENA, MOVE_DMG, TALENTS } from './data.js?v=20261022i';
+import { drawAdinkra, adinkraPath, adinkraSvg, ADINKRA } from './adinkra.js?v=20261022i';
 
 const ROOT = /\/squads\/?$|\/squads\/index\.html$/.test(location.pathname) ? '../assets/' : 'assets/';
 const A = ROOT + 'sq/';
@@ -62,7 +62,7 @@ const SFX = {
 
 // ---------------- images ----------------
 const IM = {};
-const AV = '?v=20261022h';
+const AV = '?v=20261022i';
 // stale-build guard: phones keep old pages/modules around; if the deployed version.json is newer, reload once onto it
 (async function checkBuild() {
   const mine = AV.slice(3);
@@ -692,7 +692,7 @@ function heroesScreen(id) {
     $('.hs-head b', s).textContent = { skills: 'Skills', growth: 'Growth', stars: 'Stars', lore: 'Symbol' }[t];
     if (t === 'growth') {
       const p = own ? ptsOf(heroSel) : { hp: 0, atk: 0, spd: 0, mag: 0, tec: 0 }, free = own ? freePts(heroSel) : 0;
-      const G = [['hp', 'Health', st.hp, '+5% health'], ['atk', 'Attack', st.atk, '+5% · basics and heavy single hits'], ['mag', 'Spirit', st.mag, '+5% · magic spells, magic ultimates, healing'], ['tec', 'Technique', st.tec, '+5% · flat damage on every hit, best for combos'], ['spd', 'Speed', st.spd, `+${GROWTH.spd} · costs ${GROWTH.spdCost} · max ${GROWTH.spdCap}`]];
+      const G = [['hp', 'Health', st.hp, '+5% health'], ['atk', 'Attack', st.atk, '+5% · basics and heavy single hits'], ['mag', 'Spirit', st.mag, '+5% · magic spells, magic ultimates, healing'], ['tec', 'Technique', st.tec, `+5% · flat damage on every hit, and ${Math.round(100 * dodgeOf(st))}% dodge`], ['spd', 'Speed', st.spd, `+${GROWTH.spd} · costs ${GROWTH.spdCost} · max ${GROWTH.spdCap}`]];
       body.innerHTML = `${own ? `<div class="lvrow"><b>Lv ${s0.lvl}</b><div class="bar"><i style="transform:scaleX(${s0.xp / xpNeed(s0.lvl)})"></i></div><span>${s0.xp}/${xpNeed(s0.lvl)} XP</span></div>
           <div class="gpts"><b>${free}</b> point${free === 1 ? '' : 's'} to spend<small>One per level. ${C.name}s start at speed ${C.spd}. Free reset in beta.</small></div>` : `<p class="note">${C.name} · base speed ${C.spd}. Recruit at the Shrine to grow.</p>`}
         <div class="growth">${G.map(([k, l, v, n]) => { const can = own && (k === 'spd' ? free >= GROWTH.spdCost && p.spd < GROWTH.spdCap : free >= 1);
@@ -935,9 +935,10 @@ function hit(src, dst, mult, o = {}) {
   if (dst.st.evade) { delete dst.st.evade; float(dst, 'MISS', '#c58bff', 1.1); return 0; }
   const aim = src.st.aim; if (aim) delete src.st.aim;
   // heroes: atk carries basics and heavy physical moves, spirit (mag) carries magic, technique (tec) adds flat damage to every hit
-  const cx = B.ctx && B.ctx.u === src ? B.ctx : null; if (cx && !o.counter && cx.mults) cx.mults.push(mult); const ty = cx ? cx.dmg : 'phys', W = DMG_W[ty] || DMG_W.phys;
+  const cx = B.ctx && B.ctx.u === src ? B.ctx : null; if (cx && !o.counter && cx.mults) cx.mults.push(mult); const ty = cx ? cx.dmg : 'phys', W = ty === 'adapt' ? (src.atk >= src.mag ? [.85, .15] : [.15, .85]) : DMG_W[ty] || DMG_W.phys;
   const base = src.isHero ? (src.atk * W[0] + src.mag * W[1]) * mult + (src.tec || 0) * TEC_K * (o.counter ? .5 : 1) : src.atk * mult;
-  let d = base * (B.fat || 1) * (src.st.atkUp ? (src.atkUpK || 1.3) : 1) * rnd(.92, 1.08) * 100 / (100 + (aim ? 0 : dst.def * (dst.st.defDown ? .5 : 1)));
+  if (dst.isHero && !o.counter && o.exact == null && Math.random() < dodgeOf(dst)) { float(dst, 'DODGE', '#8fe0d5', 1.1); return 0; }
+  let d = base * (cx && cx.boost || 1) * (B.fat || 1) * (src.st.atkUp ? (src.atkUpK || 1.3) : 1) * rnd(.92, 1.08) * 100 / (100 + (aim ? 0 : dst.def * (dst.st.defDown ? .5 : 1)));
   const crit = aim || o.crit === true || Math.random() < (o.crit || .1); if (crit) d *= 1.6;
   if (dst.st.guard) { d *= .5; }
   d = Math.round(o.exact ?? d);
@@ -962,21 +963,36 @@ function heal(u, n, quiet) { if (!u.alive) return; const cx = B.ctx && B.ctx.u =
 
 // damage weights [atk, spirit] per damage type; TEC_K: flat damage per hit for each technique point
 const shK = () => (B && B.arena ? .7 : 1); // arena: shields and healing are 30% weaker so duels resolve
+const dodgeOf = (u) => Math.min(.25, (u.tec || 0) / ((u.tec || 0) + 300)); // technique also dodges
+const talentOn = (T, st) => !!T && (T.c.s ? (st[T.c.s] || 0) >= T.c.min : (st[T.c.a] || 0) >= T.c.r * (st[T.c.b] || 0));
+const STN = { atk: 'ATK', mag: 'Spirit', tec: 'Tec', spd: 'SPD' };
+const talentCond = (T) => T.c.s ? `${STN[T.c.s]} ${T.c.min}+` : T.c.r === 1 ? `${STN[T.c.a]} ≥ ${STN[T.c.b]}` : `${STN[T.c.a]} ≥ ${T.c.r}× ${STN[T.c.b]}`;
+async function talentAfter(u, f, T, d0, m) { // applies a spell's talent once the spell has played
+  const e = T.e, d = u.tal.dealt - d0; float(u, 'TALENT', '#8fe0d5', .9);
+  if (e.hit && f.alive) { const [x, y] = pos(f); fx('star', 260, { x, y: y - f.h * .5, r: f.h * .5, c: PH_COL[u.id] || '#fff' }); hit(u, f, e.hit * m, { color: PH_COL[u.id] }); await wait(200); }
+  if (e.drain && d > 0) heal(u, d * e.drain);
+  if (e.burn && f.alive) addSt(f, 'burn', e.burn, { burnPow: u.mag * .5 * m });
+  if (e.stun && f.alive) addSt(f, 'stun', e.stun);
+  if (e.defDown && f.alive) { addSt(f, 'defDown', e.defDown); float(f, 'DEF▼', '#ff5a4a', .8); }
+  if (e.tm) { pushTM(u, e.tm); float(u, `TURN +${Math.round(e.tm * 100)}%`, '#7ee08a', .8); }
+  if (e.evade) u.st.evade = 1;
+  if (e.shield) { addSt(u, 'shield', 2); u.shieldAmt = (u.shieldAmt || 0) + shK() * Math.round(u.max * e.shield); }
+}
 const DMG_W = { phys: [1, 0], mag: [.25, .75], mix: [.6, .4] }, TEC_K = .55;
 // what a move's damage is made of, for a hero's current stats: ATK part, Spirit part, Technique part (before the target's defence)
 function dmgParts(id, key, st, lvl = 1) {
   const D = (MOVE_DMG[id] || {})[key]; if (!D) return null;
-  const ty = key === 'basic' ? 'phys' : key === 'ult' ? ULT_DMG[id] || 'phys' : (SPELLS[key] || {}).dmg || 'phys', W = DMG_W[ty], k = 1 + 0.12 * (lvl - 1);
+  let ty = key === 'basic' ? 'phys' : key === 'ult' ? ULT_DMG[id] || 'phys' : (SPELLS[key] || {}).dmg || 'phys'; const W = ty === 'adapt' ? (st.atk >= st.mag ? [.85, .15] : [.15, .85]) : DMG_W[ty], k = 1 + 0.12 * (lvl - 1);
   const a = st.atk * W[0] * D[0] * k, m = st.mag * W[1] * D[0] * k, t = st.tec * TEC_K * D[1];
-  return { a: Math.round(a), m: Math.round(m), t: Math.round(t), tot: Math.round(a + m + t), hits: D[1], ty, note: D[2] };
+  return { a: Math.round(a), m: Math.round(m), t: Math.round(t), tot: Math.round(a + m + t), hits: D[1], ty, note: D[2], tal: TALENTS[key], on: talentOn(TALENTS[key], st) };
 }
-const TYPE_LAB = { phys: 'Physical', mag: 'Magic', mix: 'Mixed' };
+const TYPE_LAB = { phys: 'Physical', mag: 'Magic', mix: 'Mixed', adapt: 'Adaptive (uses the higher of ATK and Spirit)' };
 function dmgHtml(P, compact) {
   if (!P) return compact ? '' : '<div class="dmgb none">No direct damage</div>';
   const pc = (x) => Math.round(100 * x / Math.max(1, P.tot));
   return `<div class="dmgb ${compact ? 'c' : ''}"><div class="dmgt"><b>≈ ${fmt(P.tot)}</b> damage per use · ${P.hits} hit${P.hits > 1 ? 's' : ''} · ${TYPE_LAB[P.ty]}</div>
     <div class="dmgbar"><i class="a" style="flex:${P.a}"></i><i class="m" style="flex:${P.m}"></i><i class="t" style="flex:${P.t}"></i></div>
-    <div class="dmgl"><span class="a">ATK ${fmt(P.a)} <small>${pc(P.a)}%</small></span><span class="m">Spirit ${fmt(P.m)} <small>${pc(P.m)}%</small></span><span class="t">Tec ${fmt(P.t)} <small>${pc(P.t)}%</small></span></div>${P.note && !compact ? `<small class="dmgn">${P.note}</small>` : ''}</div>`;
+    <div class="dmgl"><span class="a">ATK ${fmt(P.a)} <small>${pc(P.a)}%</small></span><span class="m">Spirit ${fmt(P.m)} <small>${pc(P.m)}%</small></span><span class="t">Tec ${fmt(P.t)} <small>${pc(P.t)}%</small></span></div>${P.note && !compact ? `<small class="dmgn">${P.note}</small>` : ''}${P.tal ? `<small class="dmgtal ${P.on ? 'on' : ''}">${P.on ? '✓' : '○'} Talent · ${talentCond(P.tal)}: ${P.tal.t}</small>` : ''}</div>`;
 }
 // ---------- moves ----------
 // 0 basic, 1 skill one, 2 skill two, 3 ultimate
@@ -1166,7 +1182,8 @@ async function doHero(u, i) {
     return;
   }
   if (i === 1 || i === 2) {
-    if (KF[u.id] && CHOREO[u.id] && CHOREO[u.id][sid]) { await CHOREO[u.id][sid](u, f, m); await wait(200); return; }
+    const TL = TALENTS[sid], tOn = talentOn(TL, u), d0 = u.tal.dealt; if (tOn && TL.e.dmg) B.ctx.boost = 1 + TL.e.dmg;
+    if (KF[u.id] && CHOREO[u.id] && CHOREO[u.id][sid]) { await CHOREO[u.id][sid](u, f, m); if (tOn) await talentAfter(u, f, TL, d0, m); await wait(200); return; }
     await skillBeat(u, i);
     if (!S.legacy) { await castSpell(u, f, S, m); await wait(220); return; }
     const k = S.legacy;

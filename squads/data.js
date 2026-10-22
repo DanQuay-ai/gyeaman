@@ -55,6 +55,33 @@ export const ARENA = [
 ];
 // measured per use at spell level 1: [total damage multiplier, hits, note]; feeds the damage breakdown shown to players
 export const MOVE_DMG = {"blay":{"blay1":[1.6,2],"ult":[3,5,"Kills outright below 30% health (20% against heroes)"],"basic":[1,1],"blayRush":[1.4,3]},"gyakari":{"gyakari1":[0.9,1],"basic":[1,1],"ult":[4.13,3,"The final thrust grows with his shield"],"gyaSweep":[0.9,2]},"owureku":{"owureku1":[1.1,1],"basic":[1,1],"ult":[3.45,4,"Last hit is the heaviest"],"owuRend":[1.2,1]},"kome":{"kome2":[0.7,1],"basic":[1,2],"ult":[1.7,2,"Doubles on a burning enemy"],"komeHex":[0.9,1]},"obiri":{"obiri1":[1,1],"ult":[3.35,9],"basic":[1,1],"obiVolley":[1.35,3],"obiKnee":[0.9,1]},"kuukua":{"kuukua1":[1.42,7],"kuukua2":[1.1,2],"ult":[2.4,12,"x1.5 on a slowed or weakened enemy"],"basic":[1.01,4],"kuuThrow":[1.3,1]},"afrakoma":{"afrakoma1":[1.25,1],"ult":[3,3],"afrWhirl":[1.6,4],"basic":[1,1]},"dufie":{"dufie1":[1.4,1],"basic":[1,2],"ult":[2.3,7],"dufKick":[1,2],"dufStars":[1.3,5]},"sekan":{"sekan1":[1.15,1],"sekan2":[1,1],"basic":[1.15,3],"ult":[3.14,8],"sekRush":[1.35,3]},"bayi":{"bayi1":[1,1],"bayi2":[0.4,1],"basic":[1,2],"ult":[2.8,5],"bayMist":[0.6,1],"bayCurse":[0.5,1]}};
+// Talents: a spell gains an extra effect once the caster's stats meet a condition, so different builds play differently.
+// c: { s, min } stat at least min, or { a, b, r } stat a at least r x stat b. e: hit (extra hit, x damage), drain (heal x of damage dealt),
+// burn / stun / defDown (turns), tm (turn meter gained), evade (dodge next hit), dmg (+x damage)
+export const TALENTS = {
+  blay1: { c: { s: 'spd', min: 108 }, e: { hit: .5 }, t: 'a third cut' },
+  blayRush: { c: { a: 'tec', b: 'atk', r: .3 }, e: { drain: .25 }, t: 'heals for 25% of the damage' },
+  owureku1: { c: { a: 'atk', b: 'mag', r: 2 }, e: { defDown: 2 }, t: 'also lowers defence' },
+  owuRend: { c: { s: 'spd', min: 106 }, e: { tm: .3 }, t: '+30% turn meter' },
+  gyakari1: { c: { a: 'mag', b: 'atk', r: 1 }, e: { shield: .1 }, t: 'a shield worth 10% of his health' },
+  gyaSweep: { c: { s: 'tec', min: 22 }, e: { stun: 1 }, t: 'stuns for 1 turn' },
+  obiri1: { c: { s: 'spd', min: 114 }, e: { hit: .6 }, t: 'a second arrow' },
+  obiVolley: { c: { a: 'mag', b: 'atk', r: .8 }, e: { burn: 2 }, t: 'fire arrows: burns for 2 turns' },
+  kuukua1: { c: { s: 'tec', min: 40 }, e: { hit: .5 }, t: 'one more thrust' },
+  kuuThrow: { c: { s: 'atk', min: 120 }, e: { stun: 1 }, t: 'stuns for 1 turn' },
+  kome2: { c: { a: 'atk', b: 'mag', r: 1 }, e: { dmg: .4 }, t: 'machete fire: +40% damage' },
+  komeHex: { c: { s: 'spd', min: 110 }, e: { tm: .2 }, t: '+20% turn meter' },
+  afrakoma1: { c: { a: 'mag', b: 'atk', r: .6 }, e: { burn: 2 }, t: 'burns for 2 turns' },
+  afrWhirl: { c: { s: 'spd', min: 106 }, e: { hit: .5 }, t: 'a fourth spin' },
+  dufie1: { c: { s: 'tec', min: 55 }, e: { evade: 1 }, t: 'dodges the next hit' },
+  dufStars: { c: { a: 'mag', b: 'atk', r: 1 }, e: { burn: 2 }, t: 'cursed knives: burn for 2 turns' },
+  sekan1: { c: { s: 'atk', min: 110 }, e: { stun: 1 }, t: 'stuns for 1 turn' },
+  sekRush: { c: { s: 'tec', min: 45 }, e: { hit: .45 }, t: 'a fourth strike' },
+  bayi1: { c: { a: 'atk', b: 'mag', r: 1 }, e: { defDown: 2 }, t: 'claw siphon: also lowers defence' },
+  bayMist: { c: { s: 'spd', min: 110 }, e: { tm: .5 }, t: '+50% turn meter' },
+  bayCurse: { c: { a: 'atk', b: 'mag', r: 1 }, e: { drain: .5 }, t: 'heals for 50% of the damage' },
+  bayi2: { c: { s: 'tec', min: 30 }, e: { hit: .4 }, t: 'a rending slash' },
+};
 export const STARTERS = Object.keys(HEROES); // beta: every hero unlocked while spells and animations are built
 export const SKILL_MAX = 10;
 export const skillCost = (lvl) => Math.round(120 * Math.pow(lvl, 1.6));
@@ -162,5 +189,5 @@ export const SPELLS = {
   dufKick: { hero: 'dufie', name: 'Crescent Kick', note: 'A spinning kick and a falling heel: 1-turn stun that cancels a charged attack.', cd: 3, t: 'melee', mult: 1.0, foe: [['stun', 1]], kind: 'melee' },
   dufStars: { hero: 'dufie', name: 'Star Daggers', note: 'Five thrown knives: defence down for 2 turns.', cd: 2, t: 'ranged', mult: .26, hits: 5, foe: [['defDown', 2]], proj: 'dagger', kind: 'ranged' },
 };
-const MAGIC = ['kome1', 'kome2', 'komeHex', 'komeVeil', 'bayi1', 'bayi2', 'bayMist', 'bayCurse'], MIXED = ['dufie2', 'dufStars', 'obiri2', 'gyaFirm', 'afrOath', 'kuuWall'];
-for (const [id, s] of Object.entries(SPELLS)) { s.dmg = MAGIC.includes(id) ? 'mag' : MIXED.includes(id) ? 'mix' : 'phys'; s.id = id; (HEROES[s.hero].pool ||= []).push(id); }
+const ADAPT = ['bayi1', 'bayi2', 'bayMist', 'bayCurse', 'komeHex'], MAGIC = ['kome1', 'kome2', 'komeHex', 'komeVeil', 'bayi1', 'bayi2', 'bayMist', 'bayCurse'], MIXED = ['dufie2', 'dufStars', 'obiri2', 'gyaFirm', 'afrOath', 'kuuWall'];
+for (const [id, s] of Object.entries(SPELLS)) { s.dmg = ADAPT.includes(id) ? 'adapt' : MAGIC.includes(id) ? 'mag' : MIXED.includes(id) ? 'mix' : 'phys'; s.id = id; (HEROES[s.hero].pool ||= []).push(id); }

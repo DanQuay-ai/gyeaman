@@ -564,3 +564,4 @@ body.cine .battle { grid-template-rows: 1fr; } body.cine .btop, body.cine .order
 .dmgl .a { color: #f6a65a; } .dmgl .m { color: #d2a8ff; } .dmgl .t { color: #8fe0d5; }
 .dmgn { color: var(--gold); }
 .dmgb.c { padding: 5px 8px; margin-top: 4px; gap: 3px; font-size: 11px; } .dmgb.c .dmgt b { font-size: 15px; }
+.dmgtal { color: var(--muted); } .dmgtal.on { color: #8fe0d5; font-weight: 700; }
