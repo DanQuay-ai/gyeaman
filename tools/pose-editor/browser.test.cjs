@@ -16,7 +16,7 @@ const assert=require('node:assert/strict');
   await page.locator('#review').click();assert.equal(await page.locator('#reviewBadge').innerText(),'✓ Validated');
   await page.locator('#x').fill('0.6');await page.locator('#x').press('Tab');assert.equal(await page.locator('#reviewBadge').innerText(),'Needs review');
   await page.locator('#undo').click();assert.equal(await page.locator('#reviewBadge').innerText(),'✓ Validated');
-  await page.locator('#addAttachment').click();assert.equal(await page.locator('.joint').count(),16);
+  await page.locator('summary').click();await page.locator('#addAttachment').click();assert.equal(await page.locator('.joint').count(),16);
   const downloadPromise=page.waitForEvent('download');await page.locator('#export').click();const download=await downloadPromise;
   const fs=require('node:fs');const exported=fs.readFileSync(await download.path(),'utf8');const data=JSON.parse(exported);assert.ok(data.poses.idle_0.attachments.spearGrip);
   await page.locator('#x').fill('0.1');await page.locator('#x').press('Tab');
