@@ -32,7 +32,7 @@ function loadCharacter(){
  catch{failed=true;}
  $('sequence').replaceChildren();
  for(const [value,label] of [['all','All source poses · 400 ms inspection holds'],...Object.keys(character().sequences).map(k=>[k,k+' · game sequence'])])$('sequence').add(new Option(label,value));
- $('characterNote').textContent=char==='gyakari'?'16 source poses. Suggestions and your saved corrections; unreviewed joints remain orange.':'Agyekum uses the bayi asset ID. Generic template suggestions only; every pose needs a mapping pass.';
+ $('characterNote').textContent=Object.keys(character().frames).length+' source poses · '+Object.keys(character().sequences).length+' game sequences. '+(char==='gyakari'?'Visual suggestions and your saved corrections.':'Generic template suggestions; every pose needs a mapping pass.')+(character().name.toLowerCase()!==char?' Asset ID: '+char+'.':'');
  setTool('select');render();
  notice(failed?'Saved draft could not be restored. The stored copy is untouched; import a backup before editing.':restored?'Your saved corrections are restored. New equipment tools do not change the body mapping.':'Ready. Drag a joint, or choose the shield / spear tool.');
 }
@@ -200,6 +200,12 @@ $('removeWeapon').onclick=()=>{
 $('addAttachment').onclick=()=>{const name=$('attachment').value;stop();if(!pose().attachments[name]){checkpoint();const p=pose().joints[name.startsWith('shield')?'farWrist':'nearWrist'];pose().attachments[name]=landmark(p);save();}selected=name;render();};
 $('character').onchange=loadCharacter;
 $('sequence').onchange=()=>{stop();sequence=$('sequence').value;index=0;render();};
+$('nextUnreviewed').onclick=()=>{
+ const ids=Object.keys(character().frames),current=ids.indexOf(frameId());
+ const next=Array.from({length:ids.length},(_,i)=>ids[(current+i+1)%ids.length]).find(id=>!doc.poses[id].reviewed);
+ if(!next){notice('All '+character().name+' poses are validated. Export the JSON before moving on.');return;}
+ sequence='all';$('sequence').value='all';selectFrame(ids.indexOf(next));notice('Next unreviewed pose: '+next);
+};
 $('prev').onclick=()=>selectFrame(index-1);$('next').onclick=()=>selectFrame(index+1);
 function play(mode){
  if(playing&&smooth===mode){stop();render();return;}
@@ -219,4 +225,4 @@ function tick(time){
  lastTime=time;requestAnimationFrame(tick);
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing){stop();render();}});
-try{const response=await fetch('./manifest.json');if(!response.ok)throw Error('Metadata unavailable');manifest=await response.json();loadCharacter();requestAnimationFrame(tick);}catch(e){notice('Unable to start: '+e.message+'. Serve the repository over HTTP.');}
+try{const response=await fetch('./manifest.json');if(!response.ok)throw Error('Metadata unavailable');manifest=await response.json();$('character').replaceChildren();for(const [id,c]of Object.entries(manifest.characters))$('character').add(new Option(c.name+(c.name.toLowerCase()!==id?' ('+id+')':''),id));$('character').value='gyakari';loadCharacter();requestAnimationFrame(tick);}catch(e){notice('Unable to start: '+e.message+'. Serve the repository over HTTP.');}

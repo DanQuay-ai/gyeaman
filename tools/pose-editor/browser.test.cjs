@@ -30,7 +30,7 @@ const assert=require('node:assert/strict');
   assert.ok((await page.locator('#characterNote').innerText()).includes('Generic template'));
   await page.locator('#character').selectOption('gyakari');assert.equal(await page.locator('.joint').count(),16);
   // Decode every sprite, and visit every source frame and game sequence for both characters.
-  for(const char of ['gyakari','bayi']){
+  for(const char of await page.locator('#character option').evaluateAll(os=>os.map(o=>o.value))){
    await page.locator('#character').selectOption(char);
    const sequences=await page.locator('#sequence option').evaluateAll(os=>os.map(o=>o.value));
    for(const seq of sequences){await page.locator('#sequence').selectOption(seq);const count=await page.locator('.frame').count();for(let i=0;i<count;i++){await page.locator('.frame').nth(i).click();await page.locator('#canvas image').evaluate(async im=>{const img=new Image();img.src=im.getAttribute('href');await img.decode();});assert.equal(await page.locator('#canvas .joint').count()>=15,true);}}

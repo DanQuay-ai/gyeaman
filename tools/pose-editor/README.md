@@ -1,5 +1,11 @@
 # Gyeaman Pose Workshop
 
+The full current playable roster is available: Gyakari, Blay, Owureku, Obiri, Kuukua, Kome, Afrakoma, Dufie, Bediako (`sekan`), and Agyekum (`bayi`). There are 180 source poses and 70 authored sequences. The manifest is derived from the HEROES roster plus KF/SEQ metadata, rather than a hand-maintained two-character list. New characters start with uncertain generic templates; Gyakari keeps the earlier visual suggestions. Existing per-character browser drafts are not replaced.
+
+Use **Next unreviewed pose** to advance through the current character’s mapping pass. It switches to the full source-pose view so poses unused by a particular combat sequence are included. Export each character’s JSON when finished.
+
+After the mapping pass: review all combat sequences in Smooth play, export the character JSON files, then use those approved mappings to build a reusable rig with stable bone lengths and per-pose equipment cuts. Test that rig on Gyakari before applying it to the rest of the roster. Clothing/secondary motion and sprite mesh deformation come after the body rig and attachment timing are validated.
+
 Open `/tools/pose-editor/` from a static server rooted at this repository. No build, network API, paid service, or production game changes are required.
 
 ```sh
