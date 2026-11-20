@@ -10,7 +10,8 @@ const ROOT = '../assets/sq/', AV = '?v=f1';
 const cv = document.getElementById('c'), g = cv.getContext('2d');
 const IDS = ['blay', 'owureku', 'gyakari', 'obiri', 'kuukua', 'kome', 'afrakoma', 'dufie', 'sekan', 'bayi'];
 const BGS = ['bg_grove', 'bg_forest', 'bg_gate', 'bg_marsh'];
-const RANGED = { obiri: 'fx_arrow', kuukua: 'fx_spear', kome: 'fx_fireball', bayi: 'fx_fireball' };
+const RANGED = { obiri: 'fx_arrow', kuukua: 'fx_spear', kome: 'fx_fireball' };
+const BLD = '#d01c3c';
 const IM = {};
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -69,6 +70,21 @@ const MOVES = {
   S: { set: 'special', dmg: 175, startup: 0.2, active: 0.36, recover: 0.3, stun: 0.6, push: 1.1, meter: 0, knock: true, hits: 3, lunge: 2.6 },
   G: { set: 'guard', guard: 1.2 },
 };
+// Agyekum keeps his Duels kit (squads/game.js SEQ.bayi): Claw strikes heal, Siphon, Hollow Pact, Blood Mist, Red Curse, Ohene Adwa
+// poses: [pose, ms, hit?]; heal = share of damage dealt; steal = Sunsum taken; burn = [damage per second, seconds]
+const KITS = {
+  bayi: {
+    strikeHeal: 0.25, col: BLD,
+    moves: {
+      bayi1: { poses: [['bB_2', 420, 1], ['bB_1', 520], ['idle_0', 100]], dmg: 70, stun: 0.6, push: 0.2, meter: 8, heal: 1, reach: 0.9, fx: 'drain' },
+      bayi2: { poses: [['bA_1', 120], ['bB_3', 260, 1], ['bB_1', 380], ['idle_0', 100]], dmg: 40, stun: 0.45, push: 0.3, meter: 6, steal: 35, reach: 0.9, fx: 'x' },
+      bayMist: { poses: [['bA_1', 140], ['bA_2', 220], ['bB_1', 380], ['idle_0', 100]], shot: { at: 1, im: 'fx_fireball', speed: 3.6, hue: 140 }, dmg: 34, stun: 0.35, push: 0.2, meter: 6, burn: [14, 3], selfHeal: 0.08 },
+      bayCurse: { poses: [['bB_2', 380, 1], ['bB_1', 380], ['idle_0', 100]], dmg: 30, stun: 0.35, push: 0.2, meter: 6, curse: 4, reach: 1.6, fx: 'x' },
+      S: { poses: [['bult_1', 420], ['bult_2', 130, 1], ['bB_3', 130, 1], ['bult_2', 130, 1], ['bB_3', 160, 1], ['idle_3', 160, 0, 'lunge'], ['bult_3', 340, 1], ['bB_1', 520]], dmg: 30, last: 3.2, stun: 0.6, push: 0.4, meter: 0, heal: 1, knock: true, reach: 1.0, special: true },
+    },
+    cards: { bayi1: ['Siphon', 'DRAIN'], bayi2: ['Hollow Pact', 'STEAL'], bayMist: ['Blood Mist', 'BURN'], bayCurse: ['Red Curse', 'CURSE'] },
+  },
+};
 // cards: what pops into the hand
 const CARDS = {
   H: { name: (H) => H.kit[0], tag: 'HEAVY', col: '#e3b448' },
@@ -77,7 +93,9 @@ const CARDS = {
   G: { name: (H) => H.kit[2], tag: 'SHIELD', col: '#9fd3ff' },
   S: { name: (H) => H.kit[3], tag: 'SUNSUM', col: '#c58bff' },
 };
-const deckOf = (id) => (id === 'gyakari' ? ['H', 'D', 'K', 'G', 'H'] : ['H', 'D', 'K', 'H']);
+const deckOf = (id) => (KITS[id] ? Object.keys(KITS[id].cards) : id === 'gyakari' ? ['H', 'D', 'K', 'G', 'H'] : ['H', 'D', 'K', 'H']);
+const moveOf = (f, key) => (KITS[f.id] && KITS[f.id].moves[key]) || MOVES[key];
+const cardInfo = (id, c) => { const k = KITS[id] && KITS[id].cards[c]; return k ? { name: () => k[0], tag: k[1], col: KITS[id].col } : CARDS[c]; };
 
 // ---------------------------------------------------------------- fighter
 class Fighter {
@@ -101,7 +119,8 @@ class Fighter {
     const s = this.set;
     switch (this.st) {
       case 'atk': {
-        const m = this.mv, fr = s[m.d.set];
+        const m = this.mv; if (m.d.poses) { let acc = 0; for (const [p, ms] of m.d.poses) { acc += ms / 1000; if (this.t < acc) return p; } return m.d.poses[m.d.poses.length - 1][0]; }
+        const fr = s[m.d.set];
         if (m.d.frames) return fr[Math.min(fr.length - 1, m.d.frames[0])];
         const i = Math.min(fr.length - 1, Math.floor(this.t / m.total * fr.length * 0.999)); return fr[Math.max(0, i)];
       }
@@ -115,9 +134,16 @@ class Fighter {
 }
 
 function startMove(f, key) {
-  const d = MOVES[key]; if (!d) return false;
+  const d = moveOf(f, key); if (!d) return false;
   if (key === 'S') { if (f.meter < 100) return false; f.meter = 0; fx.flash = 0.25; fx.slow = 0.18; announce(HEROES[f.id].kit[3], 0.9, f); }
   if (key === 'G') { f.st = 'guard'; f.t = 0; f.guardT = d.guard; f.vx = 0; announce(HEROES[f.id].kit[2], 0.6, f); return true; }
+  if (d.poses) {
+    let acc = 0; const win = [];
+    for (const [, ms, hit, tag] of d.poses) { const t0 = acc; acc += ms / 1000; if (hit) win.push([t0, acc]); if (tag === 'lunge') d.lungeWin = [t0, acc]; }
+    f.mv = { key, d, total: acc, win, hitDone: 0, fired: false }; f.st = 'atk'; f.t = 0; if (!f.air) f.vx = 0;
+    if (d.selfHeal) heal(f, T.maxHp * d.selfHeal);
+    return true;
+  }
   const total = d.startup + d.active + d.recover;
   f.mv = { key, d, total, hitDone: 0, hits: d.hits && !(key === 'S' && RANGED[f.id]) ? d.hits : 1, fired: false };
   f.st = 'atk'; f.t = 0; if (!f.air) f.vx = 0;
@@ -150,7 +176,7 @@ function newMatch() {
   G.round = 1; G.bg = BGS[Math.floor(Math.random() * BGS.length)]; newRound();
 }
 function newRound() {
-  for (const f of G.f) { Object.assign(f, { x: f.side * 1.6, y: 0, vx: 0, vy: 0, face: -f.side, hp: T.maxHp, show: T.maxHp, st: 'idle', t: 0, mv: null, stun: 0, combo: 0, ghosts: [], inv: 0 }); f.fillHand(true); }
+  for (const f of G.f) { Object.assign(f, { x: f.side * 1.6, y: 0, vx: 0, vy: 0, face: -f.side, hp: T.maxHp, show: T.maxHp, st: 'idle', t: 0, mv: null, stun: 0, combo: 0, ghosts: [], inv: 0, burn: null, defDown: 0, atkUp: 0 }); f.fillHand(true); }
   G.cam.x = 0; G.time = T.roundTime; G.sparks = []; G.shots = []; G.over = null; G.scene = 'fight'; G.intro = 1.6; cardsDirty = true;
   announce('ROUND ' + G.round, 0.9); setTimeout(() => { if (G.scene === 'fight') announce('FIGHT', 0.6); }, 900);
 }
@@ -228,7 +254,7 @@ function renderCards() {
       el.dataset.key = key;
       if (!c) { el.className = 'card empty' + (i === 'S' ? ' sp' : ''); el.innerHTML = i === 'S' ? '<i>SUNSUM</i>' : ''; }
       else {
-        const C = CARDS[c], H0 = HEROES[f.id];
+        const C = cardInfo(f.id, c), H0 = HEROES[f.id];
         el.className = 'card pop' + (c === 'S' ? ' sp' : ''); el.style.setProperty('--c', C.col);
         el.innerHTML = `<img src="${ROOT}face_${f.id}.webp" alt=""><b>${C.name(H0)}</b><i>${C.tag}</i>`;
       }
@@ -257,6 +283,7 @@ function aiThink(f, foe, dt) {
   }
   if (f.meter >= 100 && Math.random() < 0.5 && (RANGED[f.id] || d < 1.6)) return playCard(f, 'S');
   if (RANGED[f.id] && d > 1.8 && f.hand.includes('K') && Math.random() < 0.4) return playCardTag(f, 'K');
+  if (f.id === 'bayi' && d > 1.4 && d < 3.5 && f.hand.includes('bayMist') && Math.random() < 0.4) return playCardTag(f, 'bayMist');
   if (d > reach + 0.15) { A.walk = fwd; if (d > 2.4 && Math.random() < 0.3) dash(f, fwd); else if (Math.random() < 0.08) jump(f, fwd); return; }
   A.walk = 0;
   const r = Math.random();
@@ -268,7 +295,7 @@ function aiThink(f, foe, dt) {
 function applyHit(att, def, d, key, mult = 1) {
   if (def.inv > 0) { spark(def, att.face, 'rgba(255,255,255,.5)', 4); return; }
   const guarded = def.st === 'guard';
-  let dmg = d.dmg * att.atkM * def.defM * mult;
+  let dmg = d.dmg * att.atkM * def.defM * mult * (att.atkUp > 0 ? 1.2 : 1) * (def.defDown > 0 ? 1.25 : 1);
   if (guarded) {
     dmg *= 0.1; def.vx = att.face * d.push * 1.4; att.vx = -att.face * 0.8; att.st = 'hit'; att.t = 0; att.stun = 0.35; att.mv = null;   // shield repels
     def.meter = Math.min(100, def.meter + 8); spark(def, att.face, '#9fd3ff', 10); sfx('block');
@@ -283,7 +310,18 @@ function applyHit(att, def, d, key, mult = 1) {
     sfx(key.startsWith('L') ? 'light' : 'heavy');
   }
   def.hp = Math.max(0, def.hp - dmg);
+  if (!guarded && def.inv <= 0) {
+    const kit = KITS[att.id], hr = d.heal || (key.startsWith('L') && kit ? kit.strikeHeal : 0);
+    if (hr) { heal(att, dmg * hr); goop(def, att); }
+    if (d.steal) { const s = Math.min(def.meter, d.steal); def.meter -= s; att.meter = Math.min(100, att.meter + s); floatTxt(def, 'SUNSUM −' + Math.round(s), '#c58bff'); }
+    if (d.burn) { def.burn = { dps: d.burn[0] * att.atkM, t: d.burn[1] }; floatTxt(def, 'BURN', '#ff7a4a'); }
+    if (d.curse) { def.defDown = d.curse; att.atkUp = d.curse; floatTxt(def, 'DEF ▼', '#ff5a4a'); floatTxt(att, 'ATK ▲', '#ffb070'); }
+    if (kit) for (const sp of G.sparks.slice(-12)) if (!sp.dust) sp.col = kit.col;
+  }
 }
+function heal(f, v) { if (v <= 0) return; f.hp = Math.min(T.maxHp, f.hp + v); floatTxt(f, '+' + Math.round(v), '#7ee08a'); }
+function floatTxt(f, text, col) { (G.floats ||= []).push({ x: f.x, y: f.y + 1.15 + (G.floats.filter((q) => q.t < 0.3).length * 0.18), text, col, t: 0 }); }
+function goop(from, to) { for (let i = 0; i < 14; i++) G.sparks.push({ goop: true, x: from.x + rnd(-0.15, 0.15), y: from.y + rnd(0.4, 0.8), tx: to, t: -i * 0.03, life: 0.7, col: BLD }); }
 function spark(f, dir, col, n) {
   const x = f.x - dir * 0.05, y = f.y + 0.6;
   for (let i = 0; i < n; i++) { const a = rnd(-1.2, 1.2) + (dir > 0 ? 0 : Math.PI); G.sparks.push({ x, y, vx: Math.cos(a) * rnd(2, 5), vy: Math.sin(a) * rnd(1, 4), t: 0, life: rnd(0.15, 0.3), col }); }
@@ -292,9 +330,23 @@ function spark(f, dir, col, n) {
 function dust(f) { for (let i = 0; i < 8; i++) G.sparks.push({ x: f.x + rnd(-0.3, 0.3), y: 0.02, vx: rnd(-1, 1), vy: rnd(0.3, 1), t: 0, life: 0.4, col: 'rgba(210,190,160,.8)', dust: true }); }
 
 function stepFighter(f, foe, dt, walkIn) {
-  f.t += dt; f.inv = Math.max(0, f.inv - dt); f.chainT = Math.max(0, f.chainT - dt);
+  f.t += dt; f.inv = Math.max(0, f.inv - dt); f.defDown = Math.max(0, (f.defDown || 0) - dt); f.atkUp = Math.max(0, (f.atkUp || 0) - dt);
+  if (f.burn && f.burn.t > 0 && f.hp > 0) { f.burn.t -= dt; f.hp = Math.max(1, f.hp - f.burn.dps * dt); if (Math.random() < dt * 8) G.sparks.push({ x: f.x + rnd(-0.2, 0.2), y: f.y + rnd(0.2, 0.9), vx: 0, vy: 0.8, t: 0, life: 0.5, col: BLD, dust: true }); } f.chainT = Math.max(0, f.chainT - dt);
   for (let i = 0; i < T.hand; i++) if (f.hand[i] == null) { f.refillT[i] -= dt; if (f.refillT[i] <= 0) { let c; do { c = f.deck[Math.floor(Math.random() * f.deck.length)]; } while (c === 'G' && f.hand.includes('G')); f.hand[i] = c; if (!f.cpu) cardsDirty = true; } }
-  if (f.st === 'atk') {
+  if (f.st === 'atk' && f.mv.d.poses) {
+    const m = f.mv, d = m.d, tt = f.t;
+    if (d.lungeWin && tt > d.lungeWin[0] && tt < d.lungeWin[1]) { f.vx = f.face * 5; f.ghosts.push({ x: f.x, y: f.y, p: f.pose(), a: 0.4 }); } else if (!f.air) f.vx *= 0.8;
+    if (d.shot && !m.fired) { let acc = 0; for (let i = 0; i < d.shot.at; i++) acc += d.poses[i][1] / 1000; if (tt >= acc) { m.fired = true; G.shots.push({ owner: f, x: f.x + f.face * 0.5, y: f.y + 0.6, vx: f.face * d.shot.speed, im: d.shot.im, t: 0, hue: d.shot.hue, d, key: m.key }); sfx('shot'); } }
+    m.win.forEach(([t0, t1], i) => {
+      if (i >= m.hitDone && tt >= t0 && tt < t1) {
+        const hb = { ...hitbox(f) }; const r = (d.reach || 0.8) * f.size; if (f.face > 0) hb.x1 = Math.max(hb.x1, f.x + r); else hb.x0 = Math.min(hb.x0, f.x - r);
+        if (overlap(hb, hurtbox(foe)) && foe.st !== 'ko') { m.hitDone = i + 1; applyHit(f, foe, i === m.win.length - 1 && d.last ? { ...d, dmg: d.dmg * d.last } : d, m.key); }
+        else if (tt > t1 - 0.02) m.hitDone = i + 1;
+      }
+    });
+    if (d.special || d.poses.length > 3) f.ghosts.push({ x: f.x, y: f.y, p: f.pose(), a: 0.25 });
+    if (tt >= m.total) { f.st = f.air ? 'jump' : 'idle'; f.mv = null; }
+  } else if (f.st === 'atk') {
     const m = f.mv, d = m.d, tt = f.t;
     if (d.lunge && !(m.key === 'S' && RANGED[f.id]) && tt > d.startup && tt < d.startup + d.active) f.vx = f.face * d.lunge;
     else if (!f.air) f.vx *= 0.8;
@@ -343,11 +395,12 @@ function update(dt) {
   if (Math.abs(dx) < minD && Math.abs(a.y - b.y) < 0.8 && a.st !== 'dash' && b.st !== 'dash') { const o = (minD - Math.abs(dx)) / 2 * (Math.sign(dx) || 1); a.x -= o; b.x += o; }
   for (const s of G.shots) {
     s.t += dt; s.x += s.vx * dt; const foe = s.owner === a ? b : a;
-    if (!s.dead && overlap({ x0: s.x - 0.2, x1: s.x + 0.2, y0: s.y - 0.12, y1: s.y + 0.12 }, hurtbox(foe))) { s.dead = true; applyHit(s.owner, foe, s.d, s.key, s.big ? 0.9 : 1); }
+    if (!s.dead && overlap({ x0: s.x - 0.2, x1: s.x + 0.2, y0: s.y - 0.12, y1: s.y + 0.12 }, hurtbox(foe))) { s.dead = true; applyHit(s.owner, foe, s.d, s.key, s.big ? 0.9 : 1); if (s.d.burn) for (let i = 0; i < 10; i++) G.sparks.push({ x: s.x + rnd(-0.3, 0.3), y: s.y + rnd(-0.3, 0.3), vx: rnd(-0.4, 0.4), vy: rnd(0.2, 0.8), t: 0, life: 0.9, col: BLD, dust: true }); }
     if (Math.abs(s.x) > T.stageHalf + 3) s.dead = true;
   }
   G.shots = G.shots.filter((s) => !s.dead);
-  for (const p of G.sparks) { p.t += dt; if (!p.ring) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy -= (p.dust ? 1 : 8) * dt; } }
+  for (const q of (G.floats || [])) { q.t += dt; q.y += dt * 0.4; } G.floats = (G.floats || []).filter((q) => q.t < 1);
+  for (const p of G.sparks) { p.t += dt; if (p.goop) { if (p.t > 0) { const k = Math.min(1, dt * 6); p.x += (p.tx.x - p.x) * k; p.y += (p.tx.y + 0.6 - p.y) * k; } continue; } if (!p.ring) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy -= (p.dust ? 1 : 8) * dt; } }
   G.sparks = G.sparks.filter((p) => p.t < p.life);
   if (!G.over && (a.hp <= 0 || b.hp <= 0 || G.time <= 0)) {
     const w = a.hp === b.hp ? null : a.hp > b.hp ? a : b; G.over = { t: 0, w };
@@ -418,14 +471,16 @@ function drawFight() {
   }
   for (const s of G.shots) {
     const im = img(ROOT + 'kf/' + s.im + '.webp' + AV); if (!im.ok) continue; const h = V.s * (s.big ? 0.36 : 0.26), w = im.el.width / im.el.height * h;
-    g.save(); g.translate(V.sx(s.x), V.sy(s.y)); g.scale(Math.sign(s.vx), 1); if (s.tint) g.filter = 'hue-rotate(220deg)'; g.drawImage(im.el, -w / 2, -h / 2, w, h); g.restore();
+    g.save(); g.translate(V.sx(s.x), V.sy(s.y)); g.scale(Math.sign(s.vx), 1); if (s.hue) g.filter = `hue-rotate(${s.hue}deg) saturate(1.6)`; g.drawImage(im.el, -w / 2, -h / 2, w, h); g.restore();
   }
   for (const p of G.sparks) {
     g.globalAlpha = 1 - p.t / p.life; g.strokeStyle = p.col;
+    if (p.goop) { if (p.t < 0) { g.globalAlpha = 1; continue; } g.fillStyle = p.col; g.beginPath(); g.arc(V.sx(p.x), V.sy(p.y), V.s * 0.025, 0, 7); g.fill(); g.globalAlpha = 1; continue; }
     if (p.ring) { g.lineWidth = 3; g.beginPath(); g.arc(V.sx(p.x), V.sy(p.y), V.s * (0.1 + p.t * 1.6), 0, 7); g.stroke(); }
     else { g.lineWidth = p.dust ? 5 : 2.5; g.beginPath(); g.moveTo(V.sx(p.x), V.sy(p.y)); g.lineTo(V.sx(p.x - p.vx * 0.03), V.sy(p.y - p.vy * 0.03)); g.stroke(); }
     g.globalAlpha = 1;
   }
+  for (const q of (G.floats || [])) { g.globalAlpha = 1 - q.t; txt(q.text, V.sx(q.x), V.sy(q.y), Math.max(14, V.s * 0.09), q.col, 'center', 'Anton'); g.globalAlpha = 1; }
   if (window.GF_DEBUG) for (const f of G.f) { const hb = hurtbox(f); g.strokeStyle = '#0f0'; g.strokeRect(V.sx(hb.x0), V.sy(hb.y1), (hb.x1 - hb.x0) * V.s, (hb.y1 - hb.y0) * V.s); if (f.st === 'atk') { const a = hitbox(f); g.strokeStyle = '#f00'; g.strokeRect(V.sx(a.x0), V.sy(a.y1), (a.x1 - a.x0) * V.s, (a.y1 - a.y0) * V.s); } }
   g.restore();
   if (fx.flash > 0) { g.fillStyle = `rgba(255,230,160,${fx.flash * 1.2})`; g.fillRect(0, 0, W, H); }
@@ -462,6 +517,8 @@ function hud() {
     g.fillStyle = '#1a0d07'; g.fillRect(mx, my, mw, 7);
     g.fillStyle = f.meter >= 100 ? (Math.floor(performance.now() / 150) % 2 ? '#7fd0ff' : '#c58bff') : '#4a7fb0';
     g.fillRect(L ? mx : mx + mw - mw * f.meter / 100, my, mw * f.meter / 100, 7); g.strokeStyle = '#8a5a16'; g.strokeRect(mx - 1, my - 1, mw + 2, 9);
+    const stt = [f.burn && f.burn.t > 0 ? ['BURN', '#ff7a4a'] : null, f.defDown > 0 ? ['DEF▼', '#ff5a4a'] : null, f.atkUp > 0 ? ['ATK▲', '#ffb070'] : null].filter(Boolean);
+    stt.forEach(([t2, c2], j) => txt(t2, L ? x + j * 46 : x + bw - j * 46, top + bh + 42, 13, c2, L ? 'left' : 'right', 'Anton'));
     if (f.combo > 1 && (G.f[1 - i].st === 'hit' || G.f[1 - i].st === 'down')) txt(f.combo + ' HITS', L ? pad : W - pad, top + 92, 30, '#ffe08a', L ? 'left' : 'right');
   });
   txt(String(Math.ceil(G.time)).padStart(2, '0'), W / 2, top - 2, 40, G.time < 10 ? '#ff7a4a' : '#f3e7cf', 'center');
